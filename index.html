@@ -193,6 +193,18 @@
     section{padding:74px 0;}
     .about-stats{gap:24px;}
   }
+
+  /* quiz invitation band */
+  .quiz-band{background:var(--green);position:relative;overflow:hidden;}
+  .quiz-band::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 62% 85% at 50% -10%,rgba(169,134,60,.18),transparent 64%);pointer-events:none;}
+  .quiz-band .container{text-align:center;position:relative;z-index:2;max-width:780px;}
+  .quiz-band .eyebrow{color:var(--gold-soft);}
+  .quiz-band .eyebrow::before{background:var(--gold-soft);}
+  .quiz-band h2{color:#fbf7ec;margin-top:6px;}
+  .quiz-band h2 em{color:var(--gold-soft);font-style:italic;}
+  .quiz-band p{color:rgba(251,247,236,.82);max-width:54ch;margin:20px auto 0;font-size:1.06rem;}
+  .quiz-band .btn-gold{margin-top:34px;}
+  .quiz-band .btn-gold:hover{box-shadow:0 14px 32px rgba(0,0,0,.22);}
 </style>
 <noscript><style>.reveal{opacity:1 !important;transform:none !important}</style></noscript>
 </head>
@@ -864,6 +876,7 @@
         <li><a href="#about">Studio</a></li>
         <li><a href="#services">Usługi</a></li>
         <li><a href="#gallery">Galeria</a></li>
+        <li><a href="quiz.html">Quiz</a></li>
         <li><a href="#contact">Kontakt</a></li>
         <li><a href="https://booksy.com/pl-pl/dl/show-business/334211" target="_blank" rel="noopener noreferrer" class="nav-cta">Umów wizytę</a></li>
       </ul>
@@ -938,6 +951,15 @@
           <div class="s"><div class="n">100%</div><div class="t">certyfikowane<br>produkty</div></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="quiz-band">
+    <div class="container">
+      <span class="eyebrow reveal">Quiz</span>
+      <h2 class="reveal d1">Nie wiesz, który zabieg <em>wybrać?</em></h2>
+      <p class="reveal d2">Odpowiedz na 5 krótkich pytań, a podpowiem Ci, które rozwiązanie najlepiej pasuje do Twoich brwi &mdash; w mniej niż minutę.</p>
+      <a href="quiz.html" class="btn btn-gold reveal d3">Rozwiąż quiz</a>
     </div>
   </section>
 
