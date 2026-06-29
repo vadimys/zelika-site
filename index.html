@@ -174,6 +174,12 @@
   .booksy-widget-button::after{content:"Rezerwuj wizytę";color:#fff;font-family:var(--sans);font-weight:500;font-size:1rem;letter-spacing:.01em;}
   .booksy-widget-button:hover{background-color:var(--green-mid)!important;transform:translateY(-2px)!important;box-shadow:0 14px 32px rgba(31,94,48,.24)!important;}
   .booksy-business-link{width:auto!important;margin:10px auto 0!important;opacity:.55;}
+  /* Оверлей бронювання — центрований модал у вікні. Booksy кладе діалог absolute;top:0
+     (вгорі сторінки) і робить window.scroll вгору — звідси дивний стрибок. Робимо fixed
+     по центру екрана + блокуємо скрол фону, поки відкрито. */
+  .booksy-widget-overlay{z-index:2147483646!important;}
+  .booksy-widget-dialog{position:fixed!important;top:50%!important;left:50%!important;margin:0!important;transform:translate(-50%,-50%)!important;max-width:96vw!important;max-height:92vh!important;overflow:auto!important;}
+  html:has(.booksy-widget-overlay),body:has(.booksy-widget-overlay){overflow:hidden!important;}
   .book-card .bk-note{font-size:.74rem;color:var(--muted);margin-top:22px;}
   .book-card .bk-note strong{color:var(--green);font-weight:500;}
   footer{padding:54px 0 40px;border-top:1px solid var(--line);text-align:center;}
