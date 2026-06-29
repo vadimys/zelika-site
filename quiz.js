@@ -1,4 +1,5 @@
 const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
+  const LEAD_URL = "https://hooks.zelika.pl/webhook/lead";
 
   const QUESTIONS = [
     {
@@ -150,6 +151,12 @@ const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
       <div class="btn-row">
         <a class="btn" href="${BOOKSY}" target="_blank" rel="noopener noreferrer">Zarezerwuj w Booksy</a>
       </div>
+      <div class="consult lead-cta">
+        <p><b>Wolisz, żebyśmy odezwali się z rekomendacją?</b> Zostaw kontakt — Anna napisze do Ciebie 💕</p>
+        <input id="lead-contact" type="text" placeholder="Instagram lub telefon" maxlength="120" autocomplete="off" style="width:100%;padding:12px 14px;margin:10px 0;border:1px solid #cdbfae;border-radius:10px;font:inherit;background:#fff">
+        <button class="btn-ghost" data-action="lead">Wyślij kontakt</button>
+        <p id="lead-note" style="margin-top:10px;font-size:.95em"></p>
+      </div>
       <div class="res-links">
         <a href="index.html#services">Zobacz pełny cennik</a>
         <button data-action="restart">↺ Powtórz quiz</button>
@@ -185,6 +192,23 @@ const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
       setTimeout(()=>show(true), 160);
     }
     else if(act==='back'){ if(step>1){ step--; show(true); } }
+    else if(act==='lead'){
+      const inp = document.getElementById('lead-contact');
+      const note = document.getElementById('lead-note');
+      const contact = ((inp && inp.value) || '').trim();
+      if(!contact){ if(note) note.textContent = 'Wpisz Instagram lub telefon 🙂'; return; }
+      el.disabled = true;
+      const R = RESULTS[computeResult()];
+      fetch(LEAD_URL, {
+        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ source:'quiz', recommendation:R.title, contact:contact, url:location.href })
+      }).then(function(){
+        if(note) note.textContent = 'Dziękujemy! Odezwiemy się wkrótce 💕';
+        if(inp) inp.style.display = 'none'; el.style.display = 'none';
+      }).catch(function(){
+        if(note) note.textContent = 'Spróbuj ponownie za chwilę.'; el.disabled = false;
+      });
+    }
     else if(act==='restart'){ answers=[]; step=0; show(true); }
   });
 
