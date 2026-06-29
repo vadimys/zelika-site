@@ -23,7 +23,7 @@
       }
       // 2) widoczne elementy (jeśli dodasz badge z data-* — wypełni się samo)
       document.querySelectorAll("[data-google-rating]").forEach(function (n) {
-        n.textContent = c.google_rating;
+        n.textContent = String(c.google_rating).replace(".", ",");
       });
       document.querySelectorAll("[data-google-reviews]").forEach(function (n) {
         n.textContent = c.google_reviews;
