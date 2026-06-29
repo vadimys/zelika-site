@@ -241,6 +241,24 @@
     .zchat-panel{right:8px;bottom:8px;width:calc(100vw - 16px);height:calc(100vh - 16px);max-height:calc(100vh - 16px);border-radius:12px;}
     .zchat-fab{right:16px;bottom:16px;}
   }
+
+.reviews{padding:84px 0;background:var(--bg-soft)}
+.rev-track{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding:10px 4px 22px;margin-top:34px;-webkit-overflow-scrolling:touch}
+.rev-track::-webkit-scrollbar{height:6px}.rev-track::-webkit-scrollbar-thumb{background:var(--line-gold);border-radius:6px}
+.rev-card{flex:0 0 330px;scroll-snap-align:start;background:var(--bg-card);border:1px solid var(--line-gold);border-radius:18px;padding:28px 26px;box-shadow:0 8px 28px rgba(31,94,48,.06);display:flex;flex-direction:column}
+.rev-stars{color:var(--gold);letter-spacing:3px;margin-bottom:14px;font-size:1.05rem}
+.rev-card blockquote{font-family:var(--serif);font-size:1.18rem;line-height:1.55;color:var(--ink);margin:0 0 18px;flex:1}
+.rev-card figcaption{font-family:var(--sans);color:var(--green);font-weight:500;font-size:.98rem}
+.rev-cta{text-align:center;margin-top:8px}.rev-cta a{color:var(--green);font-family:var(--sans);font-weight:500;text-decoration:none;border-bottom:1px solid var(--line-gold)}
+.faq{padding:84px 0}
+.faq-list{max-width:780px;margin:34px auto 0}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-item summary{cursor:pointer;padding:22px 0;font-family:var(--sans);font-weight:500;font-size:1.1rem;color:var(--green);list-style:none;display:flex;justify-content:space-between;align-items:center;gap:18px}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:"+";color:var(--gold);font-size:1.5rem;line-height:1;transition:transform .2s}
+.faq-item[open] summary::after{content:"\2013"}
+.faq-item>div{padding:0 0 22px;color:var(--muted);line-height:1.65;font-family:var(--sans)}
+@media(max-width:520px){.rev-card{flex-basis:84vw}}
 </style>
 <noscript><style>.reveal{opacity:1 !important;transform:none !important}</style></noscript>
 <script type="application/ld+json" id="ld-business">
@@ -295,6 +313,62 @@
     "bestRating": "5",
     "worstRating": "1"
   }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Czy makijaż permanentny boli?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Stosujemy znieczulenie, dzięki czemu zabieg jest komfortowy — większość klientek odczuwa jedynie delikatne mrowienie. Twoje odczucia zawsze omawiamy na początku wizyty."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Jak długo utrzymuje się makijaż permanentny brwi?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Efekt utrzymuje się zwykle od 1 do 3 lat, w zależności od typu skóry i pielęgnacji. Po pierwszym zabiegu zalecamy dopigmentowanie (do 6 tygodni), które utrwala kolor i kształt."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Jak wygląda proces gojenia?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pełne gojenie trwa około 4–6 tygodni. W pierwszych dniach kolor jest intensywniejszy i stopniowo się wysubtelnia. Otrzymasz od nas dokładne wskazówki dotyczące pielęgnacji."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Którą metodę brwi wybrać — włosową, pudrową czy mieszaną?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "To zależy od Twojej skóry i oczekiwanego efektu. Najlepiej rozwiązać nasz krótki quiz lub umówić się na niezobowiązującą konsultację — wspólnie dobierzemy idealne rozwiązanie."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Czy są przeciwwskazania do zabiegu?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tak — m.in. ciąża, karmienie piersią, niektóre choroby skóry czy przyjmowane leki. Każdy przypadek omawiamy indywidualnie podczas konsultacji z Anną."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Jak umówić się na wizytę?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Najwygodniej przez rezerwację online w Booksy lub telefonicznie: 571 932 161. Możesz też zacząć od niezobowiązującej konsultacji."
+      }
+    }
+  ]
 }
 </script>
 </head>
@@ -1108,7 +1182,38 @@
     </div>
   </section>
 
-  <section class="contact" id="contact">
+  
+    <section class="reviews" id="reviews">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow reveal">Opinie</span>
+          <h2 class="reveal d1">Co mówią <em>nasze klientki</em></h2>
+          <p class="reveal d2">Prawdziwe opinie z Google — ocena <strong data-google-rating>5,0</strong> &#9733; na podstawie <strong data-google-reviews>41</strong> opinii.</p>
+        </div>
+        <div class="rev-track" id="rev-track" aria-live="polite"></div>
+        <p class="rev-cta reveal"><a href="https://www.google.com/maps/search/?api=1&query=Zelika+PMU+Wielu%C5%84" target="_blank" rel="noopener noreferrer">Zobacz wszystkie opinie w Google &#8594;</a></p>
+      </div>
+    </section>
+
+    <section class="faq" id="faq">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow reveal">FAQ</span>
+          <h2 class="reveal d1">Najczęstsze <em>pytania</em></h2>
+          <p class="reveal d2">Masz inne pytanie? Napisz do naszej konsultantki na czacie lub zadzwoń.</p>
+        </div>
+        <div class="faq-list">
+        <details class="faq-item reveal"><summary>Czy makijaż permanentny boli?</summary><div>Stosujemy znieczulenie, dzięki czemu zabieg jest komfortowy — większość klientek odczuwa jedynie delikatne mrowienie. Twoje odczucia zawsze omawiamy na początku wizyty.</div></details>
+        <details class="faq-item reveal"><summary>Jak długo utrzymuje się makijaż permanentny brwi?</summary><div>Efekt utrzymuje się zwykle od 1 do 3 lat, w zależności od typu skóry i pielęgnacji. Po pierwszym zabiegu zalecamy dopigmentowanie (do 6 tygodni), które utrwala kolor i kształt.</div></details>
+        <details class="faq-item reveal"><summary>Jak wygląda proces gojenia?</summary><div>Pełne gojenie trwa około 4–6 tygodni. W pierwszych dniach kolor jest intensywniejszy i stopniowo się wysubtelnia. Otrzymasz od nas dokładne wskazówki dotyczące pielęgnacji.</div></details>
+        <details class="faq-item reveal"><summary>Którą metodę brwi wybrać — włosową, pudrową czy mieszaną?</summary><div>To zależy od Twojej skóry i oczekiwanego efektu. Najlepiej rozwiązać nasz krótki quiz lub umówić się na niezobowiązującą konsultację — wspólnie dobierzemy idealne rozwiązanie.</div></details>
+        <details class="faq-item reveal"><summary>Czy są przeciwwskazania do zabiegu?</summary><div>Tak — m.in. ciąża, karmienie piersią, niektóre choroby skóry czy przyjmowane leki. Każdy przypadek omawiamy indywidualnie podczas konsultacji z Anną.</div></details>
+        <details class="faq-item reveal"><summary>Jak umówić się na wizytę?</summary><div>Najwygodniej przez rezerwację online w Booksy lub telefonicznie: 571 932 161. Możesz też zacząć od niezobowiązującej konsultacji.</div></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact" id="contact">
     <div class="container contact-grid">
       <div class="contact-info">
         <span class="eyebrow reveal">Kontakt</span>
