@@ -21,6 +21,18 @@
           el.textContent = JSON.stringify(ld);
         } catch (e) {}
       }
+      // 1b) karuzela opinii
+      var track = document.getElementById("rev-track");
+      if (track && Array.isArray(c.google_reviews_list) && c.google_reviews_list.length) {
+        function escH(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+        track.innerHTML = c.google_reviews_list.map(function (rv) {
+          var n = Math.max(1, Math.min(5, rv.rating || 5));
+          var stars = "\u2605\u2605\u2605\u2605\u2605".slice(0, n);
+          return '<figure class="rev-card"><div class="rev-stars">' + stars +
+            '</div><blockquote>' + escH(rv.text) + '</blockquote><figcaption>\u2014 ' +
+            escH(rv.author) + '</figcaption></figure>';
+        }).join("");
+      }
       // 2) widoczne elementy (jeśli dodasz badge z data-* — wypełni się samo)
       document.querySelectorAll("[data-google-rating]").forEach(function (n) {
         n.textContent = String(c.google_rating).replace(".", ",");
