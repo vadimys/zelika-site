@@ -166,12 +166,14 @@
   .book-card p{color:var(--muted);font-size:.95rem;margin-bottom:28px;max-width:340px;margin-left:auto;margin-right:auto;}
   .book-card .btn-green{width:100%;justify-content:center;margin-bottom:14px;}
   .book-card .btn-ghost{width:100%;justify-content:center;}
-  /* Вбудоване бронювання Booksy — кнопку віджета приводимо до нашого дизайну */
-  .bk-widget{margin-bottom:14px;min-height:50px;}
+  /* Вбудоване бронювання Booksy — порожній div-кнопку приводимо до нашого дизайну.
+     Booksy малює напис картинкою (background-image) — прибираємо її й кладемо свій текст. */
+  .bk-widget{margin-bottom:14px;text-align:center;}
   .bk-widget noscript{display:block;}
-  .booksy-widget-button{display:flex!important;align-items:center;justify-content:center!important;gap:8px;width:100%!important;box-sizing:border-box!important;padding:14px 30px!important;background:var(--green)!important;color:#fff!important;font-family:var(--sans)!important;font-size:1rem!important;font-weight:500!important;line-height:1.2!important;border:none!important;border-radius:999px!important;text-decoration:none!important;cursor:pointer;box-shadow:none!important;letter-spacing:.01em!important;transition:background .2s,transform .2s,box-shadow .2s!important;}
-  .booksy-widget-button:hover{background:var(--green-mid)!important;transform:translateY(-2px)!important;box-shadow:0 14px 32px rgba(31,94,48,.24)!important;}
-  .booksy-widget-button *{color:#fff!important;}
+  .booksy-widget-button{background-image:none!important;background-color:var(--green)!important;width:100%!important;height:auto!important;min-height:52px!important;padding:14px 30px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:999px!important;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s!important;}
+  .booksy-widget-button::after{content:"Rezerwuj wizytę";color:#fff;font-family:var(--sans);font-weight:500;font-size:1rem;letter-spacing:.01em;}
+  .booksy-widget-button:hover{background-color:var(--green-mid)!important;transform:translateY(-2px)!important;box-shadow:0 14px 32px rgba(31,94,48,.24)!important;}
+  .booksy-business-link{width:auto!important;margin:10px auto 0!important;opacity:.55;}
   .book-card .bk-note{font-size:.74rem;color:var(--muted);margin-top:22px;}
   .book-card .bk-note strong{color:var(--green);font-weight:500;}
   footer{padding:54px 0 40px;border-top:1px solid var(--line);text-align:center;}
