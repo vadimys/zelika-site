@@ -17,4 +17,18 @@
     if (overlayOpen()) return;
     return _scrollTo.apply(window, arguments);
   };
+
+  /* Прогресивне покращення: будь-яке посилання з [data-booksy] (nav, hero…)
+     відкриває той самий вбудований оверлей Booksy, що й кнопка в картці.
+     Якщо віджет ще не намалював кнопку (повільна мережа / JS-помилка) —
+     не заважаємо: спрацює звичайний href (редірект на Booksy). */
+  document.addEventListener("click", function (e) {
+    var link = e.target.closest && e.target.closest("[data-booksy]");
+    if (!link) return;
+    var btn = document.querySelector(".booksy-widget-button");
+    if (btn) {
+      e.preventDefault();
+      btn.click();
+    }
+  });
 })();
