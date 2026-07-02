@@ -199,10 +199,13 @@ const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
       if(!contact){ if(note) note.textContent = 'Wpisz Instagram lub telefon 🙂'; return; }
       el.disabled = true;
       const R = RESULTS[computeResult()];
+      // text/plain = "simple" request (без preflight); БЕЗ no-cors, щоб читати
+      // статус — інакше 403/429 маскується під успіх і лід тихо губиться.
       fetch(LEAD_URL, {
-        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+        method:'POST', headers:{'Content-Type':'text/plain'},
         body: JSON.stringify({ source:'quiz', recommendation:R.title, contact:contact, url:location.href })
-      }).then(function(){
+      }).then(function(res){
+        if(!res.ok) throw new Error('HTTP '+res.status);
         if(note) note.textContent = 'Dziękujemy! Odezwiemy się wkrótce 💕';
         if(inp) inp.style.display = 'none'; el.style.display = 'none';
       }).catch(function(){
