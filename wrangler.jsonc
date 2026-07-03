@@ -1,7 +1,9 @@
 {
   "name": "zelika-site",
   "compatibility_date": "2026-06-17",
+  "main": "worker.js",
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS"
   }
 }
