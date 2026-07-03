@@ -207,12 +207,12 @@ function htmlResponse(html, status = 200, sMaxAge = 300) {
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Content-Security-Policy":
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-        "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com; " +
+        "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://booksy.com; " +
         "font-src https://fonts.gstatic.com; " +
         "script-src 'self' https://booksy.com https://www.googletagmanager.com https://www.googleadservices.com; " +
         "frame-src https://booksy.com https://td.doubleclick.net; " +
-        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com; " +
+        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
         "form-action 'self' https://booksy.com; upgrade-insecure-requests",
     },
   });
