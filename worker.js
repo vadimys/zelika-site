@@ -173,6 +173,7 @@ function layout({ title, description, canonical, ogImage, jsonld, body, noindex 
 <meta charset="utf-8">
 <script src="/consent.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18246998055"></script>
+<script src="/booking-conversion.js" defer></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
