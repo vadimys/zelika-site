@@ -194,7 +194,7 @@ ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script
 </head><body>
 ${header()}
 <main class="wrap">${body}</main>
-<footer class="site"><div class="wrap">© Zelika Brows &amp; More — Anna Zelinska, PMU · Wieluń · <a href="/">zelika.pl</a> · <a href="#" data-cookies>Cookies</a></div></footer>
+<footer class="site"><div class="wrap">© Zelika Brows &amp; More — Anna Zelinska, PMU · Wieluń · <a href="/">zelika.pl</a> · <a href="/prywatnosc">Polityka prywatności</a> · <a href="#" data-cookies>Cookies</a></div></footer>
 </body></html>`;
 }
 

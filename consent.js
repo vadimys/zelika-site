@@ -60,7 +60,7 @@
     var bar = document.createElement("div");
     bar.id = "zconsent-bar";
     bar.innerHTML =
-      '<div class="zc-txt">Ta strona używa plików cookie do celów analitycznych i marketingowych, aby ulepszać nasze usługi. Możesz zaakceptować lub odrzucić — Twój wybór zapamiętamy.</div>' +
+      '<div class="zc-txt">Ta strona używa plików cookie do celów analitycznych i marketingowych, aby ulepszać nasze usługi. Możesz zaakceptować lub odrzucić — Twój wybór zapamiętamy. Szczegóły w <a href="/prywatnosc" style="color:#1f5e30;text-decoration:underline">Polityce prywatności</a>.</div>' +
       '<div class="zc-btns"><button type="button" class="zc-acc">Akceptuję</button><button type="button" class="zc-rej">Odrzucam</button></div>';
     document.body.appendChild(bar);
     bar.querySelector(".zc-acc").addEventListener("click", function () { setConsent("granted"); });
