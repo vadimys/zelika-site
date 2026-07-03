@@ -2,10 +2,12 @@
 // Worker renderuje /porady (index) i /porady/<slug> jako gotowy HTML z danych
 // bota (/api/posts) — pełne SEO (meta, OG, Article/Blog JSON-LD), natychmiastowa
 // publikacja, jedno źródło prawdy w bocie. Reszta ścieżek → statyka (env.ASSETS).
+// Nagłówek i integracja Booksy — spójne ze stroną główną (ten sam widget-overlay).
 
 const POSTS_API = "https://hooks.zelika.pl/api/posts";
 const SITE = "https://zelika.pl";
 const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
+const BOOKSY_WIDGET = "https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl";
 const SECTION_TITLE = "Porady i inspiracje";
 const SECTION_DESC =
   "Porady, inspiracje i ciekawostki o makijażu permanentnym, brwiach i rzęsach — od Anny Zelinskiej, ekspertki PMU ze Studia Zelika w Wieluniu.";
@@ -80,40 +82,91 @@ async function fetchPost(slug) {
   return null;
 }
 
-// --- wspólny layout ---
+// --- style (spójne ze stroną główną: kolory, fonty, nagłówek, przycisk Booksy) ---
 const CSS = `
 :root{--bg:#f4f1e7;--bg-soft:#ece7d8;--bg-card:#fffdf6;--green:#1f5e30;--green-mid:#2f7d44;--gold:#a9863c;--ink:#272b22;--muted:#6e7365;--line:rgba(31,94,48,.16);--line-gold:rgba(169,134,60,.30);--serif:'Cormorant Garamond',Georgia,serif;--sans:'Jost',system-ui,sans-serif}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;line-height:1.75;-webkit-font-smoothing:antialiased}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline}
-.wrap{max-width:760px;margin:0 auto;padding:0 20px}
-header.site{border-bottom:1px solid var(--line);background:var(--bg-card)}
-header.site .wrap{display:flex;align-items:center;justify-content:space-between;padding:18px 20px}
-.logo{font-family:var(--serif);font-size:1.5rem;color:var(--green);letter-spacing:.02em}
-.logo span{color:var(--gold)}
-.navlink{font-size:.95rem;color:var(--ink)}
-h1,h2{font-family:var(--serif);color:var(--green);font-weight:600;line-height:1.2}
-h1{font-size:2.1rem;margin:.6em 0 .2em}
-h2{font-size:1.5rem;margin:1.4em 0 .3em}
-.crumbs{font-size:.85rem;color:var(--muted);margin:22px 0 0}
+.wrap{max-width:760px;margin:0 auto;padding:0 24px}
+/* --- nagłówek jak na stronie głównej --- */
+header.nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1;text-decoration:none}
+.brand .mark{width:118px;height:auto;display:block}
+.brand .tag{font-family:var(--serif);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600;font-size:.5rem;margin-top:1px;margin-left:3px}
+.nav-links{display:flex;gap:30px;list-style:none;align-items:center;margin:0;padding:0}
+.nav-links a{color:var(--ink);font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;font-weight:400;position:relative;padding:4px 0;transition:.3s}
+.nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0;height:1px;background:var(--gold);transition:.35s}
+.nav-links a:hover{color:var(--green);text-decoration:none}
+.nav-links a:hover::after,.nav-links a.current::after{width:100%}
+.nav-links a.current{color:var(--green)}
+.nav-cta{border:1px solid var(--green);color:var(--green)!important;padding:9px 20px!important;border-radius:2px;transition:.4s}
+.nav-cta:hover{background:var(--green);color:#fff!important;text-decoration:none}
+.nav-cta::after{display:none!important}
+@media(max-width:760px){.nav-links li:not(.cta-li){display:none}.nav-links{gap:14px}header.nav{padding:10px 18px}.brand .mark{width:96px}}
+/* --- treść --- */
+main{padding-bottom:10px}
+h1,h2{font-family:var(--serif);color:var(--green);font-weight:600;line-height:1.15}
+h1{font-size:2.2rem;margin:.5em 0 .2em}
+h2{font-size:1.55rem;margin:1.5em 0 .3em}
+.crumbs{font-size:.85rem;color:var(--muted);margin:26px 0 0}
+.crumbs a{color:var(--muted)}
 .meta{font-size:.9rem;color:var(--muted);margin:.2em 0 1.4em;border-bottom:1px solid var(--line-gold);padding-bottom:1em}
-.hero-img{width:100%;max-height:380px;object-fit:cover;border-radius:14px;margin:1em 0}
+.hero-img{width:100%;max-height:400px;object-fit:cover;border-radius:16px;margin:1em 0}
 article p{margin:0 0 1.1em}
-.cta{margin:2.4em 0;padding:1.6em;background:var(--bg-card);border:1px solid var(--line-gold);border-radius:14px;text-align:center}
-.btn{display:inline-block;background:var(--green);color:#fff;padding:13px 26px;border-radius:999px;font-weight:400;letter-spacing:.02em}
+.lead{font-size:1.08rem;color:var(--muted);margin:.3em 0 2.2em}
+.card{display:block;background:var(--bg-card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:0 0 22px;transition:box-shadow .25s,transform .25s}
+.card:hover{box-shadow:0 12px 34px rgba(31,94,48,.12);transform:translateY(-2px);text-decoration:none}
+.card img{width:100%;height:200px;object-fit:cover;display:block}
+.card .body{padding:18px 22px}
+.card h2{margin:.1em 0 .3em;font-size:1.35rem}
+.card p{margin:0;color:var(--muted);font-size:.96rem}
+.card .date{font-size:.78rem;color:var(--gold);letter-spacing:.05em;margin-top:.6em}
+.cta{margin:2.6em 0 1em;padding:1.8em;background:var(--bg-card);border:1px solid var(--line-gold);border-radius:16px;text-align:center}
+.cta-h{margin:.1em 0 .6em;font-family:var(--serif);font-size:1.45rem;color:var(--green)}
+.cta-p{margin:0 0 1.3em;color:var(--muted)}
+.bk-widget{max-width:320px;margin:0 auto}
+.btn{display:inline-block;background:var(--green);color:#fff;padding:14px 30px;border-radius:999px;font-weight:500;letter-spacing:.01em}
 .btn:hover{background:var(--green-mid);text-decoration:none}
-.lead{font-size:1.05rem;color:var(--muted);margin:.3em 0 2em}
-.card{display:block;background:var(--bg-card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 20px;transition:box-shadow .2s}
-.card:hover{box-shadow:0 8px 28px rgba(31,94,48,.10);text-decoration:none}
-.card img{width:100%;height:180px;object-fit:cover}
-.card .body{padding:16px 20px}
-.card h2{margin:.1em 0 .3em;font-size:1.3rem}
-.card p{margin:0;color:var(--muted);font-size:.95rem}
-.card .date{font-size:.8rem;color:var(--gold);margin-top:.5em}
-footer.site{border-top:1px solid var(--line);margin-top:48px;padding:26px 0;color:var(--muted);font-size:.85rem}
-.empty{padding:60px 0;text-align:center;color:var(--muted)}
+.empty{padding:64px 0;text-align:center;color:var(--muted)}
+footer.site{border-top:1px solid var(--line);margin-top:40px;padding:28px 0;color:var(--muted);font-size:.85rem;text-align:center}
+/* --- override widgetu Booksy (jak na stronie głównej) --- */
+.booksy-widget-button{background-image:none!important;background-color:var(--green)!important;width:100%!important;height:auto!important;min-height:52px!important;padding:14px 30px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:999px!important;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s!important}
+.booksy-widget-button::after{content:"Rezerwuj wizytę";color:#fff;font-family:var(--sans);font-weight:500;font-size:1rem;letter-spacing:.01em}
+.booksy-widget-button:hover{background-color:var(--green-mid)!important;transform:translateY(-2px)!important;box-shadow:0 14px 32px rgba(31,94,48,.24)!important}
+.booksy-business-link{width:auto!important;margin:10px auto 0!important;opacity:.55}
+.booksy-widget-overlay{z-index:2147483646!important}
+.booksy-widget-dialog{position:fixed!important;top:50%!important;left:50%!important;margin:0!important;transform:translate(-50%,-50%)!important;max-width:96vw!important;max-height:92vh!important;overflow:auto!important}
+html:has(.booksy-widget-overlay),body:has(.booksy-widget-overlay){overflow:hidden!important}
 `;
+
+function header() {
+  return `<header class="nav">
+<a href="/" class="brand"><img class="mark" src="/logo.svg" alt="Zelika Brows & More" width="118" height="66"><span class="tag">Brows &amp; More</span></a>
+<nav><ul class="nav-links">
+<li><a href="/#about">Studio</a></li>
+<li><a href="/#services">Usługi</a></li>
+<li><a href="/#gallery">Galeria</a></li>
+<li><a href="/porady" class="current">Porady</a></li>
+<li><a href="/quiz.html">Quiz</a></li>
+<li><a href="/#contact">Kontakt</a></li>
+<li class="cta-li"><a href="${BOOKSY}" class="nav-cta" data-booksy target="_blank" rel="noopener noreferrer">Umów wizytę</a></li>
+</ul></nav>
+</header>`;
+}
+
+// Blok CTA z realnym widgetem Booksy (rysuje zielony przycisk „Rezerwuj wizytę”,
+// a link „Umów wizytę" w nagłówku [data-booksy] deleguje do niego przez booksy-fix.js).
+function ctaBlock() {
+  return `<div class="cta">
+<p class="cta-h">Masz pytanie o swój zabieg?</p>
+<p class="cta-p">Umów niezobowiązującą konsultację — dobierzemy metodę idealną dla Ciebie.</p>
+<div class="bk-widget" id="bk-widget"><noscript><a class="btn" href="${BOOKSY}" target="_blank" rel="noopener noreferrer">Rezerwuj na Booksy</a></noscript></div>
+<script src="/booksy-fix.js" defer></script>
+<script src="${BOOKSY_WIDGET}"></script>
+</div>`;
+}
 
 function layout({ title, description, canonical, ogImage, jsonld, body, noindex }) {
   return `<!doctype html><html lang="pl"><head>
@@ -136,21 +189,10 @@ ${noindex ? '<meta name="robots" content="noindex">' : ""}
 <style>${CSS}</style>
 ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>` : ""}
 </head><body>
-<header class="site"><div class="wrap">
-<a class="logo" href="/">Zelika <span>PMU</span></a>
-<a class="navlink" href="/">← Strona główna</a>
-</div></header>
+${header()}
 <main class="wrap">${body}</main>
 <footer class="site"><div class="wrap">© Zelika Brows &amp; More — Anna Zelinska, PMU · Wieluń · <a href="/">zelika.pl</a></div></footer>
 </body></html>`;
-}
-
-function ctaBlock() {
-  return `<div class="cta">
-<p style="margin:.2em 0 1em;font-family:var(--serif);font-size:1.3rem;color:var(--green)">Masz pytanie o swój zabieg?</p>
-<p style="margin:.2em 0 1.2em;color:var(--muted)">Umów niezobowiązującą konsultację — dobierzemy metodę idealną dla Ciebie.</p>
-<a class="btn" href="${BOOKSY}?utm_source=blog&utm_medium=cta" rel="nofollow">Umów wizytę</a>
-</div>`;
 }
 
 function htmlResponse(html, status = 200, sMaxAge = 300) {
@@ -163,9 +205,12 @@ function htmlResponse(html, status = 200, sMaxAge = 300) {
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Content-Security-Policy":
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-        "img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-        "font-src https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; " +
-        "form-action 'self' https://booksy.com; upgrade-insecure-requests",
+        "img-src 'self' data: https://booksy.com; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://booksy.com; " +
+        "font-src https://fonts.gstatic.com; " +
+        "script-src 'self' https://booksy.com; frame-src https://booksy.com; " +
+        "connect-src 'self' https://booksy.com; form-action 'self' https://booksy.com; " +
+        "upgrade-insecure-requests",
     },
   });
 }
