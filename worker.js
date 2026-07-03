@@ -172,6 +172,7 @@ function layout({ title, description, canonical, ogImage, jsonld, body, noindex 
   return `<!doctype html><html lang="pl"><head>
 <meta charset="utf-8">
 <script src="/consent.js"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18246998055"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
@@ -206,12 +207,12 @@ function htmlResponse(html, status = 200, sMaxAge = 300) {
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Content-Security-Policy":
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-        "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net; " +
+        "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://booksy.com; " +
         "font-src https://fonts.gstatic.com; " +
-        "script-src 'self' https://booksy.com https://www.googletagmanager.com; " +
+        "script-src 'self' https://booksy.com https://www.googletagmanager.com https://www.googleadservices.com; " +
         "frame-src https://booksy.com https://td.doubleclick.net; " +
-        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com; " +
+        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com; " +
         "form-action 'self' https://booksy.com; upgrade-insecure-requests",
     },
   });

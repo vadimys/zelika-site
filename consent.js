@@ -29,12 +29,9 @@
   if (choice === "granted") gtag("consent", "update", GRANT);
   gtag("js", new Date());
   gtag("config", ID);
-
-  // Załaduj gtag.js (dozwolone w CSP: script-src googletagmanager.com).
-  var g = document.createElement("script");
-  g.async = true;
-  g.src = "https://www.googletagmanager.com/gtag/js?id=" + ID;
-  document.head.appendChild(g);
+  // Uwaga: samo gtag.js ładujemy STATYCZNYM tagiem w <head> (zaraz po tym pliku),
+  // żeby detektor Google widział go w źródle strony. Ten plik (synchroniczny)
+  // ustawia zgodę „denied" ZANIM async gtag.js się wykona.
 
   // Styl banera (style-src 'unsafe-inline' pokrywa wstrzyknięty <style>).
   var css =
