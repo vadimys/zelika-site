@@ -149,7 +149,7 @@ function header() {
 <li><a href="/#services">Usługi</a></li>
 <li><a href="/#gallery">Galeria</a></li>
 <li><a href="/porady" class="current">Porady</a></li>
-<li><a href="/quiz.html">Quiz</a></li>
+<li><a href="/quiz">Quiz</a></li>
 <li><a href="/#contact">Kontakt</a></li>
 <li class="cta-li"><a href="${BOOKSY}" class="nav-cta" data-booksy target="_blank" rel="noopener noreferrer">Umów wizytę</a></li>
 </ul></nav>
