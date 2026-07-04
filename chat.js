@@ -30,6 +30,17 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
     h = h.replace(/(https?:\/\/[^\s<]+)/g, function (u) {
+      // Лінк на Booksy → кнопка, що відкриває вбудований оверлей (як на сайті),
+      // а не перехід на booksy.com. data-booksy перехоплює booksy-fix.js;
+      // якщо віджет не намалювався — спрацює звичайний href (фолбек).
+      if (/booksy\.com/i.test(u)) {
+        return (
+          '<a href="' + u + '" data-booksy target="_blank" rel="noopener noreferrer" ' +
+          'style="display:inline-block;margin:6px 0;background:#1f5e30;color:#fff;' +
+          'padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:500">' +
+          "📅 Rezerwuj wizytę</a>"
+        );
+      }
       return '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + u + "</a>";
     });
     return h.replace(/\n/g, "<br>");
