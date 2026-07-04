@@ -29,10 +29,11 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+    // легкий Markdown: **жирний**, *курсив*
+    h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    h = h.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+    // посилання: Booksy → кнопка вбудованого оверлея (як на сайті); інші → звичайне
     h = h.replace(/(https?:\/\/[^\s<]+)/g, function (u) {
-      // Лінк на Booksy → кнопка, що відкриває вбудований оверлей (як на сайті),
-      // а не перехід на booksy.com. data-booksy перехоплює booksy-fix.js;
-      // якщо віджет не намалювався — спрацює звичайний href (фолбек).
       if (/booksy\.com/i.test(u)) {
         return (
           '<a href="' + u + '" data-booksy target="_blank" rel="noopener noreferrer" ' +
@@ -43,7 +44,18 @@
       }
       return '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + u + "</a>";
     });
-    return h.replace(/\n/g, "<br>");
+    // списки: «- » / «• » → 🔹 маркер; «1. » → жирний номер
+    var out = [];
+    var lineList = h.split("\n");
+    for (var i = 0; i < lineList.length; i++) {
+      var ln = lineList[i];
+      var mb = ln.match(/^\s*[-*•]\s+(.*)$/);
+      var mn = ln.match(/^\s*(\d+)\.\s+(.*)$/);
+      if (mb) out.push("🔹 " + mb[1]);
+      else if (mn) out.push("<b>" + mn[1] + ".</b> " + mn[2]);
+      else out.push(ln);
+    }
+    return out.join("<br>");
   }
 
   function addBubble(role, text) {
