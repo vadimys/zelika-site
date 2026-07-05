@@ -353,6 +353,20 @@ async function renderSitemap() {
   });
 }
 
+// CSP tylko dla strony głównej (czat + Turnstile). Względem _headers: script-src
+// ma 'unsafe-inline' zamiast hasha (Turnstile wstrzykuje inline-skrypt z losowym
+// tokenem) oraz challenges.cloudflare.com w script-src/frame-src/connect-src.
+const HOMEPAGE_CSP =
+  "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
+  "form-action 'self' https://booksy.com; " +
+  "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://booksy.com; " +
+  "font-src https://fonts.gstatic.com; " +
+  "script-src 'self' 'unsafe-inline' https://booksy.com https://www.googletagmanager.com https://www.googleadservices.com https://challenges.cloudflare.com; " +
+  "frame-src https://booksy.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
+  "connect-src 'self' https://zelika-chat.vadimzelinshy.workers.dev https://hooks.zelika.pl https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
+  "upgrade-insecure-requests";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -361,6 +375,17 @@ export default {
     if (path === "/porady") return renderIndex();
     if (path.startsWith("/porady/")) return renderPost(decodeURIComponent(path.slice("/porady/".length)));
     if (path === "/sitemap.xml") return renderSitemap();
+
+    // Strona główna: czat z widgetem Turnstile, który wstrzykuje inline-skrypt
+    // (z losowym tokenem → hash niestabilny, nonce niemożliwy na statyce). Dlatego
+    // TYLKO dla "/" luzujemy script-src do 'unsafe-inline'. Reszta stron (_headers)
+    // zostaje ścisła. Ryzyko znikome: strona statyczna, brak wstrzykiwania HTML.
+    if (path === "/" || path === "/index.html") {
+      const res = await env.ASSETS.fetch(request);
+      const h = new Headers(res.headers);
+      h.set("Content-Security-Policy", HOMEPAGE_CSP);
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+    }
 
     // wszystko inne → statyka
     return env.ASSETS.fetch(request);
