@@ -383,7 +383,19 @@ export default {
     if (path === "/" || path === "/index.html") {
       const res = await env.ASSETS.fetch(request);
       const h = new Headers(res.headers);
+      // Worker-generated response → _headers może się nie zastosować, więc pełny
+      // zestaw nagłówków bezpieczeństwa ustawiamy tu jawnie (jak w SSR).
       h.set("Content-Security-Policy", HOMEPAGE_CSP);
+      h.set("X-Content-Type-Options", "nosniff");
+      h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+      h.set("X-Frame-Options", "DENY");
+      h.set(
+        "Permissions-Policy",
+        "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()"
+      );
+      h.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+      h.set("Cross-Origin-Opener-Policy", "same-origin");
+      h.set("Cross-Origin-Resource-Policy", "same-origin");
       return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
     }
 
