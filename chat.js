@@ -3,6 +3,7 @@
   "use strict";
 
   var WORKER_URL = "https://zelika-chat.vadimzelinshy.workers.dev";
+  var TS_SITEKEY = "0x4AAAAAADv9w-YaItvnyOZE"; // Turnstile (publiczny) — anty-bot czatu
   var GREETING =
     "Cześć! \uD83D\uDC4B Jestem wirtualną konsultantką Studia Zelika. Chętnie pomogę dobrać zabieg, opowiem o metodach makijażu permanentnego, cenach albo umawianiu wizyty. O co chciałabyś zapytać?";
 
@@ -20,6 +21,86 @@
 
   function scrollDown() {
     bodyEl.scrollTop = bodyEl.scrollHeight;
+  }
+
+  // ── Turnstile (anty-bot) ─────────────────────────────────────────────────
+  // Ładujemy skrypt LENIWIE (dopiero przy otwarciu czatu — nie obciążamy zwykłych
+  // odwiedzin). Widget w trybie execute+interaction-only: wyzwanie tylko przy
+  // wysyłce, zwykle niewidoczne. Token świeży na KAŻDĄ wiadomość (single-use).
+  var tsWidgetId = null;
+  var tsResolve = null;
+
+  function initTurnstile() {
+    var el = document.getElementById("zchat-turnstile");
+    if (tsWidgetId !== null || !window.turnstile || !TS_SITEKEY || !el) return;
+    try {
+      tsWidgetId = window.turnstile.render(el, {
+        sitekey: TS_SITEKEY,
+        execution: "execute",
+        appearance: "interaction-only",
+        callback: function (tok) {
+          if (tsResolve) tsResolve(tok);
+        },
+        "error-callback": function () {
+          if (tsResolve) tsResolve("");
+        },
+        "expired-callback": function () {
+          if (tsResolve) tsResolve("");
+        },
+      });
+    } catch (e) {
+      tsWidgetId = null;
+    }
+  }
+
+  function loadTurnstile() {
+    if (window.turnstile) {
+      initTurnstile();
+      return;
+    }
+    if (!document.getElementById("zchat-ts-script")) {
+      var s = document.createElement("script");
+      s.id = "zchat-ts-script";
+      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      s.async = true;
+      s.defer = true;
+      document.head.appendChild(s);
+    }
+    var tries = 0;
+    var iv = setInterval(function () {
+      if (window.turnstile) {
+        clearInterval(iv);
+        initTurnstile();
+      } else if (++tries > 50) {
+        clearInterval(iv); // ~10 s — poddajemy się (token = "", worker pominie jeśli ochrona off)
+      }
+    }, 200);
+  }
+
+  // Zwraca Promise z tokenem (albo "" gdy Turnstile niedostępny — worker pominie,
+  // jeśli TURNSTILE_SECRET nieustawiony; a gdy ustawiony — odrzuci pusty token).
+  function getToken() {
+    return new Promise(function (resolve) {
+      if (tsWidgetId === null || !window.turnstile) {
+        resolve("");
+        return;
+      }
+      var to = null;
+      tsResolve = function (tok) {
+        if (to) clearTimeout(to);
+        tsResolve = null;
+        resolve(tok || "");
+      };
+      to = setTimeout(function () {
+        if (tsResolve) tsResolve("");
+      }, 9000);
+      try {
+        window.turnstile.reset(tsWidgetId);
+        window.turnstile.execute(tsWidgetId);
+      } catch (e) {
+        if (tsResolve) tsResolve("");
+      }
+    });
   }
 
   function render(text) {
@@ -84,6 +165,7 @@
     panel.classList.add("open");
     panel.setAttribute("aria-hidden", "false");
     fab.classList.add("hidden");
+    loadTurnstile(); // leniwe: skrypt + widget dopiero teraz
     if (!greeted) {
       addBubble("bot", GREETING);
       greeted = true;
@@ -106,11 +188,14 @@
     messages.push({ role: "user", content: text });
     showTyping();
 
-    fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: messages }),
-    })
+    getToken()
+      .then(function (token) {
+        return fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: messages, turnstileToken: token }),
+        });
+      })
       .then(function (res) {
         return res.json().then(function (data) {
           return { ok: res.ok, data: data };
