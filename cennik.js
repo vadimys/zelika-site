@@ -1,34 +1,18 @@
 /* Studio Zelika — synchronizacja cennika z botem (/api/content → finance).
-   Ceny, czasy i nazwy pochodzą z bota (jedno źródło). Które usługi są PUBLICZNE
-   i w jakiej kategorii — kurujemy tutaj (żeby wewnętrzne pozycje finansowe nie
-   trafiły na stronę). Statyczny cennik w index.html zostaje jako fallback. */
+   Ceny, nazwy, czasy I KATEGORIE pochodzą z bota (jedno źródło). Mistrzyni zarządza
+   wszystkim w bocie: 💰 Finanse → ⚙️ Cennik. Usługa BEZ kategorii = wewnętrzna,
+   nie trafia na stronę. Statyczny cennik w index.html zostaje jako fallback. */
 (function () {
   "use strict";
   var API = "https://hooks.zelika.pl/api/content";
 
-  // Kategorie (kolejność + które usługi publiczne). Nazwy dopasowujemy do bota
-  // (porównanie znormalizowane: bez wielkości liter i nadmiarowych spacji).
-  var CATS = [
-    {
-      title: "Makijaż permanentny brwi",
-      feature: true,
-      note: "Trwały, naturalny efekt dopasowany do kształtu twarzy. Cena zawiera konsultację, brow mapping i dobór koloru.",
-      names: [
-        "Makijaż permanentny brwi",
-        "Dopigmentowanie do 6 tygodni po pierwszym zabiegu",
-      ],
-    },
-    {
-      title: "Brwi",
-      names: ["Regulacja brwi", "Regulacja + farba brwi", "Laminacja brwi (regulacja+farba)"],
-    },
-    { title: "Rzęsy", names: ["Laminacja rzęs (farba)", "Koloryzacja rzęs"] },
-    { title: "Pozostałe", names: ["Depilacja wąsika"] },
-  ];
+  // Prezentacja (stała): kolejność sekcji, która jest wyróżniona i jej opis.
+  // Nowe kategorie z bota, których tu nie ma, dokleją się na końcu automatycznie.
+  var ORDER = ["Makijaż permanentny brwi", "Brwi", "Rzęsy", "Usta", "Pozostałe"];
+  var FEATURE = "Makijaż permanentny brwi";
+  var NOTE =
+    "Trwały, naturalny efekt dopasowany do kształtu twarzy. Cena zawiera konsultację, brow mapping i dobór koloru.";
 
-  function norm(s) {
-    return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
-  }
   function esc(s) {
     return String(s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -55,35 +39,40 @@
       var container = document.querySelector(".svc-cats");
       if (!container) return;
 
-      // lookup znormalizowanych nazw → pozycja (name/price/duration z bota)
-      var byName = {};
+      // grupujemy usługi po kategorii (którą nadaje bot)
+      var byCat = {};
       c.cennik_items.forEach(function (it) {
-        if (it && it.name) byName[norm(it.name)] = it;
+        if (!it || !it.category) return;
+        (byCat[it.category] = byCat[it.category] || []).push(it);
       });
+      // kolejność: najpierw ORDER, potem nowe kategorie z bota (na końcu)
+      var cats = ORDER.filter(function (t) { return byCat[t]; }).concat(
+        Object.keys(byCat).filter(function (t) { return ORDER.indexOf(t) < 0; })
+      );
+      if (!cats.length) return;
 
+      // Klasa "in" OBOWIĄZKOWO: .reveal startuje z opacity:0, a IntersectionObserver
+      // nadaje "in" tylko elementom obecnym na starcie — dynamiczne bez "in" byłyby
+      // niewidoczne, więc od razu dajemy stan końcowy (widoczny).
       var html = "";
       var num = 0;
-      CATS.forEach(function (cat) {
-        var rows = cat.names.map(function (n) { return byName[norm(n)]; }).filter(Boolean);
-        if (!rows.length) return; // brak danych z bota → pomijamy kategorię
-        // Клас "in" ОБОВʼЯЗКОВО: .reveal стартує opacity:0, а IntersectionObserver
-        // додає "in" лише елементам, що були в DOM на старті. Динамічно вставлені
-        // без "in" лишились би невидимі → одразу ставимо кінцевий (видимий) стан.
-        if (cat.feature) {
+      cats.forEach(function (title) {
+        var rows = byCat[title] || [];
+        if (!rows.length) return;
+        if (title === FEATURE) {
           html +=
             '<div class="cat feature reveal in d1"><div class="cat-h"><span class="cat-num">&#10022;</span><h3>' +
-            esc(cat.title) + "</h3></div>" +
-            (cat.note ? '<p class="feat-note">' + esc(cat.note) + "</p>" : "") +
+            esc(title) + "</h3></div><p class=\"feat-note\">" + esc(NOTE) + "</p>" +
             rows.map(row).join("") + "</div>";
         } else {
           num += 1;
           var nn = (num < 10 ? "0" : "") + num;
           html +=
             '<div class="cat reveal in d1"><div class="cat-h"><span class="cat-num">' + nn +
-            "</span><h3>" + esc(cat.title) + "</h3></div>" + rows.map(row).join("") + "</div>";
+            "</span><h3>" + esc(title) + "</h3></div>" + rows.map(row).join("") + "</div>";
         }
       });
-      if (html) container.innerHTML = html; // podmiana statycznego cennika świeżymi cenami
+      if (html) container.innerHTML = html; // podmiana statycznego cennika świeżymi danymi
     })
     .catch(function () {}); // fetch padł → zostaje statyczny cennik (fallback)
 })();
