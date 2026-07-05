@@ -206,6 +206,12 @@ function htmlResponse(html, status = 200, sMaxAge = 300) {
       "Cache-Control": `public, max-age=60, s-maxage=${sMaxAge}`,
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "Permissions-Policy":
+        "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()",
+      "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Resource-Policy": "same-origin",
       "Content-Security-Policy":
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
         "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
