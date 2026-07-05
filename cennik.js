@@ -66,9 +66,12 @@
       CATS.forEach(function (cat) {
         var rows = cat.names.map(function (n) { return byName[norm(n)]; }).filter(Boolean);
         if (!rows.length) return; // brak danych z bota → pomijamy kategorię
+        // Клас "in" ОБОВʼЯЗКОВО: .reveal стартує opacity:0, а IntersectionObserver
+        // додає "in" лише елементам, що були в DOM на старті. Динамічно вставлені
+        // без "in" лишились би невидимі → одразу ставимо кінцевий (видимий) стан.
         if (cat.feature) {
           html +=
-            '<div class="cat feature reveal d1"><div class="cat-h"><span class="cat-num">&#10022;</span><h3>' +
+            '<div class="cat feature reveal in d1"><div class="cat-h"><span class="cat-num">&#10022;</span><h3>' +
             esc(cat.title) + "</h3></div>" +
             (cat.note ? '<p class="feat-note">' + esc(cat.note) + "</p>" : "") +
             rows.map(row).join("") + "</div>";
@@ -76,7 +79,7 @@
           num += 1;
           var nn = (num < 10 ? "0" : "") + num;
           html +=
-            '<div class="cat reveal d1"><div class="cat-h"><span class="cat-num">' + nn +
+            '<div class="cat reveal in d1"><div class="cat-h"><span class="cat-num">' + nn +
             "</span><h3>" + esc(cat.title) + "</h3></div>" + rows.map(row).join("") + "</div>";
         }
       });
