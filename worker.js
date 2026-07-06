@@ -331,6 +331,8 @@ async function renderSitemap() {
   const posts = (await fetchPosts()) || [];
   const urls = [
     { loc: SITE + "/", pri: "1.0", freq: "monthly" },
+    { loc: SITE + "/uk/", pri: "0.9", freq: "monthly" },
+    { loc: SITE + "/en/", pri: "0.9", freq: "monthly" },
     { loc: SITE + "/porady", pri: "0.8", freq: "weekly" },
     ...posts.map((p) => ({
       loc: SITE + "/porady/" + p.slug,
@@ -367,6 +369,201 @@ const HOMEPAGE_CSP =
   "connect-src 'self' https://zelika-chat.vadimzelinshy.workers.dev https://hooks.zelika.pl https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
   "upgrade-insecure-requests";
 
+// ── i18n: PL (база) + UA + EN. Один PL-шаблон (index.html з data-i18n) →
+// HTMLRewriter віддає локалізовану версію за URL (/uk/, /en/). SEO: hreflang+canonical.
+const META = {
+  pl: {
+    title: "Zelika | PMU — Makijaż Permanentny, Brwi, Rzęsy | Wieluń",
+    desc: "Zelika Brows & More — studio makijażu permanentnego, architektury i stylizacji brwi oraz rzęs w Wieluniu. Anna Zelinska — Ekspert PMU. Rezerwacja online na Booksy.",
+    ogtitle: "Zelika — Makijaż Permanentny, Brwi, Rzęsy | Wieluń",
+    ogdesc: "Studio makijażu permanentnego oraz stylizacji brwi i rzęs w Wieluniu. Anna Zelinska — Ekspert PMU. Rezerwacja online.",
+    locale: "pl_PL",
+  },
+  uk: {
+    title: "Zelika | PMU — Перманентний макіяж, брови, вії | Велюнь",
+    desc: "Zelika Brows & More — студія перманентного макіяжу, архітектури та стилізації брів і вій у Велюні. Анна Зелінська — експертка PMU. Онлайн-запис у Booksy.",
+    ogtitle: "Zelika — Перманентний макіяж, брови, вії | Велюнь",
+    ogdesc: "Студія перманентного макіяжу та стилізації брів і вій у Велюні. Анна Зелінська — експертка PMU. Онлайн-запис.",
+    locale: "uk_UA",
+  },
+  en: {
+    title: "Zelika | PMU — Permanent Makeup, Brows, Lashes | Wieluń",
+    desc: "Zelika Brows & More — permanent makeup, brow architecture and brow & lash styling studio in Wieluń, Poland. Anna Zelinska — PMU expert. Online booking via Booksy.",
+    ogtitle: "Zelika — Permanent Makeup, Brows, Lashes | Wieluń",
+    ogdesc: "Permanent makeup and brow & lash styling studio in Wieluń, Poland. Anna Zelinska — PMU expert. Online booking.",
+    locale: "en_US",
+  },
+};
+const I18N = {
+  uk: {
+    "nav.studio": "Студія", "nav.uslugi": "Послуги", "nav.galeria": "Галерея",
+    "nav.porady": "Поради", "nav.quiz": "Квіз", "nav.kontakt": "Контакти",
+    "nav.book": "Записатися",
+    "hero.kicker": "Експертка PMU · Архітектура брів",
+    "hero.h1": "Перманентний макіяж,<br>брови &amp; <em>вії</em>",
+    "hero.lead": "Затишна студія краси у Велюні. Природний, стійкий ефект, безпечні сертифіковані пігменти та індивідуальний підхід до кожного погляду.",
+    "hero.book": "Онлайн-запис", "hero.services": "Послуги й ціни",
+    "val1.h": "Експертка PMU й архітектура брів",
+    "val1.p": "Спеціалізація на перманентному макіяжі та моделюванні форми брів методом brow mapping.",
+    "val2.h": "Природний ефект",
+    "val2.p": "Делікатний, стійкий перманентний макіяж, що підкреслює ваші природні риси.",
+    "val3.h": "Безпечні пігменти",
+    "val3.p": "Лише сертифіковані продукти, одноразові матеріали та суворі правила гігієни.",
+    "val4.h": "Професіоналізм",
+    "val4.p": "Анна Зелінська — понад 5 років досвіду. Ваше обличчя в руках експертки.",
+    "about.eyebrow": "Про студію",
+    "about.h2": "Ваше обличчя в руках <em>експертки</em>",
+    "about.p1": "Студію Zelika у Велюні веде <strong>Анна Зелінська — експертка PMU й архітектури брів</strong> із понад 5-річним досвідом. Ми спеціалізуємося на перманентному макіяжі та професійному догляді й стилізації брів і вій.",
+    "about.p2": "Працюємо індивідуально: аналіз рис обличчя, brow mapping і добір ідеальної форми та відтінку. Використовуємо сертифіковані продукти, одноразові матеріали й суворі правила гігієни. Робимо ставку на природний, доглянутий ефект, що підкреслює ваші риси.",
+    "about.p3": "Зручне розташування, гнучкий графік і нагадування про візит. Запишіться на консультацію — разом створимо ідеальну форму брів і виразний погляд.",
+    "quiz.eyebrow": "Квіз",
+    "quiz.h2": "Не знаєте, яку процедуру <em>обрати?</em>",
+    "quiz.p": "Дайте відповідь на 5 коротких запитань, і я підкажу, яке рішення найкраще пасує вашим бровам — менш ніж за хвилину.",
+    "quiz.btn": "Пройти квіз",
+    "svc.eyebrow": "Ціни", "svc.h2": "Послуги й <em>ціни</em>",
+    "svc.p": "Актуальні ціни та вільні терміни також знайдете в системі бронювання Booksy.",
+    "svc.note": "Також пропонуємо brow mapping, макіяж на подію та фарбування вій — повний перелік послуг і ціни в <a href='https://booksy.com/pl-pl/dl/show-business/334211' target='_blank' rel='noopener noreferrer'>системі Booksy</a>.",
+    "gal.eyebrow": "Портфоліо", "gal.h2": "Галерея <em>робіт</em>",
+    "gal.p": "Роботи, сертифікати й закулісся нашої студії. Повна галерея — в Instagram.",
+    "gal.btn": "&#9670; Більше в Instagram",
+    "rev.eyebrow": "Відгуки", "rev.h2": "Що кажуть <em>наші клієнтки</em>",
+    "faq.eyebrow": "Часті питання", "faq.h2": "Найчастіші <em>питання</em>",
+    "faq.p": "Маєте інше питання? Напишіть нашій консультантці в чат або зателефонуйте.",
+    "faq.q1": "Чи болить перманентний макіяж?",
+    "faq.a1": "Ми застосовуємо знеболення, тож процедура комфортна — більшість клієнток відчуває лише легке поколювання. Ваші відчуття завжди обговорюємо на початку візиту.",
+    "faq.q2": "Скільки тримається перманентний макіяж брів?",
+    "faq.a2": "Ефект тримається зазвичай від 1 до 3 років, залежно від типу шкіри та догляду. Після першої процедури радимо докорекцію (до 6 тижнів), що закріплює колір і форму.",
+    "faq.q3": "Як відбувається загоєння?",
+    "faq.a3": "Повне загоєння триває близько 4–6 тижнів. У перші дні колір яскравіший і поступово пом'якшується. Ви отримаєте від нас докладні рекомендації з догляду.",
+    "faq.q4": "Яку методику брів обрати — волоскову, пудрову чи змішану?",
+    "faq.a4": "Це залежить від вашої шкіри й бажаного ефекту. Найкраще пройти наш короткий квіз або записатися на необов'язкову консультацію — разом підберемо ідеальне рішення.",
+    "faq.q5": "Чи є протипоказання до процедури?",
+    "faq.a5": "Так — зокрема вагітність, годування грудьми, деякі захворювання шкіри чи певні ліки. Кожен випадок обговорюємо індивідуально на консультації з Анною.",
+    "faq.q6": "Як записатися на візит?",
+    "faq.a6": "Найзручніше через онлайн-запис у Booksy або за телефоном: 571 932 161. Можна також почати з необов'язкової консультації.",
+    "por.eyebrow": "Поради", "por.h2": "Поради та <em>натхнення</em>",
+    "por.p": "Короткі поради й цікавинки про перманентний макіяж, брови та вії — просто від Анни.",
+    "con.eyebrow": "Контакти", "con.h2": "Запрошуємо до <em>студії</em>",
+    "con.p": "Маєте питання? Зателефонуйте або напишіть в Instagram. Найзручніше зарезервувати термін онлайн.",
+    "con.addr": "Адреса", "con.phone": "Телефон", "con.hours": "Години роботи",
+    "bk.eye": "Онлайн-запис", "bk.h3": "Записатися на <em>візит</em>",
+    "bk.p": "Оберіть послугу та зручний час у системі Booksy — підтвердження й нагадування отримаєте автоматично.",
+    "bk.call": "Зателефонувати: 571 932 161",
+  },
+  en: {
+    "nav.studio": "Studio", "nav.uslugi": "Services", "nav.galeria": "Gallery",
+    "nav.porady": "Tips", "nav.quiz": "Quiz", "nav.kontakt": "Contact",
+    "nav.book": "Book now",
+    "hero.kicker": "PMU Expert · Brow Architecture",
+    "hero.h1": "Permanent makeup,<br>brows &amp; <em>lashes</em>",
+    "hero.lead": "A cosy beauty studio in Wieluń. A natural, long-lasting result, safe certified pigments and an individual approach to every look.",
+    "hero.book": "Book online", "hero.services": "Services & prices",
+    "val1.h": "PMU Expert & Brow Architecture",
+    "val1.p": "Specialising in permanent makeup and brow shape design using brow mapping.",
+    "val2.h": "Natural result",
+    "val2.p": "Subtle, long-lasting permanent makeup that enhances your natural features.",
+    "val3.h": "Safe pigments",
+    "val3.p": "Only certified products, single-use materials and rigorous hygiene.",
+    "val4.h": "A true professional",
+    "val4.p": "Anna Zelinska — over 5 years of experience. Your face in expert hands.",
+    "about.eyebrow": "About the studio",
+    "about.h2": "Your face in <em>expert hands</em>",
+    "about.p1": "Studio Zelika in Wieluń is run by <strong>Anna Zelinska — PMU &amp; Brow Architecture expert</strong> with over 5 years of experience. We specialise in permanent makeup and professional brow &amp; lash care and styling.",
+    "about.p2": "We work individually: facial feature analysis, brow mapping and selecting the perfect shape and shade. We use certified products, single-use materials and strict hygiene. We focus on a natural, well-groomed result that enhances your features.",
+    "about.p3": "Convenient location, flexible hours and appointment reminders. Book a consultation — together we'll create the perfect brow shape and an expressive look.",
+    "quiz.eyebrow": "Quiz",
+    "quiz.h2": "Not sure which treatment <em>to choose?</em>",
+    "quiz.p": "Answer 5 short questions and I'll suggest which option best suits your brows — in under a minute.",
+    "quiz.btn": "Take the quiz",
+    "svc.eyebrow": "Pricing", "svc.h2": "Services &amp; <em>prices</em>",
+    "svc.p": "Current prices and available slots are also in the Booksy booking system.",
+    "svc.note": "We also offer brow mapping, occasion makeup and lash tinting — the full list of services and prices is in the <a href='https://booksy.com/pl-pl/dl/show-business/334211' target='_blank' rel='noopener noreferrer'>Booksy system</a>.",
+    "gal.eyebrow": "Portfolio", "gal.h2": "Our <em>work</em>",
+    "gal.p": "Our work, certificates and behind-the-scenes. Full gallery on Instagram.",
+    "gal.btn": "&#9670; See more on Instagram",
+    "rev.eyebrow": "Reviews", "rev.h2": "What <em>our clients</em> say",
+    "faq.eyebrow": "FAQ", "faq.h2": "Frequently asked <em>questions</em>",
+    "faq.p": "Have another question? Message our consultant in the chat or call us.",
+    "faq.q1": "Does permanent makeup hurt?",
+    "faq.a1": "We use anaesthetic, so the treatment is comfortable — most clients feel only slight tingling. We always discuss your comfort at the start of the visit.",
+    "faq.q2": "How long does permanent brow makeup last?",
+    "faq.a2": "The result usually lasts 1 to 3 years, depending on skin type and care. After the first session we recommend a touch-up (within 6 weeks) to set the colour and shape.",
+    "faq.q3": "What is the healing process like?",
+    "faq.a3": "Full healing takes about 4–6 weeks. In the first days the colour is more intense and gradually softens. You'll get detailed aftercare guidance from us.",
+    "faq.q4": "Which brow method to choose — hair strokes, powder or combined?",
+    "faq.a4": "It depends on your skin and the desired result. Best to take our short quiz or book a no-obligation consultation — together we'll pick the perfect option.",
+    "faq.q5": "Are there any contraindications?",
+    "faq.a5": "Yes — including pregnancy, breastfeeding, certain skin conditions or some medications. We discuss each case individually during a consultation with Anna.",
+    "faq.q6": "How do I book an appointment?",
+    "faq.a6": "The easiest way is online booking via Booksy or by phone: 571 932 161. You can also start with a no-obligation consultation.",
+    "por.eyebrow": "Tips", "por.h2": "Tips &amp; <em>inspiration</em>",
+    "por.p": "Short tips and facts about permanent makeup, brows and lashes — straight from Anna.",
+    "con.eyebrow": "Contact", "con.h2": "Visit <em>our studio</em>",
+    "con.p": "Have questions? Call or message us on Instagram. The easiest way to book is online.",
+    "con.addr": "Address", "con.phone": "Phone", "con.hours": "Opening hours",
+    "bk.eye": "Online booking", "bk.h3": "Book an <em>appointment</em>",
+    "bk.p": "Choose a service and a convenient time in Booksy — you'll get confirmation and a reminder automatically.",
+    "bk.call": "Call: 571 932 161",
+  },
+};
+const HREFLANG =
+  `<link rel="alternate" hreflang="pl" href="${SITE}/">` +
+  `<link rel="alternate" hreflang="uk" href="${SITE}/uk/">` +
+  `<link rel="alternate" hreflang="en" href="${SITE}/en/">` +
+  `<link rel="alternate" hreflang="x-default" href="${SITE}/">`;
+function switcher(lang) {
+  const item = (code, href, label) =>
+    `<a href="${href}" style="padding:2px 6px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
+  return (
+    `<li class="lang-switch" style="display:flex;gap:2px;align-items:center;font-size:.72rem;font-weight:600;letter-spacing:.02em">` +
+    item("pl", "/", "PL") + item("uk", "/uk/", "UA") + item("en", "/en/", "EN") + `</li>`
+  );
+}
+const SEC_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "DENY",
+  "Permissions-Policy":
+    "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()",
+  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+};
+async function localizedHome(request, env, lang) {
+  const u = new URL(request.url);
+  u.pathname = "/";
+  u.search = "";
+  const res = await env.ASSETS.fetch(new Request(u.toString(), { headers: request.headers }));
+  const meta = META[lang] || META.pl;
+  const dict = I18N[lang] || {};
+  const canon = SITE + (lang === "pl" ? "/" : "/" + lang + "/");
+  let rw = new HTMLRewriter()
+    .on("html", { element(e) { e.setAttribute("lang", lang); } })
+    .on("title", { element(e) { e.setInnerContent(meta.title); } })
+    .on('meta[name="description"]', { element(e) { e.setAttribute("content", meta.desc); } })
+    .on('meta[property="og:title"]', { element(e) { e.setAttribute("content", meta.ogtitle); } })
+    .on('meta[property="og:description"]', { element(e) { e.setAttribute("content", meta.ogdesc); } })
+    .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", meta.locale); } })
+    .on("head", { element(e) { e.append(HREFLANG, { html: true }); e.append(`<link rel="canonical" href="${canon}">`, { html: true }); } })
+    .on(".nav-links", { element(e) { e.append(switcher(lang), { html: true }); } })
+    // відносні шляхи (img/…, cennik.js) → абсолютні, бо /uk/ інакше дасть /uk/img/… (404)
+    .on("img[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/|data:)/.test(s)) e.setAttribute("src", "/" + s); } })
+    .on("script[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/)/.test(s)) e.setAttribute("src", "/" + s); } });
+  if (lang !== "pl") {
+    rw = rw.on("[data-i18n]", {
+      element(e) {
+        const v = dict[e.getAttribute("data-i18n")];
+        if (v != null) e.setInnerContent(v, { html: true });
+      },
+    });
+  }
+  const out = rw.transform(res);
+  const h = new Headers(out.headers);
+  h.set("Content-Security-Policy", HOMEPAGE_CSP);
+  for (const k in SEC_HEADERS) h.set(k, SEC_HEADERS[k]);
+  return new Response(out.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -380,24 +577,11 @@ export default {
     // (z losowym tokenem → hash niestabilny, nonce niemożliwy na statyce). Dlatego
     // TYLKO dla "/" luzujemy script-src do 'unsafe-inline'. Reszta stron (_headers)
     // zostaje ścisła. Ryzyko znikome: strona statyczna, brak wstrzykiwania HTML.
-    if (path === "/" || path === "/index.html") {
-      const res = await env.ASSETS.fetch(request);
-      const h = new Headers(res.headers);
-      // Worker-generated response → _headers może się nie zastosować, więc pełny
-      // zestaw nagłówków bezpieczeństwa ustawiamy tu jawnie (jak w SSR).
-      h.set("Content-Security-Policy", HOMEPAGE_CSP);
-      h.set("X-Content-Type-Options", "nosniff");
-      h.set("Referrer-Policy", "strict-origin-when-cross-origin");
-      h.set("X-Frame-Options", "DENY");
-      h.set(
-        "Permissions-Policy",
-        "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()"
-      );
-      h.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-      h.set("Cross-Origin-Opener-Policy", "same-origin");
-      h.set("Cross-Origin-Resource-Policy", "same-origin");
-      return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
-    }
+    // Головна: локалізована (PL/UA/EN) через HTMLRewriter (data-i18n) + HOMEPAGE_CSP
+    // ('unsafe-inline' для Turnstile) + hreflang + перемикач мов.
+    if (path === "/" || path === "/index.html") return localizedHome(request, env, "pl");
+    if (path === "/uk" || path === "/uk/index.html") return localizedHome(request, env, "uk");
+    if (path === "/en" || path === "/en/index.html") return localizedHome(request, env, "en");
 
     // wszystko inne → statyka
     return env.ASSETS.fetch(request);
