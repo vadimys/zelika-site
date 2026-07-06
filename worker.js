@@ -605,6 +605,7 @@ async function localizedPage(request, env, lang, pageKey) {
     .on('meta[property="og:title"]', { element(e) { if (meta.ogtitle) e.setAttribute("content", meta.ogtitle); } })
     .on('meta[property="og:description"]', { element(e) { if (meta.ogdesc) e.setAttribute("content", meta.ogdesc); } })
     .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", locale); } })
+    .on('link[rel="canonical"]', { element(e) { e.remove(); } }) // приберемо статичний, щоб не було дубля
     .on("head", { element(e) { e.append(hreflangFor(page.pl), { html: true }); e.append(`<link rel="canonical" href="${canon}">`, { html: true }); } })
     .on("header", { element(e) { e.append(switcher(lang, page.pl), { html: true }); } })
     .on("img[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/|data:)/.test(s)) e.setAttribute("src", "/" + s); } })
