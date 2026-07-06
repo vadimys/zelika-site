@@ -1,3 +1,4 @@
+(function(){
 const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
   const LEAD_URL = "https://hooks.zelika.pl/webhook/lead";
 
@@ -197,12 +198,17 @@ const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
     return resultHTML();
   }
 
+  const modal = document.getElementById('quiz-modal');
   function show(scroll){
     card.classList.add('fade');
     setTimeout(()=>{
       card.innerHTML = buildHTML();
       card.classList.remove('fade');
-      if(scroll){ document.querySelector('.quiz').scrollIntoView({behavior:'smooth',block:'start'}); }
+      if(scroll){
+        const sc = document.querySelector('.quiz');
+        if(sc) sc.scrollIntoView({behavior:'smooth',block:'start'});
+        else if(modal) modal.scrollTop = 0;
+      }
     },180);
   }
 
@@ -239,4 +245,18 @@ const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
     else if(act==='restart'){ answers=[]; step=0; show(true); }
   });
 
+  // Модалка на головній: відкрити з [data-quiz-open], закрити X/бекдроп/Esc.
+  function openQuiz(){ answers=[]; step=0; card.innerHTML=buildHTML(); if(modal){ modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); modal.scrollTop=0; document.body.style.overflow='hidden'; } }
+  function closeQuiz(){ if(modal){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; } }
+  if(modal){
+    document.addEventListener('click',(e)=>{
+      const op=e.target.closest('[data-quiz-open]'); if(op){ e.preventDefault(); openQuiz(); return; }
+      const cl=e.target.closest('[data-quiz-close]'); if(cl){ e.preventDefault(); closeQuiz(); return; }
+      if(e.target===modal) closeQuiz();
+    });
+    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeQuiz(); });
+  }
+
   card.innerHTML = buildHTML();
+
+})();

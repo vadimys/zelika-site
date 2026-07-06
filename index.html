@@ -403,12 +403,12 @@
     </a>
     <nav>
       <ul class="nav-links">
-        <li data-i18n="nav.studio"><a href="#about">Studio</a></li>
-        <li data-i18n="nav.uslugi"><a href="#services">Usługi</a></li>
-        <li data-i18n="nav.galeria"><a href="#gallery">Galeria</a></li>
-        <li data-i18n="nav.porady"><a href="/porady">Porady</a></li>
-        <li data-i18n="nav.quiz"><a href="/quiz">Quiz</a></li>
-        <li data-i18n="nav.kontakt"><a href="#contact">Kontakt</a></li>
+        <li><a href="#about" data-i18n="nav.studio">Studio</a></li>
+        <li><a href="#services" data-i18n="nav.uslugi">Usługi</a></li>
+        <li><a href="#gallery" data-i18n="nav.galeria">Galeria</a></li>
+        <li><a href="/porady" data-i18n="nav.porady">Porady</a></li>
+        <li><a href="/quiz" data-i18n="nav.quiz" data-quiz-open>Quiz</a></li>
+        <li><a href="#contact" data-i18n="nav.kontakt">Kontakt</a></li>
         <li><a data-i18n="nav.book" href="https://booksy.com/pl-pl/dl/show-business/334211" target="_blank" rel="noopener noreferrer" class="nav-cta" data-booksy>Umów wizytę</a></li>
       </ul>
     </nav>
@@ -490,7 +490,7 @@
       <span data-i18n="quiz.eyebrow" class="eyebrow reveal">Quiz</span>
       <h2 data-i18n="quiz.h2" class="reveal d1">Nie wiesz, który zabieg <em>wybrać?</em></h2>
       <p data-i18n="quiz.p" class="reveal d2">Odpowiedz na 5 krótkich pytań, a podpowiem Ci, które rozwiązanie najlepiej pasuje do Twoich brwi &mdash; w mniej niż minutę.</p>
-      <a data-i18n="quiz.btn" href="/quiz" class="btn btn-gold reveal d3">Rozwiąż quiz</a>
+      <a data-i18n="quiz.btn" href="/quiz" class="btn btn-gold reveal d3" data-quiz-open>Rozwiąż quiz</a>
     </div>
   </section>
 
@@ -688,5 +688,59 @@
   <script src="chat.js"></script>
 <script src="rating.js" defer></script>
 <script src="cennik.js" defer></script>
+
+<style>
+.qm{position:fixed;inset:0;z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;background:rgba(20,25,18,.55);backdrop-filter:blur(4px)}
+.qm.open{display:flex}
+.qm-dialog{position:relative;width:100%;max-width:660px;margin:auto}
+.qm-x{position:absolute;top:12px;right:16px;z-index:3;background:none;border:none;color:var(--muted);font-size:2rem;line-height:1;cursor:pointer;transition:.2s}
+.qm-x:hover{color:var(--green)}
+#quiz-modal .card{width:100%;background:var(--bg-card);border:1px solid var(--line);border-radius:8px;padding:52px 50px;box-shadow:0 24px 60px -30px rgba(31,94,48,.28);transition:opacity .18s,transform .18s}
+#quiz-modal .card.fade{opacity:0;transform:translateY(8px)}
+#quiz-modal .eyebrow{font-family:var(--sans);font-weight:400;font-size:.7rem;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);display:inline-block;margin-bottom:18px}
+#quiz-modal .eyebrow::before{content:"";display:inline-block;width:30px;height:1px;background:var(--gold);vertical-align:middle;margin-right:12px;opacity:.8}
+#quiz-modal h1{font-family:var(--serif);font-weight:500;line-height:1.1;color:var(--green);font-size:clamp(1.8rem,4.5vw,2.6rem);margin:0}
+#quiz-modal h2{font-family:var(--serif);font-weight:500;line-height:1.16;color:var(--green);font-size:clamp(1.5rem,3.6vw,2rem);margin:0}
+#quiz-modal em{font-style:italic;color:var(--gold)}
+#quiz-modal .lead{color:var(--muted);font-size:1.02rem;margin-top:18px;max-width:46ch}
+#quiz-modal .intro-note{font-size:.78rem;letter-spacing:.06em;color:var(--muted);margin-top:26px}
+#quiz-modal .intro-note b{color:var(--green);font-weight:500}
+#quiz-modal .btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--sans);font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;font-weight:400;padding:15px 34px;border-radius:2px;cursor:pointer;border:1px solid var(--green);background:var(--green);color:#fff;transition:.4s;text-decoration:none}
+#quiz-modal .btn:hover{background:var(--green-mid);border-color:var(--green-mid)}
+#quiz-modal .btn-ghost{background:transparent;color:var(--green)}
+#quiz-modal .btn-ghost:hover{background:var(--green);color:#fff}
+#quiz-modal .btn-row{margin-top:34px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+#quiz-modal .progress-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#quiz-modal .progress-label{font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+#quiz-modal .progress-back{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:.3s;padding:2px 0}
+#quiz-modal .progress-back:hover{color:var(--green)}
+#quiz-modal .bar{height:2px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:34px}
+#quiz-modal .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-soft));border-radius:2px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+#quiz-modal .q-title{margin-bottom:30px}
+#quiz-modal .answers{display:flex;flex-direction:column;gap:13px}
+#quiz-modal .answer{position:relative;text-align:left;background:#fff;border:1px solid var(--line);border-radius:3px;padding:18px 22px;font-family:var(--sans);font-size:1.01rem;font-weight:300;color:var(--ink);cursor:pointer;transition:.28s;line-height:1.45}
+#quiz-modal .answer:hover{border-color:var(--gold);transform:translateX(4px)}
+#quiz-modal .answer.sel{border-color:var(--green);background:rgba(31,94,48,.05)}
+#quiz-modal .answer::after{content:"\203A";position:absolute;right:20px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:1.4rem;opacity:0;transition:.28s}
+#quiz-modal .answer:hover::after{opacity:1;right:16px}
+#quiz-modal .res-service{font-size:.74rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+#quiz-modal .res-price{display:inline-block;margin-top:18px;font-family:var(--serif);font-size:1.5rem;font-weight:600;color:var(--green);border:1px solid var(--line-gold);border-radius:2px;padding:6px 18px;background:rgba(169,134,60,.07)}
+#quiz-modal .res-desc{color:var(--ink);font-size:1.05rem;margin-top:24px;line-height:1.75}
+#quiz-modal .consult{margin-top:26px;padding:20px 22px;background:rgba(31,94,48,.05);border-left:3px solid var(--green);border-radius:2px}
+#quiz-modal .consult b{color:var(--green);font-weight:500}
+#quiz-modal .consult p{color:var(--ink);font-size:.96rem;margin:0}
+#quiz-modal .res-links{margin-top:30px;padding-top:24px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:22px;align-items:center}
+#quiz-modal .res-links a,#quiz-modal .res-links button{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:.3s;display:inline-flex;align-items:center;gap:7px}
+#quiz-modal .res-links a:hover,#quiz-modal .res-links button:hover{color:var(--green)}
+@media(max-width:620px){#quiz-modal .card{padding:36px 22px}.qm{padding:14px 8px}}
+</style>
+<div class="qm" id="quiz-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="qm-dialog">
+    <button class="qm-x" data-quiz-close aria-label="Zamknij">&times;</button>
+    <div class="card" id="card"></div>
+  </div>
+</div>
+<script src="quiz.js" defer></script>
+
 </body>
 </html>
