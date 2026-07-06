@@ -38,11 +38,11 @@
   .wrap{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;}
 
   /* top bar */
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;}
+  .topbar{display:flex;align-items:center;gap:20px;padding:14px 40px;position:sticky;top:0;z-index:50;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
   .brand{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1;text-decoration:none;}
   .brand .mark{display:block;width:120px;color:var(--green);overflow:visible;}
   .brand .tag{font-family:var(--serif);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600;font-size:.5rem;margin-top:1px;margin-left:3px;}
-  .back{color:var(--ink);text-decoration:none;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;font-weight:400;transition:.3s;white-space:nowrap;}
+  .back{color:var(--ink);text-decoration:none;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;font-weight:400;transition:.3s;white-space:nowrap;margin-left:auto;}
   .back:hover{color:var(--green);}
 
   /* quiz layout */
