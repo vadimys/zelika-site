@@ -449,6 +449,7 @@ const I18N = {
     "bk.eye": "Онлайн-запис", "bk.h3": "Записатися на <em>візит</em>",
     "bk.p": "Оберіть послугу та зручний час у системі Booksy — підтвердження й нагадування отримаєте автоматично.",
     "bk.call": "Зателефонувати: 571 932 161",
+    "quiz.back": "← На головну",
   },
   en: {
     "nav.studio": "Studio", "nav.uslugi": "Services", "nav.galeria": "Gallery",
@@ -504,20 +505,73 @@ const I18N = {
     "bk.eye": "Online booking", "bk.h3": "Book an <em>appointment</em>",
     "bk.p": "Choose a service and a convenient time in Booksy — you'll get confirmation and a reminder automatically.",
     "bk.call": "Call: 571 932 161",
+    "quiz.back": "← Home",
   },
 };
-const HREFLANG =
-  `<link rel="alternate" hreflang="pl" href="${SITE}/">` +
-  `<link rel="alternate" hreflang="uk" href="${SITE}/uk/">` +
-  `<link rel="alternate" hreflang="en" href="${SITE}/en/">` +
-  `<link rel="alternate" hreflang="x-default" href="${SITE}/">`;
-function switcher(lang) {
-  const item = (code, href, label) =>
-    `<a href="${href}" style="padding:2px 6px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
+const META_QUIZ = {
+  pl: {
+    title: "Quiz: Jaki zabieg brwi dla Ciebie? · Zelika",
+    desc: "Odpowiedz na 5 pytań i odkryj, który zabieg brwi — makijaż permanentny, laminacja czy stylizacja — najlepiej pasuje do Ciebie. Studio Zelika, Wieluń.",
+    ogtitle: "Quiz: Jaki zabieg brwi dla Ciebie? · Zelika",
+    ogdesc: "Odpowiedz na 5 pytań i odkryj idealny zabieg dla swoich brwi.",
+  },
+  uk: {
+    title: "Квіз: яка процедура для брів вам підходить? · Zelika",
+    desc: "Дайте відповідь на 5 запитань і дізнайтеся, яка процедура для брів — перманентний макіяж, ламінування чи стилізація — підходить саме вам. Студія Zelika, Велюнь.",
+    ogtitle: "Квіз: яка процедура для брів вам підходить? · Zelika",
+    ogdesc: "Дайте відповідь на 5 запитань і знайдіть ідеальну процедуру для брів.",
+  },
+  en: {
+    title: "Quiz: Which brow treatment is right for you? · Zelika",
+    desc: "Answer 5 questions and discover which brow treatment — permanent makeup, lamination or styling — suits you best. Zelika Studio, Wieluń.",
+    ogtitle: "Quiz: Which brow treatment is right for you? · Zelika",
+    ogdesc: "Answer 5 questions and find the ideal treatment for your brows.",
+  },
+};
+const META_PRIV = {
+  pl: {
+    title: "Polityka prywatności · Zelika PMU — Wieluń",
+    desc: "Polityka prywatności i informacja o plikach cookie Studia Zelika (Brows & More), Wieluń — jak przetwarzamy dane osobowe zgodnie z RODO.",
+  },
+  uk: {
+    title: "Політика конфіденційності · Zelika PMU — Велюнь",
+    desc: "Політика конфіденційності та інформація про файли cookie студії Zelika (Brows & More), Велюнь — як ми обробляємо персональні дані згідно з GDPR (RODO).",
+  },
+  en: {
+    title: "Privacy Policy · Zelika PMU — Wieluń",
+    desc: "Privacy policy and cookie information for Zelika (Brows & More) studio, Wieluń — how we process personal data under GDPR (RODO).",
+  },
+};
+function href(lang, pl) {
+  return lang === "pl" ? pl : "/" + lang + (pl === "/" ? "/" : pl);
+}
+function hreflangFor(pl) {
   return (
-    `<li class="lang-switch" style="display:flex;gap:2px;align-items:center;font-size:.72rem;font-weight:600;letter-spacing:.02em">` +
-    item("pl", "/", "PL") + item("uk", "/uk/", "UA") + item("en", "/en/", "EN") + `</li>`
+    ["pl", "uk", "en"]
+      .map((l) => `<link rel="alternate" hreflang="${l}" href="${SITE}${href(l, pl)}">`)
+      .join("") + `<link rel="alternate" hreflang="x-default" href="${SITE}${pl}">`
   );
+}
+function switcher(lang, pl) {
+  const item = (code, label) =>
+    `<a href="${href(code, pl)}" style="padding:2px 6px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
+  // <span> (не <li>) — інжектимо в <header> будь-якої сторінки (навбар або topbar quizу)
+  return (
+    `<span class="lang-switch" style="display:inline-flex;gap:2px;align-items:center;font-size:.72rem;font-weight:600;letter-spacing:.02em;margin-left:auto;padding-left:10px">` +
+    item("pl", "PL") + item("uk", "UA") + item("en", "EN") + `</span>`
+  );
+}
+// внутрішні лінки на локалізованій сторінці → тримати мовний префікс.
+// Анкери (#), зовнішні, mailto/tel і БЛОГ (/porady, PL-only) — не чіпаємо.
+function localizeHref(s, lang) {
+  if (lang === "pl" || !s) return null;
+  // блог і політика конфіденційності — PL-only (не префіксуємо)
+  if (s.startsWith("#") || /^(https?:|mailto:|tel:)/.test(s)) return null;
+  if (s.startsWith("/porady") || s === "/prywatnosc") return null;
+  if (s === "/") return "/" + lang + "/";
+  if (s.startsWith("/#")) return "/" + lang + "/" + s.slice(1);
+  if (s === "/quiz") return "/" + lang + s;
+  return null;
 }
 const SEC_HEADERS = {
   "X-Content-Type-Options": "nosniff",
@@ -529,26 +583,33 @@ const SEC_HEADERS = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
 };
-async function localizedHome(request, env, lang) {
+const PAGES = {
+  home: { asset: "/", pl: "/", meta: META },
+  quiz: { asset: "/quiz", pl: "/quiz", meta: META_QUIZ },
+  priv: { asset: "/prywatnosc", pl: "/prywatnosc", meta: META_PRIV },
+};
+async function localizedPage(request, env, lang, pageKey) {
+  const page = PAGES[pageKey];
   const u = new URL(request.url);
-  u.pathname = "/";
+  u.pathname = page.asset;
   u.search = "";
   const res = await env.ASSETS.fetch(new Request(u.toString(), { headers: request.headers }));
-  const meta = META[lang] || META.pl;
+  const meta = page.meta[lang] || page.meta.pl;
   const dict = I18N[lang] || {};
-  const canon = SITE + (lang === "pl" ? "/" : "/" + lang + "/");
+  const canon = SITE + href(lang, page.pl);
+  const locale = (META[lang] || META.pl).locale;
   let rw = new HTMLRewriter()
     .on("html", { element(e) { e.setAttribute("lang", lang); } })
     .on("title", { element(e) { e.setInnerContent(meta.title); } })
     .on('meta[name="description"]', { element(e) { e.setAttribute("content", meta.desc); } })
-    .on('meta[property="og:title"]', { element(e) { e.setAttribute("content", meta.ogtitle); } })
-    .on('meta[property="og:description"]', { element(e) { e.setAttribute("content", meta.ogdesc); } })
-    .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", meta.locale); } })
-    .on("head", { element(e) { e.append(HREFLANG, { html: true }); e.append(`<link rel="canonical" href="${canon}">`, { html: true }); } })
-    .on(".nav-links", { element(e) { e.append(switcher(lang), { html: true }); } })
-    // відносні шляхи (img/…, cennik.js) → абсолютні, бо /uk/ інакше дасть /uk/img/… (404)
+    .on('meta[property="og:title"]', { element(e) { if (meta.ogtitle) e.setAttribute("content", meta.ogtitle); } })
+    .on('meta[property="og:description"]', { element(e) { if (meta.ogdesc) e.setAttribute("content", meta.ogdesc); } })
+    .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", locale); } })
+    .on("head", { element(e) { e.append(hreflangFor(page.pl), { html: true }); e.append(`<link rel="canonical" href="${canon}">`, { html: true }); } })
+    .on("header", { element(e) { e.append(switcher(lang, page.pl), { html: true }); } })
     .on("img[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/|data:)/.test(s)) e.setAttribute("src", "/" + s); } })
-    .on("script[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/)/.test(s)) e.setAttribute("src", "/" + s); } });
+    .on("script[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/)/.test(s)) e.setAttribute("src", "/" + s); } })
+    .on("a[href]", { element(e) { const t = localizeHref(e.getAttribute("href"), lang); if (t) e.setAttribute("href", t); } });
   if (lang !== "pl") {
     rw = rw.on("[data-i18n]", {
       element(e) {
@@ -577,11 +638,15 @@ export default {
     // (z losowym tokenem → hash niestabilny, nonce niemożliwy na statyce). Dlatego
     // TYLKO dla "/" luzujemy script-src do 'unsafe-inline'. Reszta stron (_headers)
     // zostaje ścisła. Ryzyko znikome: strona statyczna, brak wstrzykiwania HTML.
-    // Головна: локалізована (PL/UA/EN) через HTMLRewriter (data-i18n) + HOMEPAGE_CSP
-    // ('unsafe-inline' для Turnstile) + hreflang + перемикач мов.
-    if (path === "/" || path === "/index.html") return localizedHome(request, env, "pl");
-    if (path === "/uk" || path === "/uk/index.html") return localizedHome(request, env, "uk");
-    if (path === "/en" || path === "/en/index.html") return localizedHome(request, env, "en");
+    // Локалізовані сторінки (PL/UA/EN) через HTMLRewriter (data-i18n) + hreflang +
+    // перемикач мов. PL теж через воркер — щоб мати hreflang і перемикач.
+    if (path === "/" || path === "/index.html") return localizedPage(request, env, "pl", "home");
+    if (path === "/uk" || path === "/uk/index.html") return localizedPage(request, env, "uk", "home");
+    if (path === "/en" || path === "/en/index.html") return localizedPage(request, env, "en", "home");
+    if (path === "/quiz") return localizedPage(request, env, "pl", "quiz");
+    if (path === "/uk/quiz") return localizedPage(request, env, "uk", "quiz");
+    if (path === "/en/quiz") return localizedPage(request, env, "en", "quiz");
+    // /prywatnosc — юридичний документ, лишається PL (авторитетна версія)
 
     // wszystko inne → statyka
     return env.ASSETS.fetch(request);
