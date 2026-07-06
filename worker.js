@@ -153,6 +153,7 @@ function header() {
 <li><a href="/#contact">Kontakt</a></li>
 <li class="cta-li"><a href="${BOOKSY}" class="nav-cta" data-booksy target="_blank" rel="noopener noreferrer">Umów wizytę</a></li>
 </ul></nav>
+${switcher("pl", "/")}
 </header>`;
 }
 
@@ -607,7 +608,7 @@ async function localizedPage(request, env, lang, pageKey) {
     .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", locale); } })
     .on('link[rel="canonical"]', { element(e) { e.remove(); } }) // приберемо статичний, щоб не було дубля
     .on("head", { element(e) { e.append(hreflangFor(page.pl), { html: true }); e.append(`<link rel="canonical" href="${canon}">`, { html: true }); } })
-    .on("header", { element(e) { e.append(switcher(lang, page.pl), { html: true }); } })
+    .on("header.nav", { element(e) { e.append(switcher(lang, page.pl), { html: true }); } })
     .on("img[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/|data:)/.test(s)) e.setAttribute("src", "/" + s); } })
     .on("script[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/)/.test(s)) e.setAttribute("src", "/" + s); } })
     .on("a[href]", { element(e) { const t = localizeHref(e.getAttribute("href"), lang); if (t) e.setAttribute("href", t); } });
