@@ -61,7 +61,7 @@
   .nav-cta{border:1px solid var(--green);color:var(--green)!important;padding:10px 22px!important;border-radius:2px;transition:.4s;}
   .nav-cta:hover{background:var(--green);color:#fff!important;}
   .nav-cta::after{display:none;}
-  .burger{display:none;background:none;border:none;color:var(--green);font-size:1.5rem;cursor:pointer;}
+  .burger{display:none;background:none;border:none;color:var(--green);font-size:1.7rem;line-height:1;cursor:pointer;padding:6px 8px;}
   .hero{min-height:100vh;display:flex;align-items:center;position:relative;padding:128px 0 80px;}
   .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;}
   .hero .brand-hero{margin-bottom:22px;}
@@ -204,9 +204,16 @@
     .svc-cats{grid-template-columns:1fr;}
     .gallery-grid{grid-template-columns:1fr 1fr;}
     .book-card{position:static;}
-    .nav-links{display:none;}
+    /* мобільне меню: бургер розкриває випадну панель із розділами */
+    .nav-links{position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;gap:0;background:rgba(244,241,231,.98);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);box-shadow:0 20px 44px -20px rgba(31,94,48,.35);padding:4px 22px 16px;display:none;}
+    .nav-links.open{display:flex;}
+    .nav-links li{display:block;}
+    .nav-links a:not(.nav-cta){display:block;padding:15px 2px;font-size:.95rem;letter-spacing:.14em;border-top:1px solid var(--line);}
+    .nav-links a:not(.nav-cta)::after{display:none;}
+    .nav-links .nav-cta{display:block;text-align:center;margin-top:14px;padding:15px 20px!important;}
     .burger{display:block;}
     header.nav,header.nav.scrolled{padding:14px 22px;}
+    footer .fline a,.rev-cta a{display:inline-block;padding:5px 0;}
   }
   @media(max-width:560px){
     .container{padding:0 22px;}
@@ -229,11 +236,11 @@
   .quiz-band .btn-gold:hover{box-shadow:0 14px 32px rgba(0,0,0,.22);}
 
   /* AI konsultantka — widget czatu */
-  .zchat-fab{position:fixed;right:24px;bottom:24px;width:60px;height:60px;border-radius:50%;background:var(--green);color:#fbf7ec;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -8px rgba(31,94,48,.55);z-index:90;transition:transform .3s,box-shadow .3s,opacity .25s;}
+  .zchat-fab{position:fixed;right:24px;bottom:24px;width:60px;height:60px;border-radius:50%;background:var(--green);color:#fbf7ec;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -8px rgba(31,94,48,.55);z-index:2147483400;transition:transform .3s,box-shadow .3s,opacity .25s;}
   .zchat-fab::after{content:"";position:absolute;inset:3px;border-radius:50%;border:1px solid var(--gold-soft);opacity:.5;pointer-events:none;}
   .zchat-fab:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 16px 36px -8px rgba(31,94,48,.65);}
   .zchat-fab.hidden{opacity:0;pointer-events:none;transform:scale(.8);}
-  .zchat-panel{padding:0;margin:0;position:fixed;right:24px;bottom:24px;width:380px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 48px);background:var(--bg-card);border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 70px -20px rgba(31,94,48,.45);z-index:95;display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(20px) scale(.98);pointer-events:none;transition:opacity .28s,transform .28s;}
+  .zchat-panel{padding:0;margin:0;position:fixed;right:24px;bottom:24px;width:380px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 48px);background:var(--bg-card);border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 70px -20px rgba(31,94,48,.45);z-index:2147483600;display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(20px) scale(.98);pointer-events:none;transition:opacity .28s,transform .28s;}
   .zchat-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
   .zchat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:var(--green);color:#fbf7ec;flex:none;}
   .zchat-title{font-family:var(--serif);font-size:1.25rem;font-weight:600;line-height:1.1;}
@@ -412,7 +419,7 @@
         <li><a data-i18n="nav.book" href="https://booksy.com/pl-pl/dl/show-business/334211" target="_blank" rel="noopener noreferrer" class="nav-cta" data-booksy>Umów wizytę</a></li>
       </ul>
     </nav>
-    <button class="burger" id="burger" type="button" aria-label="Otwórz kontakt">&#9776;</button>
+    <button class="burger" id="burger" type="button" aria-label="Menu" aria-expanded="false">&#9776;</button>
   </header>
 
   <section class="hero" id="top">
@@ -662,7 +669,13 @@
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.12});
   document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
   var b=document.getElementById('burger');
-  if(b){b.addEventListener('click',function(){var c=document.getElementById('contact');if(c)c.scrollIntoView({behavior:'smooth'});});}
+  var nl=document.querySelector('.nav-links');
+  if(b&&nl){
+    function setMenu(open){nl.classList.toggle('open',open);b.setAttribute('aria-expanded',open?'true':'false');b.innerHTML=open?'&times;':'&#9776;';}
+    b.addEventListener('click',function(e){e.stopPropagation();setMenu(!nl.classList.contains('open'));});
+    nl.addEventListener('click',function(e){if(e.target.closest('a'))setMenu(false);});
+    document.addEventListener('click',function(e){if(nl.classList.contains('open')&&!e.target.closest('header.nav'))setMenu(false);});
+  }
 })();
 </script>
   <!-- AI konsultantka -->

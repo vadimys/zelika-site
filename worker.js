@@ -555,7 +555,7 @@ function hreflangFor(pl) {
 }
 function switcher(lang, pl) {
   const item = (code, label) =>
-    `<a href="${href(code, pl)}" style="padding:2px 6px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
+    `<a href="${href(code, pl)}" style="padding:7px 8px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
   // <span> (не <li>) — інжектимо в <header> будь-якої сторінки (навбар або topbar quizу)
   return (
     `<span class="lang-switch" style="display:inline-flex;gap:2px;align-items:center;font-size:.72rem;font-weight:600;letter-spacing:.02em;padding-left:6px">` +
