@@ -141,22 +141,6 @@ footer.site{border-top:1px solid var(--line);margin-top:40px;padding:28px 0;colo
 html:has(.booksy-widget-overlay),body:has(.booksy-widget-overlay){overflow:hidden!important}
 `;
 
-function header() {
-  return `<header class="nav">
-<a href="/" class="brand"><img class="mark" src="/logo.svg" alt="Zelika Brows & More" width="118" height="66"><span class="tag">Brows &amp; More</span></a>
-<nav><ul class="nav-links">
-<li><a href="/#about">Studio</a></li>
-<li><a href="/#services">Usługi</a></li>
-<li><a href="/#gallery">Galeria</a></li>
-<li><a href="/porady" class="current">Porady</a></li>
-<li><a href="/quiz">Quiz</a></li>
-<li><a href="/#contact">Kontakt</a></li>
-<li class="cta-li"><a href="${BOOKSY}" class="nav-cta" data-booksy target="_blank" rel="noopener noreferrer">Umów wizytę</a></li>
-</ul></nav>
-${switcher("pl", "/")}
-</header>`;
-}
-
 // Blok CTA z realnym widgetem Booksy (rysuje zielony przycisk „Rezerwuj wizytę”,
 // a link „Umów wizytę" w nagłówku [data-booksy] deleguje do niego przez booksy-fix.js).
 function ctaBlock() {
@@ -190,12 +174,13 @@ ${noindex ? '<meta name="robots" content="noindex">' : ""}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<style>${CSS}</style>
+<style>${CSS}${SHELL_CSS}</style>
 ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>` : ""}
 </head><body>
-${header()}
+${headerHtml("pl", { current: "porady", pl: "/porady" })}
 <main class="wrap">${body}</main>
-<footer class="site"><div class="wrap">© Zelika Brows &amp; More — Anna Zelinska, PMU · Wieluń · <a href="/">zelika.pl</a> · <a href="/prywatnosc">Polityka prywatności</a> · <a href="#" data-cookies>Cookies</a></div></footer>
+${footerHtml("pl")}
+<script src="/nav.js" defer></script>
 </body></html>`;
 }
 
@@ -562,6 +547,81 @@ function switcher(lang, pl) {
     item("pl", "PL") + item("uk", "UA") + item("en", "EN") + `</span>`
   );
 }
+
+// ── УНІФІКОВАНИЙ КАРКАС: єдине джерело header/footer для ВСІХ сторінок ────────
+// Воркер видаляє власні <header>/<footer> сторінки й вставляє ці канонічні
+// (локалізовані) + SHELL_CSS + /nav.js. Головна = режим "home" (fixed, прозорий
+// →scrolled); решта = "inner" (sticky, непрозорий). Так бари завжди однакові.
+const NAV = [
+  { a: "#about", k: "nav.studio", pl: "Studio" },
+  { a: "#services", k: "nav.uslugi", pl: "Usługi" },
+  { a: "#gallery", k: "nav.galeria", pl: "Galeria" },
+  { p: "/porady", k: "nav.porady", pl: "Porady", cur: "porady" },
+  { p: "/quiz", k: "nav.quiz", pl: "Quiz", quiz: true, cur: "quiz" },
+  { a: "#contact", k: "nav.kontakt", pl: "Kontakt" },
+];
+function navLabel(lang, k, pl) {
+  return (I18N[lang] && I18N[lang][k]) || pl;
+}
+function navHref(lang, it, home) {
+  if (it.a) return home ? it.a : (lang === "pl" ? "/" : "/" + lang + "/") + it.a; // #about | /#about | /uk/#about
+  if (it.p === "/porady") return "/porady"; // блог PL-only
+  return lang === "pl" ? it.p : "/" + lang + it.p; // /quiz | /uk/quiz
+}
+function headerHtml(lang, { home = false, current = "", pl = "/" } = {}) {
+  const items = NAV.map((it) => {
+    const cls = current && it.cur === current ? ' class="current"' : "";
+    const q = it.quiz && home ? " data-quiz-open" : "";
+    return `<li><a href="${navHref(lang, it, home)}"${cls}${q}>${navLabel(lang, it.k, it.pl)}</a></li>`;
+  }).join("");
+  const cta = `<li class="cta-li"><a href="${BOOKSY}" class="nav-cta" data-booksy target="_blank" rel="noopener noreferrer">${navLabel(lang, "nav.book", "Umów wizytę")}</a></li>`;
+  return `<header class="nav${home ? " home" : ""}"${home ? ' id="nav"' : ""}>
+<a href="${home ? "#top" : href(lang, "/")}" class="brand" aria-label="Zelika — Home"><svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg><span class="tag">Brows &amp; More</span></a>
+<nav><ul class="nav-links">${items}${cta}</ul></nav>
+${switcher(lang, pl)}
+<button class="burger" id="burger" type="button" aria-label="Menu" aria-expanded="false">&#9776;</button>
+</header>`;
+}
+function footerHtml(lang) {
+  return `<footer class="site"><div class="container"><a href="${href(lang, "/")}" class="brand" aria-label="Zelika — Home"><svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg><span class="tag">Brows &amp; More</span></a><p class="fline">Anna Zelinska &middot; Makijaż permanentny &middot; Brwi &middot; Rzęsy <span class="fdot">|</span> Wieluń <span class="fdot">&middot;</span> &copy; 2026 <span class="fdot">&middot;</span> <a href="/prywatnosc">Polityka prywatności</a> <span class="fdot">&middot;</span> <a href="#" data-cookies>Cookies</a></p></div></footer>`;
+}
+const SHELL_CSS = `
+header.nav{position:sticky;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line,#e6e1d3);transition:.45s ease}
+header.nav.home{position:fixed;background:transparent;backdrop-filter:none;border-bottom:0;padding:16px 40px}
+header.nav.home.scrolled{background:rgba(244,241,231,.9);backdrop-filter:blur(14px);padding:9px 40px;border-bottom:1px solid var(--line,#e6e1d3)}
+header.nav .brand{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1;text-decoration:none}
+header.nav .brand .mark{display:block;color:var(--green,#1f5e30);overflow:visible;width:120px;height:auto}
+header.nav .brand .tag{font-family:var(--serif,'Cormorant Garamond',serif);letter-spacing:.34em;text-transform:uppercase;color:var(--gold,#a9863c);font-weight:600;font-size:.5rem;margin-top:1px;margin-left:3px}
+header.nav .nav-links{display:flex;gap:34px;list-style:none;align-items:center;margin:0;padding:0}
+header.nav .nav-links a{color:var(--ink,#2e2a22);text-decoration:none;font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;font-weight:400;position:relative;padding:4px 0;transition:.3s}
+header.nav .nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0;height:1px;background:var(--gold,#a9863c);transition:.35s}
+header.nav .nav-links a:hover{color:var(--green,#1f5e30)}
+header.nav .nav-links a:hover::after,header.nav .nav-links a.current::after{width:100%}
+header.nav .nav-links a.current{color:var(--green,#1f5e30)}
+header.nav .nav-cta{border:1px solid var(--green,#1f5e30);color:var(--green,#1f5e30)!important;padding:10px 22px!important;border-radius:2px;transition:.4s}
+header.nav .nav-cta:hover{background:var(--green,#1f5e30);color:#fff!important}
+header.nav .nav-cta::after{display:none!important}
+header.nav .lang-switch a{padding:7px 8px;border-radius:6px;text-decoration:none}
+header.nav .burger{display:none;background:none;border:none;color:var(--green,#1f5e30);font-size:1.7rem;line-height:1;cursor:pointer;padding:6px 8px}
+footer.site{padding:54px 0 40px;border-top:1px solid var(--line,#e6e1d3);text-align:center;margin-top:40px;background:transparent;color:var(--muted,#6e7365);font-size:.85rem}
+footer.site .container{max-width:1180px;margin:0 auto;padding:0 32px}
+footer.site .brand{align-items:center;display:inline-flex;flex-direction:column;margin-bottom:14px;text-decoration:none;line-height:1}
+footer.site .brand .mark{width:122px;height:auto;color:var(--green,#1f5e30);overflow:visible}
+footer.site .brand .tag{font-family:var(--serif,'Cormorant Garamond',serif);letter-spacing:.34em;text-transform:uppercase;color:var(--gold,#a9863c);font-weight:600;font-size:.5rem;margin-top:3px}
+footer.site .fline{color:var(--muted,#6e7365);font-size:.8rem;letter-spacing:.04em;margin-top:10px}
+footer.site .fdot{color:var(--gold,#a9863c);margin:0 9px}
+footer.site .fline a{color:var(--muted,#6e7365);text-decoration:none;border-bottom:1px solid var(--line-gold,#d8cba8);padding-bottom:1px;transition:.3s}
+footer.site .fline a:hover{color:var(--green,#1f5e30);border-color:var(--green,#1f5e30)}
+@media(max-width:920px){
+header.nav .nav-links{position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;gap:0;background:rgba(244,241,231,.98);backdrop-filter:blur(14px);border-bottom:1px solid var(--line,#e6e1d3);box-shadow:0 20px 44px -20px rgba(31,94,48,.35);padding:4px 22px 16px;display:none}
+header.nav .nav-links.open{display:flex}
+header.nav .nav-links li{display:block}
+header.nav .nav-links a:not(.nav-cta){display:block;padding:15px 2px;font-size:.95rem;letter-spacing:.14em;border-top:1px solid var(--line,#e6e1d3)}
+header.nav .nav-links a:not(.nav-cta)::after{display:none}
+header.nav .nav-links .nav-cta{display:block;text-align:center;margin-top:14px;padding:15px 20px!important}
+header.nav .burger{display:block}
+header.nav,header.nav.home,header.nav.home.scrolled{padding:14px 22px}
+}`;
 // внутрішні лінки на локалізованій сторінці → тримати мовний префікс.
 // Анкери (#), зовнішні, mailto/tel і БЛОГ (/porady, PL-only) — не чіпаємо.
 function localizeHref(s, lang) {
@@ -599,6 +659,8 @@ async function localizedPage(request, env, lang, pageKey) {
   const dict = I18N[lang] || {};
   const canon = SITE + href(lang, page.pl);
   const locale = (META[lang] || META.pl).locale;
+  const home = pageKey === "home";
+  const current = pageKey === "quiz" ? "quiz" : "";
   let rw = new HTMLRewriter()
     .on("html", { element(e) { e.setAttribute("lang", lang); } })
     .on("title", { element(e) { e.setInnerContent(meta.title); } })
@@ -607,8 +669,19 @@ async function localizedPage(request, env, lang, pageKey) {
     .on('meta[property="og:description"]', { element(e) { if (meta.ogdesc) e.setAttribute("content", meta.ogdesc); } })
     .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", locale); } })
     .on('link[rel="canonical"]', { element(e) { e.remove(); } }) // приберемо статичний, щоб не було дубля
-    .on("head", { element(e) { e.append(hreflangFor(page.pl), { html: true }); e.append(`<link rel="canonical" href="${canon}">`, { html: true }); } })
-    .on("header.nav", { element(e) { e.append(switcher(lang, page.pl), { html: true }); } })
+    .on("head", { element(e) {
+      e.append(hreflangFor(page.pl), { html: true });
+      e.append(`<link rel="canonical" href="${canon}">`, { html: true });
+      e.append(`<style>${SHELL_CSS}</style>`, { html: true }); // канон-каркас: авторитетний, останнім
+      e.append(`<script src="/nav.js" defer></script>`, { html: true });
+    } })
+    // Уніфікований каркас: прибираємо власні header/footer сторінки й вставляємо канонічні
+    .on("header", { element(e) { e.remove(); } })
+    .on("footer", { element(e) { e.remove(); } })
+    .on("body", { element(e) {
+      e.prepend(headerHtml(lang, { home, current, pl: page.pl }), { html: true });
+      e.append(footerHtml(lang), { html: true });
+    } })
     .on("img[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/|data:)/.test(s)) e.setAttribute("src", "/" + s); } })
     .on("script[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/)/.test(s)) e.setAttribute("src", "/" + s); } })
     .on("a[href]", { element(e) { const t = localizeHref(e.getAttribute("href"), lang); if (t) e.setAttribute("href", t); } });
@@ -648,7 +721,8 @@ export default {
     if (path === "/quiz") return localizedPage(request, env, "pl", "quiz");
     if (path === "/uk/quiz") return localizedPage(request, env, "uk", "quiz");
     if (path === "/en/quiz") return localizedPage(request, env, "en", "quiz");
-    // /prywatnosc — юридичний документ, лишається PL (авторитетна версія)
+    // /prywatnosc — юридичний документ, лишається PL, але через воркер (уніфікований каркас)
+    if (path === "/prywatnosc") return localizedPage(request, env, "pl", "priv");
 
     // wszystko inne → statyka
     return env.ASSETS.fetch(request);

@@ -5,6 +5,6 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/index.html", "/quiz", "/uk", "/en", "/uk/*", "/en/*"]
+    "run_worker_first": ["/", "/index.html", "/quiz", "/uk", "/en", "/uk/*", "/en/*", "/prywatnosc"]
   }
 }
