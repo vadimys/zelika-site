@@ -46,22 +46,7 @@
   h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.08;letter-spacing:.01em;color:var(--green);}
   .eyebrow{font-family:var(--sans);font-weight:400;font-size:.72rem;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);display:inline-block;}
   .eyebrow::before{content:"";display:inline-block;width:32px;height:1px;background:var(--gold);vertical-align:middle;margin-right:13px;opacity:.8;}
-  .brand{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1;text-decoration:none;}
-  .brand .mark{display:block;color:var(--green);overflow:visible;}
-  .brand .tag{font-family:var(--serif);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600;}
-  header.nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:16px 40px;transition:.45s ease;}
-  header.nav.scrolled{background:rgba(244,241,231,.9);backdrop-filter:blur(14px);padding:9px 40px;border-bottom:1px solid var(--line);}
-  .nav .brand .mark{width:120px;}
-  .nav .brand .tag{font-size:.5rem;margin-top:1px;margin-left:3px;}
-  .nav-links{display:flex;gap:34px;list-style:none;align-items:center;}
-  .nav-links a{color:var(--ink);text-decoration:none;font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;font-weight:400;position:relative;padding:4px 0;transition:.3s;}
-  .nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0;height:1px;background:var(--gold);transition:.35s;}
-  .nav-links a:hover{color:var(--green);}
-  .nav-links a:hover::after{width:100%;}
-  .nav-cta{border:1px solid var(--green);color:var(--green)!important;padding:10px 22px!important;border-radius:2px;transition:.4s;}
-  .nav-cta:hover{background:var(--green);color:#fff!important;}
-  .nav-cta::after{display:none;}
-  .burger{display:none;background:none;border:none;color:var(--green);font-size:1.7rem;line-height:1;cursor:pointer;padding:6px 8px;}
+  /* header/nav/brand/burger — уніфікований каркас у worker.js (SHELL_CSS) */
   .hero{min-height:100vh;display:flex;align-items:center;position:relative;padding:128px 0 80px;}
   .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;}
   .hero .brand-hero{margin-bottom:22px;}
@@ -186,14 +171,7 @@
   html:has(.booksy-widget-overlay),body:has(.booksy-widget-overlay){overflow:hidden!important;}
   .book-card .bk-note{font-size:.74rem;color:var(--muted);margin-top:22px;}
   .book-card .bk-note strong{color:var(--green);font-weight:500;}
-  footer{padding:54px 0 40px;border-top:1px solid var(--line);text-align:center;}
-  footer .brand{align-items:center;display:inline-flex;margin-bottom:14px;}
-  footer .brand .mark{width:122px;color:var(--green);}
-  footer .brand .tag{font-size:.5rem;margin-top:3px;}
-  footer .fline{color:var(--muted);font-size:.8rem;letter-spacing:.04em;margin-top:10px;}
-  footer .fdot{color:var(--gold);margin:0 9px;}
-  footer .fline a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line-gold);padding-bottom:1px;transition:.3s;}
-  footer .fline a:hover{color:var(--green);border-color:var(--green);}
+  /* footer — уніфікований каркас у worker.js (SHELL_CSS) */
   .reveal{opacity:0;transform:translateY(28px);transition:.9s cubic-bezier(.22,1,.36,1);}
   .reveal.in{opacity:1;transform:none;}
   .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
@@ -204,16 +182,8 @@
     .svc-cats{grid-template-columns:1fr;}
     .gallery-grid{grid-template-columns:1fr 1fr;}
     .book-card{position:static;}
-    /* мобільне меню: бургер розкриває випадну панель із розділами */
-    .nav-links{position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;gap:0;background:rgba(244,241,231,.98);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);box-shadow:0 20px 44px -20px rgba(31,94,48,.35);padding:4px 22px 16px;display:none;}
-    .nav-links.open{display:flex;}
-    .nav-links li{display:block;}
-    .nav-links a:not(.nav-cta){display:block;padding:15px 2px;font-size:.95rem;letter-spacing:.14em;border-top:1px solid var(--line);}
-    .nav-links a:not(.nav-cta)::after{display:none;}
-    .nav-links .nav-cta{display:block;text-align:center;margin-top:14px;padding:15px 20px!important;}
-    .burger{display:block;}
-    header.nav,header.nav.scrolled{padding:14px 22px;}
-    footer .fline a,.rev-cta a{display:inline-block;padding:5px 0;}
+    /* мобільне меню (nav-drawer/burger/header) — у worker.js SHELL_CSS */
+    .rev-cta a{display:inline-block;padding:5px 0;}
   }
   @media(max-width:560px){
     .container{padding:0 22px;}
@@ -403,24 +373,11 @@
 <div class="wrap">
   
 
-  <header class="nav" id="nav">
-    <a href="#top" class="brand">
-      <svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg>
-      <span class="tag">Brows &amp; More</span>
-    </a>
-    <nav>
-      <ul class="nav-links">
-        <li><a href="#about" data-i18n="nav.studio">Studio</a></li>
-        <li><a href="#services" data-i18n="nav.uslugi">Usługi</a></li>
-        <li><a href="#gallery" data-i18n="nav.galeria">Galeria</a></li>
-        <li><a href="/porady" data-i18n="nav.porady">Porady</a></li>
-        <li><a href="/quiz" data-i18n="nav.quiz" data-quiz-open>Quiz</a></li>
-        <li><a href="#contact" data-i18n="nav.kontakt">Kontakt</a></li>
-        <li><a data-i18n="nav.book" href="https://booksy.com/pl-pl/dl/show-business/334211" target="_blank" rel="noopener noreferrer" class="nav-cta" data-booksy>Umów wizytę</a></li>
-      </ul>
-    </nav>
-    <button class="burger" id="burger" type="button" aria-label="Menu" aria-expanded="false">&#9776;</button>
-  </header>
+  <!-- шапку вставляє worker.js (headerHtml) — уніфікований каркас -->
+  <!-- на головній Quiz відкриває модалку: data-quiz-open (див. hero-кнопку) -->
+  <!-- ВАЖЛИВО: не додавати сюди <header class="nav"> — воркер його видаляє -->
+  <!-- data-quiz-open також на кнопці в hero нижче, тож модалка працює -->
+  <!-- (порожньо: контент починається з hero) -->
 
   <section class="hero" id="top">
     <div class="container hero-grid">
@@ -652,15 +609,8 @@
     </div>
   </section>
 
-  <footer>
-    <div class="container">
-      <a href="#top" class="brand">
-        <svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg>
-        <span class="tag">Brows &amp; More</span>
-      </a>
-      <p class="fline">Anna Zelinska &middot; Makijaż permanentny &middot; Brwi &middot; Rzęsy <span class="fdot">|</span> Wieluń <span class="fdot">&middot;</span> &copy; 2026 <span class="fdot">&middot;</span> <a href="/prywatnosc">Polityka prywatności</a> <span class="fdot">&middot;</span> <a href="#" data-cookies>Cookies</a></p>
-    </div>
-  </footer>
+  <!-- підвал вставляє worker.js (footerHtml) — уніфікований каркас -->
+
 </div>
 <script>
 (function(){

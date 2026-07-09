@@ -37,19 +37,7 @@
   body::after{content:"";position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");opacity:.04;pointer-events:none;z-index:1;mix-blend-mode:multiply;}
   .wrap{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;}
 
-  /* top bar */
-  header.nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
-  .brand{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1;text-decoration:none;}
-  .brand .mark{display:block;width:118px;color:var(--green);overflow:visible;}
-  .brand .tag{font-family:var(--serif);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600;font-size:.5rem;margin-top:1px;margin-left:3px;}
-  .nav-links{display:flex;gap:30px;list-style:none;align-items:center;margin:0;padding:0;}
-  .nav-links a{color:var(--ink);text-decoration:none;font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;font-weight:400;position:relative;padding:4px 0;transition:.3s;}
-  .nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0;height:1px;background:var(--gold);transition:.35s;}
-  .nav-links a:hover{color:var(--green);}
-  .nav-links a:hover::after{width:100%;}
-  .nav-cta{border:1px solid var(--green);color:var(--green)!important;padding:9px 20px!important;border-radius:2px;transition:.4s;}
-  .nav-cta:hover{background:var(--green);color:#fff!important;}
-  .nav-cta::after{display:none!important;}
+  /* top bar (header/nav/brand) — уніфікований каркас у worker.js (SHELL_CSS) */
   .back:hover{color:var(--green);}
 
   /* quiz layout */
@@ -104,18 +92,9 @@
   .res-links a, .res-links button{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:.3s;display:inline-flex;align-items:center;gap:7px;}
   .res-links a:hover, .res-links button:hover{color:var(--green);}
 
-  .foot{text-align:center;padding:24px;font-size:.74rem;letter-spacing:.04em;color:var(--muted);}
-  .foot a{color:var(--gold);text-decoration:none;}
+  /* footer + мобільний nav — уніфікований каркас у worker.js (SHELL_CSS) */
 
-  @media(max-width:760px){
-    header.nav{padding:10px 16px;}
-    .nav-links li:not(.cta-li){display:none;}
-    .nav-links{gap:12px;}
-    .brand .mark{width:92px;}
-    .lang-switch{font-size:.68rem;}
-  }
   @media(max-width:620px){
-    .brand .mark{width:92px;}
     .card{padding:38px 26px;}
     .quiz{padding:18px 16px 44px;}
     .res-links{gap:16px;}
@@ -125,29 +104,12 @@
 <body>
 
 <div class="wrap">
-  <header class="nav">
-    <a href="/" class="brand" aria-label="Zelika — strona główna">
-      <svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg>
-      <span class="tag">Brows &amp; More</span>
-    </a>
-    <nav><ul class="nav-links">
-      <li><a href="/#about" data-i18n="nav.studio">Studio</a></li>
-      <li><a href="/#services" data-i18n="nav.uslugi">Usługi</a></li>
-      <li><a href="/#gallery" data-i18n="nav.galeria">Galeria</a></li>
-      <li><a href="/porady" data-i18n="nav.porady">Porady</a></li>
-      <li><a href="/quiz" data-i18n="nav.quiz">Quiz</a></li>
-      <li><a href="/#contact" data-i18n="nav.kontakt">Kontakt</a></li>
-      <li class="cta-li"><a href="https://booksy.com/pl-pl/dl/show-business/334211" class="nav-cta" target="_blank" rel="noopener noreferrer" data-i18n="nav.book">Umów wizytę</a></li>
-    </ul></nav>
-  </header>
-
+  <!-- шапку вставляє worker.js (headerHtml) — уніфікований каркас -->
   <main class="quiz">
     <div class="card" id="card"><!-- rendered by JS --></div>
   </main>
 
-  <footer class="foot">
-    Studio Zelika &middot; Wieluń &middot; <a href="/">zelika.pl</a> &middot; <a href="/prywatnosc">Polityka prywatności</a> &middot; <a href="#" data-cookies>Cookies</a>
-  </footer>
+  <!-- підвал вставляє worker.js (footerHtml) — уніфікований каркас -->
 </div>
 
 <script src="quiz.js"></script>

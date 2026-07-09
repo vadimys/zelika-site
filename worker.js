@@ -675,8 +675,10 @@ async function localizedPage(request, env, lang, pageKey) {
       e.append(`<style>${SHELL_CSS}</style>`, { html: true }); // канон-каркас: авторитетний, останнім
       e.append(`<script src="/nav.js" defer></script>`, { html: true });
     } })
-    // Уніфікований каркас: прибираємо власні header/footer сторінки й вставляємо канонічні
-    .on("header", { element(e) { e.remove(); } })
+    // Уніфікований каркас: прибираємо власні header/footer сторінки й вставляємо канонічні.
+    // ⚠️ ЛИШЕ header.nav (не чат-віджет header.zchat-head!). footer сторінки — <footer>
+    // (чат-підвал це <div class="zchat-foot">, тож не зачіпаємо).
+    .on("header.nav", { element(e) { e.remove(); } })
     .on("footer", { element(e) { e.remove(); } })
     .on("body", { element(e) {
       e.prepend(headerHtml(lang, { home, current, pl: page.pl }), { html: true });
