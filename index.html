@@ -629,21 +629,10 @@
         <p data-i18n="bk.p">Wybierz usługę i dogodny termin w systemie Booksy — potwierdzenie i przypomnienie otrzymasz automatycznie.</p>
         <div class="bk-widget" id="bk-widget"><noscript><a href="https://booksy.com/pl-pl/dl/show-business/334211" target="_blank" rel="noopener noreferrer" class="btn btn-green">Rezerwuj na Booksy</a></noscript></div>
         <script src="/booksy-fix.js" defer></script>
-        <script>
-        /* Booksy-віджет вантажимо ЛІНИВО (коли картка бронювання за ~500px від в'юпорта)
-           — прибирає ~885ms render-blocking. До завантаження nav/hero [data-booksy]
-           fallback-ять на прямий href booksy.com (booksy-fix.js). */
-        (function(){var el=document.getElementById('bk-widget');if(!el)return;
-          var load=function(){var s=document.createElement('script');
-            s.src='https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl';
-            document.body.appendChild(s);};
-          if('IntersectionObserver' in window){
-            var io=new IntersectionObserver(function(es){es.forEach(function(e){
-              if(e.isIntersecting){load();io.disconnect();}});},{rootMargin:'500px'});
-            io.observe(el);
-          }else{load();}
-        })();
-        </script>
+        <!-- Booksy-віджет: defer прибирає render-blocking (LCP-виграш лишається), а
+             через збереження позиції скрипта кнопка рендериться ТУТ, у картці бронювання
+             (не в кінці body). НЕ переносити в document.body — «попливе» вниз-ліворуч. -->
+        <script src="https://booksy.com/widget/code.js?id=334211&amp;country=pl&amp;lang=pl" defer></script>
         <a data-i18n="bk.call" href="tel:+48571932161" class="btn btn-ghost">Zadzwoń: 571 932 161</a>
         <p class="bk-note">Ocena <strong><span data-google-rating>5,0</span> &#9733;</strong> na podstawie <span data-google-reviews>41</span> opinii w Google</p>
       </div>
