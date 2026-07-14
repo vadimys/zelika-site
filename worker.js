@@ -236,7 +236,15 @@ ${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" loading="lazy">` :
     publisher: { "@type": "Organization", name: "Zelika Brows & More", url: SITE },
   };
 
-  const body = `<p class="crumbs"><a href="/">Strona główna</a> › ${esc(SECTION_TITLE)}</p>
+  const crumbLd = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Strona główna", item: SITE + "/" },
+      { "@type": "ListItem", position: 2, name: SECTION_TITLE, item: SITE + "/porady" },
+    ],
+  };
+  const body = `<script type="application/ld+json">${JSON.stringify(crumbLd)}</script>
+<p class="crumbs"><a href="/">Strona główna</a> › ${esc(SECTION_TITLE)}</p>
 <h1>${esc(SECTION_TITLE)}</h1>
 <p class="lead">${esc(SECTION_DESC)}</p>
 ${cards}
@@ -289,7 +297,16 @@ async function renderPost(slug) {
     inLanguage: "pl-PL",
   };
 
-  const body = `<p class="crumbs"><a href="/">Strona główna</a> › <a href="/porady">${esc(SECTION_TITLE)}</a> › ${esc(post.title)}</p>
+  const crumbLd = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Strona główna", item: SITE + "/" },
+      { "@type": "ListItem", position: 2, name: SECTION_TITLE, item: SITE + "/porady" },
+      { "@type": "ListItem", position: 3, name: post.title, item: canonical },
+    ],
+  };
+  const body = `<script type="application/ld+json">${JSON.stringify(crumbLd)}</script>
+<p class="crumbs"><a href="/">Strona główna</a> › <a href="/porady">${esc(SECTION_TITLE)}</a> › ${esc(post.title)}</p>
 <article>
 <h1>${esc(post.title)}</h1>
 <div class="meta">${esc(post.author || "Anna Zelinska")}${
@@ -318,6 +335,36 @@ ${ctaBlock()}
 // в AI-пошуку. Перебиває Cloudflare-керований robots, що за замовч. блокував AI-ботів.
 function renderRobots() {
   const body = `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`;
+  return new Response(body, {
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" },
+  });
+}
+
+// llms.txt — agent-readable опис бізнесу для AI-пошуку/асистентів (AEO/GEO).
+function renderLlms() {
+  const body = `# Zelika — Makijaż Permanentny, Brwi, Rzęsy (Wieluń)
+
+> Studio makijażu permanentnego (PMU) oraz architektury i stylizacji brwi i rzęs w Wieluniu, Polska. Prowadzi Anna Zelinska, ekspertka PMU. Ocena 5,0 w Google.
+
+## Usługi
+- Makijaż permanentny brwi (metoda włosowa, pudrowa, mieszana)
+- Makijaż permanentny ust
+- Laminacja brwi, lifting rzęs
+- Architektura brwi (brow mapping)
+
+## Kontakt i rezerwacja
+- Adres: ul. Młodzieżowa 5B, 98-300 Wieluń
+- Telefon: +48 571 932 161
+- Rezerwacja online (Booksy): ${BOOKSY}
+- Instagram: https://www.instagram.com/annazelika
+- Godziny: pon.–pt. 8:00–16:00, sob. 6:00–13:00, niedziela nieczynne
+
+## Ważne strony
+- Strona główna: ${SITE}/
+- Porady i inspiracje (blog): ${SITE}/porady
+- Quiz „Jaki zabieg brwi dla Ciebie?": ${SITE}/quiz
+- Polityka prywatności: ${SITE}/prywatnosc
+`;
   return new Response(body, {
     headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" },
   });
@@ -725,6 +772,7 @@ export default {
     if (path.startsWith("/porady/")) return renderPost(decodeURIComponent(path.slice("/porady/".length)));
     if (path === "/sitemap.xml") return renderSitemap();
     if (path === "/robots.txt") return renderRobots();
+    if (path === "/llms.txt") return renderLlms();
 
     // Strona główna: czat z widgetem Turnstile, który wstrzykuje inline-skrypt
     // (z losowym tokenem → hash niestabilny, nonce niemożliwy na statyce). Dlatego
