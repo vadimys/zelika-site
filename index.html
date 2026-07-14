@@ -629,10 +629,10 @@
         <p data-i18n="bk.p">Wybierz usługę i dogodny termin w systemie Booksy — potwierdzenie i przypomnienie otrzymasz automatycznie.</p>
         <div class="bk-widget" id="bk-widget"><noscript><a href="https://booksy.com/pl-pl/dl/show-business/334211" target="_blank" rel="noopener noreferrer" class="btn btn-green">Rezerwuj na Booksy</a></noscript></div>
         <script src="/booksy-fix.js" defer></script>
-        <!-- Booksy-віджет: defer прибирає render-blocking (LCP-виграш лишається), а
-             через збереження позиції скрипта кнопка рендериться ТУТ, у картці бронювання
-             (не в кінці body). НЕ переносити в document.body — «попливе» вниз-ліворуч. -->
-        <script src="https://booksy.com/widget/code.js?id=334211&amp;country=pl&amp;lang=pl" defer></script>
+        <!-- Booksy-віджет: СИНХРОННО тут, у картці. Віджет вставляє кнопку через
+             document.currentScript — а для defer/async/appendChild воно null → кнопка
+             «пливе» в кінець body. Тож НЕ додавати defer/async і НЕ переносити в body. -->
+        <script src="https://booksy.com/widget/code.js?id=334211&amp;country=pl&amp;lang=pl"></script>
         <a data-i18n="bk.call" href="tel:+48571932161" class="btn btn-ghost">Zadzwoń: 571 932 161</a>
         <p class="bk-note">Ocena <strong><span data-google-rating>5,0</span> &#9733;</strong> na podstawie <span data-google-reviews>41</span> opinii w Google</p>
       </div>
