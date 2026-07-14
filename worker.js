@@ -6,7 +6,7 @@
 
 const POSTS_API = "https://hooks.zelika.pl/api/posts";
 const SITE = "https://zelika.pl";
-const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
+const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun";
 const BOOKSY_WIDGET = "https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl";
 const SECTION_TITLE = "Porady i inspiracje";
 const SECTION_DESC =
@@ -469,7 +469,7 @@ const I18N = {
     "quiz.btn": "Пройти квіз",
     "svc.eyebrow": "Ціни", "svc.h2": "Послуги й <em>ціни</em>",
     "svc.p": "Актуальні ціни та вільні терміни також знайдете в системі бронювання Booksy.",
-    "svc.note": "Також пропонуємо brow mapping, макіяж на подію та фарбування вій — повний перелік послуг і ціни в <a href='https://booksy.com/pl-pl/dl/show-business/334211' target='_blank' rel='noopener noreferrer'>системі Booksy</a>.",
+    "svc.note": "Також пропонуємо brow mapping, макіяж на подію та фарбування вій — повний перелік послуг і ціни в <a href='https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun' target='_blank' rel='noopener noreferrer'>системі Booksy</a>.",
     "gal.eyebrow": "Портфоліо", "gal.h2": "Галерея <em>робіт</em>",
     "gal.p": "Роботи, сертифікати й закулісся нашої студії. Повна галерея — в Instagram.",
     "gal.btn": "&#9670; Більше в Instagram",
@@ -525,7 +525,7 @@ const I18N = {
     "quiz.btn": "Take the quiz",
     "svc.eyebrow": "Pricing", "svc.h2": "Services &amp; <em>prices</em>",
     "svc.p": "Current prices and available slots are also in the Booksy booking system.",
-    "svc.note": "We also offer brow mapping, occasion makeup and lash tinting — the full list of services and prices is in the <a href='https://booksy.com/pl-pl/dl/show-business/334211' target='_blank' rel='noopener noreferrer'>Booksy system</a>.",
+    "svc.note": "We also offer brow mapping, occasion makeup and lash tinting — the full list of services and prices is in the <a href='https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun' target='_blank' rel='noopener noreferrer'>Booksy system</a>.",
     "gal.eyebrow": "Portfolio", "gal.h2": "Our <em>work</em>",
     "gal.p": "Our work, certificates and behind-the-scenes. Full gallery on Instagram.",
     "gal.btn": "&#9670; See more on Instagram",

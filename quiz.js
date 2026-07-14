@@ -1,5 +1,5 @@
 (function(){
-const BOOKSY = "https://booksy.com/pl-pl/dl/show-business/334211";
+const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun";
   const LEAD_URL = "https://hooks.zelika.pl/webhook/lead";
 
   // Мова з URL (/uk/quiz, /en/quiz) — тексти беремо зі словника, логіка балів спільна.
