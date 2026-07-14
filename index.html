@@ -25,7 +25,11 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Шрифти non-blocking: media=print→all по onload (не блокує перший рендер hero-h1=LCP).
+     onload-хендлер дозволений CSP головної (HOMEPAGE_CSP script-src 'unsafe-inline'). -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap"></noscript>
 <style>
   :root{
     --bg:#f4f1e7;--bg-soft:#ece7d8;--bg-card:#fffdf6;
@@ -611,7 +615,21 @@
         <p data-i18n="bk.p">Wybierz usługę i dogodny termin w systemie Booksy — potwierdzenie i przypomnienie otrzymasz automatycznie.</p>
         <div class="bk-widget" id="bk-widget"><noscript><a href="https://booksy.com/pl-pl/dl/show-business/334211" target="_blank" rel="noopener noreferrer" class="btn btn-green">Rezerwuj na Booksy</a></noscript></div>
         <script src="/booksy-fix.js" defer></script>
-        <script type="text/javascript" src="https://booksy.com/widget/code.js?id=334211&amp;country=pl&amp;lang=pl"></script>
+        <script>
+        /* Booksy-віджет вантажимо ЛІНИВО (коли картка бронювання за ~500px від в'юпорта)
+           — прибирає ~885ms render-blocking. До завантаження nav/hero [data-booksy]
+           fallback-ять на прямий href booksy.com (booksy-fix.js). */
+        (function(){var el=document.getElementById('bk-widget');if(!el)return;
+          var load=function(){var s=document.createElement('script');
+            s.src='https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl';
+            document.body.appendChild(s);};
+          if('IntersectionObserver' in window){
+            var io=new IntersectionObserver(function(es){es.forEach(function(e){
+              if(e.isIntersecting){load();io.disconnect();}});},{rootMargin:'500px'});
+            io.observe(el);
+          }else{load();}
+        })();
+        </script>
         <a data-i18n="bk.call" href="tel:+48571932161" class="btn btn-ghost">Zadzwoń: 571 932 161</a>
         <p class="bk-note">Ocena <strong><span data-google-rating>5,0</span> &#9733;</strong> na podstawie <span data-google-reviews>41</span> opinii w Google</p>
       </div>
