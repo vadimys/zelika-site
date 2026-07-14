@@ -313,6 +313,16 @@ ${ctaBlock()}
   );
 }
 
+// Власний robots.txt: ВІДКРИТИЙ для всіх (вкл. AI-краулери цитувань — GPTBot,
+// Google-Extended, PerplexityBot, ClaudeBot тощо), бо ціль — видимість і цитування
+// в AI-пошуку. Перебиває Cloudflare-керований robots, що за замовч. блокував AI-ботів.
+function renderRobots() {
+  const body = `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`;
+  return new Response(body, {
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" },
+  });
+}
+
 async function renderSitemap() {
   const posts = (await fetchPosts()) || [];
   const urls = [
@@ -320,6 +330,10 @@ async function renderSitemap() {
     { loc: SITE + "/uk/", pri: "0.9", freq: "monthly" },
     { loc: SITE + "/en/", pri: "0.9", freq: "monthly" },
     { loc: SITE + "/porady", pri: "0.8", freq: "weekly" },
+    { loc: SITE + "/quiz", pri: "0.6", freq: "monthly" },
+    { loc: SITE + "/uk/quiz", pri: "0.5", freq: "monthly" },
+    { loc: SITE + "/en/quiz", pri: "0.5", freq: "monthly" },
+    { loc: SITE + "/prywatnosc", pri: "0.3", freq: "yearly" },
     ...posts.map((p) => ({
       loc: SITE + "/porady/" + p.slug,
       pri: "0.7",
@@ -710,6 +724,7 @@ export default {
     if (path === "/porady") return renderIndex();
     if (path.startsWith("/porady/")) return renderPost(decodeURIComponent(path.slice("/porady/".length)));
     if (path === "/sitemap.xml") return renderSitemap();
+    if (path === "/robots.txt") return renderRobots();
 
     // Strona główna: czat z widgetem Turnstile, który wstrzykuje inline-skrypt
     // (z losowym tokenem → hash niestabilny, nonce niemożliwy na statyce). Dlatego
