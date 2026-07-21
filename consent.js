@@ -4,7 +4,8 @@
    Wszystko zewnętrznym plikiem, żeby nie ruszać hashy CSP dla skryptów inline. */
 (function () {
   "use strict";
-  var ID = "AW-18246998055";
+  var ID = "AW-18246998055";       // Google Ads
+  var GA4 = "G-F30NJ62P2X";        // Google Analytics 4 — та сама бібліотека gtag.js
   var GRANT = {
     ad_storage: "granted",
     analytics_storage: "granted",
@@ -29,6 +30,7 @@
   if (choice === "granted") gtag("consent", "update", GRANT);
   gtag("js", new Date());
   gtag("config", ID);
+  gtag("config", GA4);  // GA4 — Consent Mode (analytics_storage) керує cookies так само
   // Uwaga: samo gtag.js ładujemy STATYCZNYM tagiem w <head> (zaraz po tym pliku),
   // żeby detektor Google widział go w źródle strony. Ten plik (synchroniczny)
   // ustawia zgodę „denied" ZANIM async gtag.js się wykona.

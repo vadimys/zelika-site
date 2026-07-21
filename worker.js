@@ -205,7 +205,7 @@ function htmlResponse(html, status = 200, sMaxAge = 300) {
         "font-src https://fonts.gstatic.com; " +
         "script-src 'self' https://booksy.com https://www.googletagmanager.com https://www.googleadservices.com; " +
         "frame-src https://booksy.com https://td.doubleclick.net; " +
-        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
+        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
         "form-action 'self' https://booksy.com; upgrade-insecure-requests",
     },
   });
@@ -413,7 +413,7 @@ const HOMEPAGE_CSP =
   "font-src https://fonts.gstatic.com; " +
   "script-src 'self' 'unsafe-inline' https://booksy.com https://www.googletagmanager.com https://www.googleadservices.com https://challenges.cloudflare.com; " +
   "frame-src https://booksy.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
-  "connect-src 'self' https://zelika-chat.vadimzelinshy.workers.dev https://hooks.zelika.pl https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
+  "connect-src 'self' https://zelika-chat.vadimzelinshy.workers.dev https://hooks.zelika.pl https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
   "upgrade-insecure-requests";
 
 // ── i18n: PL (база) + UA + EN. Один PL-шаблон (index.html з data-i18n) →
