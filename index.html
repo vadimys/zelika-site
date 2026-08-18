@@ -34,8 +34,8 @@
   :root{
     --bg:#f4f1e7;--bg-soft:#ece7d8;--bg-card:#fffdf6;
     --green:#1f5e30;--green-mid:#2f7d44;--green-soft:#5a9c6c;
-    --gold:#a9863c;--gold-soft:#c9a35b;
-    --ink:#272b22;--muted:#6e7365;
+    --gold:#a9863c;--gold-soft:#c9a35b;--gold-ink:#7c5e22;
+    --ink:#272b22;--muted:#5f6456;
     --line:rgba(31,94,48,.16);--line-gold:rgba(169,134,60,.30);
     --serif:'Cormorant Garamond', serif;--sans:'Jost', sans-serif;
   }
@@ -48,7 +48,7 @@
   .wrap{position:relative;z-index:2;}
   .container{max-width:1180px;margin:0 auto;padding:0 32px;}
   h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.08;letter-spacing:.01em;color:var(--green);}
-  .eyebrow{font-family:var(--sans);font-weight:400;font-size:.72rem;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);display:inline-block;}
+  .eyebrow{font-family:var(--sans);font-weight:500;font-size:.72rem;letter-spacing:.4em;text-transform:uppercase;color:var(--gold-ink);display:inline-block;}
   .eyebrow::before{content:"";display:inline-block;width:32px;height:1px;background:var(--gold);vertical-align:middle;margin-right:13px;opacity:.8;}
   /* header/nav/brand/burger — уніфікований каркас у worker.js (SHELL_CSS) */
   .hero{min-height:100vh;display:flex;align-items:center;position:relative;padding:128px 0 80px;}
@@ -56,7 +56,7 @@
   .hero .brand-hero{margin-bottom:22px;}
   .hero .brand-hero .mark{width:min(380px,82%);color:var(--green);overflow:visible;filter:drop-shadow(0 8px 22px rgba(31,94,48,.14));}
   .hero .brand-hero .tag{font-family:var(--serif);letter-spacing:.46em;text-transform:uppercase;color:var(--gold);font-size:1.05rem;font-weight:600;margin-top:12px;margin-left:6px;}
-  .hero .kicker{display:inline-block;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line-gold);border-radius:2px;padding:8px 16px;margin-bottom:18px;}
+  .hero .kicker{display:inline-block;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--gold-ink);font-weight:500;border:1px solid var(--line-gold);border-radius:2px;padding:8px 16px;margin-bottom:18px;}
   .hero h1{font-size:clamp(2.4rem,5.2vw,4rem);margin-bottom:8px;}
   .hero h1 em{font-style:italic;color:var(--gold);}
   .hero .lead{color:var(--muted);font-size:1.05rem;max-width:440px;margin:20px 0 34px;}
@@ -118,7 +118,18 @@
   .price-row .pname{color:var(--ink);font-size:.96rem;}
   .price-row .pdur{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.05em;margin-top:2px;}
   .price-row .price{font-family:var(--serif);font-size:1.4rem;color:var(--green);white-space:nowrap;font-weight:600;}
-  .cat.feature .price{font-size:1.7rem;color:var(--gold);}
+  .cat.feature .price{font-size:1.7rem;color:var(--gold-ink);}
+  /* Kwalifikacje — трест-смуга PMU-авторитету */
+  .kwal{background:linear-gradient(180deg,transparent,var(--bg-soft) 46%,transparent);}
+  .kwal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px;}
+  .kcard{background:var(--bg-card);border:1px solid var(--line);border-top:2px solid var(--gold);border-radius:6px;padding:26px 24px;box-shadow:0 10px 30px rgba(31,94,48,.05);}
+  .kcard .kzone{font-family:var(--serif);font-size:1.5rem;color:var(--green);font-weight:600;line-height:1;}
+  .kcard .ktitle{color:var(--ink);font-size:.96rem;margin:10px 0 14px;line-height:1.4;}
+  .kcard .kbadge{display:inline-block;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink);border:1px solid var(--line-gold);border-radius:999px;padding:5px 12px;font-weight:500;}
+  .kcard .kbadge.new{color:#fff;background:var(--green);border-color:var(--green);}
+  .kwal-note{max-width:760px;margin:34px auto 0;text-align:center;color:var(--muted);font-size:.95rem;line-height:1.72;}
+  .kwal-note strong{color:var(--green);font-weight:600;}
+  @media(max-width:920px){.kwal-grid{grid-template-columns:1fr;}}
   .svc-note{text-align:center;color:var(--muted);font-size:.9rem;margin-top:34px;}
   .svc-note a{color:var(--green);text-decoration:none;border-bottom:1px solid var(--line-gold);}
   .svc-note a:hover{color:var(--gold);}
@@ -300,8 +311,9 @@
   ],
   "founder": {
     "@type": "Person",
+    "@id": "https://zelika.pl/#anna",
     "name": "Anna Zelinska",
-    "jobTitle": "Ekspert PMU"
+    "jobTitle": "Specjalistka makijażu permanentnego"
   },
   "knowsAbout": [
     "Makijaż permanentny brwi",
@@ -333,7 +345,7 @@
   "aggregateRating": {
     "@type": "AggregateRating",
     "ratingValue": "5.0",
-    "reviewCount": "45",
+    "reviewCount": "51",
     "bestRating": "5",
     "worstRating": "1"
   }
@@ -395,6 +407,22 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://zelika.pl/#anna",
+  "name": "Anna Zelinska",
+  "jobTitle": "Specjalistka makijażu permanentnego",
+  "worksFor": { "@type": "BeautySalon", "@id": "https://zelika.pl/#business" },
+  "knowsAbout": ["Makijaż permanentny brwi", "Makijaż permanentny ust", "Kreska międzyrzęsowa", "Architektura brwi"],
+  "hasCredential": [
+    {"@type": "EducationalOccupationalCredential", "credentialCategory": "certificate", "name": "Makijaż permanentny brwi", "recognizedBy": {"@type": "Organization", "name": "Hasnutdinova Permanent", "address": "Warszawa, PL"}, "dateCreated": "2026-08-13"},
+    {"@type": "EducationalOccupationalCredential", "credentialCategory": "certificate", "name": "Makijaż permanentny ust", "recognizedBy": {"@type": "Organization", "name": "Hasnutdinova Permanent", "address": "Warszawa, PL"}, "dateCreated": "2026-08-14"},
+    {"@type": "EducationalOccupationalCredential", "credentialCategory": "certificate", "name": "Makijaż permanentny oczu (kreska)", "recognizedBy": {"@type": "Organization", "name": "Hasnutdinova Permanent", "address": "Warszawa, PL"}, "dateCreated": "2026-08-15"}
+  ]
+}
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -413,9 +441,9 @@
           <svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg>
           <div class="tag">Brows &amp; More</div>
         </div>
-        <span data-i18n="hero.kicker" class="kicker reveal d1">Ekspert PMU &middot; Architektura Brwi</span>
-        <h1 data-i18n="hero.h1" class="reveal d1">Makijaż permanentny,<br>brwi &amp; <em>rzęsy</em></h1>
-        <p data-i18n="hero.lead" class="lead reveal d2">Kameralne studio urody w Wieluniu. Naturalny, trwały efekt, bezpieczne certyfikowane pigmenty i indywidualne podejście do każdego spojrzenia.</p>
+        <span data-i18n="hero.kicker" class="kicker reveal d1">Certyfikowane studio PMU &middot; Wieluń</span>
+        <h1 data-i18n="hero.h1" class="reveal d1">Makijaż permanentny<br>w rękach <em>specjalisty</em></h1>
+        <p data-i18n="hero.lead" class="lead reveal d2">Studio PMU w Wieluniu prowadzone przez Annę Zelinską. Certyfikowane pigmenty, jednorazowe materiały i rygorystyczna higiena — bo trwały makijaż to zabieg, przy którym liczy się nie cena, a wiedza i precyzja. Umów niezobowiązującą konsultację.</p>
         <div class="hero-actions reveal d3">
           <a data-i18n="hero.book" href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer" class="btn btn-green" data-booksy>Rezerwacja online</a>
           <a data-i18n="hero.services" href="#services" class="btn btn-ghost">Usługi i cennik</a>
@@ -423,7 +451,7 @@
       </div>
       <div class="hero-visual reveal d2">
         <img src="img/photo-1.jpg" fetchpriority="high" alt="Makijaż permanentny i stylizacja rzęs — Studio Zelika Wieluń" decoding="async">
-        <div class="hv-rating"><span class="r" data-google-rating>5,0</span><span class="s">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="t"><span data-google-reviews>41</span> opinie</span></div>
+        <div class="hv-rating"><span class="r" data-google-rating>5,0</span><span class="s">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="t"><span data-google-reviews>51</span> opinie</span></div>
       </div>
     </div>
   </section>
@@ -448,8 +476,8 @@
         </div>
         <div class="val reveal d4">
           <div class="vi"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3.5-6 7-6s7 2 7 6"/></svg></div>
-          <h4 data-i18n="val4.h">Profesjonalista</h4>
-          <p data-i18n="val4.p">Anna Zelinska — ponad 5 lat doświadczenia. Twoja twarz w rękach eksperta.</p>
+          <h4 data-i18n="val4.h">Profesjonalistka</h4>
+          <p data-i18n="val4.p">Anna Zelinska — ponad 5 lat praktyki. Twoja twarz w rękach specjalistki PMU.</p>
         </div>
       </div>
     </div>
@@ -469,10 +497,26 @@
         <p data-i18n="about.p3" class="reveal d2">Dogodna lokalizacja, elastyczne terminy i przypomnienia o wizycie. Umów konsultację — wspólnie stworzymy idealny kształt brwi i wyraziste spojrzenie.</p>
         <div class="about-stats reveal d3">
           <div class="s"><div class="n">5+</div><div class="t">lat<br>doświadczenia</div></div>
-          <div class="s"><div class="n"><span data-google-rating>5,0</span> &#9733;</div><div class="t">średnia ocena<br>(<span data-google-reviews>41</span> opinie)</div></div>
+          <div class="s"><div class="n"><span data-google-rating>5,0</span> &#9733;</div><div class="t">średnia ocena<br>(<span data-google-reviews>51</span> opinie)</div></div>
           <div class="s"><div class="n">100%</div><div class="t">certyfikowane<br>produkty</div></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="kwal" id="kwalifikacje">
+    <div class="container">
+      <div class="section-head">
+        <span data-i18n="kwal.eyebrow" class="eyebrow reveal">Kwalifikacje i bezpieczeństwo</span>
+        <h2 data-i18n="kwal.h2" class="reveal d1">Dlaczego makijaż permanentny warto powierzyć <em>specjaliście</em></h2>
+        <p data-i18n="kwal.intro" class="reveal d2">Pigment trafia w skórę na lata — dlatego liczy się nie cena, a wiedza: dobór odcienia do podtonu skóry, technika dopasowana do typu cery, higiena i prawidłowe gojenie. Źle wykonany makijaż permanentny jest trudny i kosztowny do poprawienia.</p>
+      </div>
+      <div class="kwal-grid">
+        <div class="kcard reveal d1"><div class="kzone">Brwi</div><div class="ktitle" data-i18n="kwal.b1t">Makijaż permanentny &middot; architektura brwi</div><div class="kbadge" data-i18n="kwal.b1b">Ponad 5 lat praktyki</div></div>
+        <div class="kcard reveal d2"><div class="kzone">Usta</div><div class="ktitle" data-i18n="kwal.b2t">Makijaż permanentny &middot; metoda Aquarelle</div><div class="kbadge new" data-i18n="kwal.b2b">Certyfikat 2026 &middot; Warszawa</div></div>
+        <div class="kcard reveal d3"><div class="kzone">Oczy</div><div class="ktitle" data-i18n="kwal.b3t">Kreska międzyrzęsowa (linia rzęs)</div><div class="kbadge new" data-i18n="kwal.b3b">Certyfikat 2026 &middot; Warszawa</div></div>
+      </div>
+      <p class="kwal-note reveal" data-i18n="kwal.note"><strong>Bezpieczeństwo przede wszystkim.</strong> Pracuję wyłącznie na certyfikowanych pigmentach i jednorazowych, sterylnych modułach. Przed każdym zabiegiem omawiamy przeciwwskazania (m.in. ciąża, karmienie, opryszczka przy ustach, niektóre leki). Szkolenia w standardzie Hasnutdinova (Warszawa, 2026).</p>
     </div>
   </section>
 
@@ -634,7 +678,7 @@
              «пливе» в кінець body. Тож НЕ додавати defer/async і НЕ переносити в body. -->
         <script src="https://booksy.com/widget/code.js?id=334211&amp;country=pl&amp;lang=pl"></script>
         <a data-i18n="bk.call" href="tel:+48571932161" class="btn btn-ghost">Zadzwoń: 571 932 161</a>
-        <p class="bk-note">Ocena <strong><span data-google-rating>5,0</span> &#9733;</strong> na podstawie <span data-google-reviews>41</span> opinii w Google</p>
+        <p class="bk-note">Ocena <strong><span data-google-rating>5,0</span> &#9733;</strong> na podstawie <span data-google-reviews>51</span> opinii w Google</p>
       </div>
     </div>
   </section>
