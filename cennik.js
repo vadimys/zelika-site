@@ -8,8 +8,14 @@
 
   // Prezentacja (stała): kolejność sekcji, która jest wyróżniona i jej opis.
   // Nowe kategorie z bota, których tu nie ma, dokleją się na końcu automatycznie.
-  var ORDER = ["Makijaż permanentny brwi", "Brwi", "Rzęsy", "Usta", "Pozostałe"];
+  var ORDER = ["Makijaż permanentny brwi", "Brwi", "Rzęsy", "Usta", "Oczy", "Pozostałe"];
   var FEATURE = "Makijaż permanentny brwi";
+  var NEW_CATS = ["Usta", "Oczy"]; // нові зони (сертифікати 2026) — бейдж «Nowość»
+  // канонізація категорії: bot може віддати "Oczy " / "oczy" / "OCZY" → зводимо до ORDER,
+  // інакше категорія тихо впаде в кінець після "Pozostałe" (див. фікс ORDER-матчингу).
+  var CANON = {};
+  ORDER.forEach(function (t) { CANON[t.toLowerCase()] = t; });
+  function canonCat(s) { var t = String(s == null ? "" : s).trim(); return CANON[t.toLowerCase()] || t; }
   var NOTE =
     "Trwały, naturalny efekt dopasowany do kształtu twarzy. Cena zawiera konsultację, brow mapping i dobór koloru.";
 
@@ -43,7 +49,8 @@
       var byCat = {};
       c.cennik_items.forEach(function (it) {
         if (!it || !it.category) return;
-        (byCat[it.category] = byCat[it.category] || []).push(it);
+        var cat = canonCat(it.category);
+        (byCat[cat] = byCat[cat] || []).push(it);
       });
       // kolejność: najpierw ORDER, potem nowe kategorie z bota (na końcu)
       var cats = ORDER.filter(function (t) { return byCat[t]; }).concat(
@@ -67,9 +74,10 @@
         } else {
           num += 1;
           var nn = (num < 10 ? "0" : "") + num;
+          var badge = NEW_CATS.indexOf(title) >= 0 ? '<span class="cat-new">Nowość</span>' : "";
           html +=
             '<div class="cat reveal in d1"><div class="cat-h"><span class="cat-num">' + nn +
-            "</span><h3>" + esc(title) + "</h3></div>" + rows.map(row).join("") + "</div>";
+            "</span><h3>" + esc(title) + "</h3>" + badge + "</div>" + rows.map(row).join("") + "</div>";
         }
       });
       if (html) container.innerHTML = html; // podmiana statycznego cennika świeżymi danymi
