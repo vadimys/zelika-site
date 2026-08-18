@@ -130,6 +130,11 @@ article p{margin:0 0 1.1em}
 .btn{display:inline-block;background:var(--green);color:#fff;padding:14px 30px;border-radius:999px;font-weight:500;letter-spacing:.01em}
 .btn:hover{background:var(--green-mid);text-decoration:none}
 .empty{padding:64px 0;text-align:center;color:var(--muted)}
+.author-box{margin:2.6em 0 0;padding:1.7em 1.9em;background:var(--bg-card);border:1px solid var(--line-gold);border-left:3px solid var(--gold);border-radius:14px}
+.author-box .ab-eye{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.author-box .ab-name{font-family:var(--serif);font-weight:600;color:var(--green);font-size:1.35rem;margin:.25em 0 .35em}
+.author-box .ab-bio{margin:0 0 .9em;color:var(--muted);font-size:.96rem;line-height:1.65}
+.author-box .ab-link{color:var(--gold);font-weight:500}
 footer.site{border-top:1px solid var(--line);margin-top:40px;padding:28px 0;color:var(--muted);font-size:.85rem;text-align:center}
 /* --- override widgetu Booksy (jak na stronie głównej) --- */
 .booksy-widget-button{background-image:none!important;background-color:var(--green)!important;width:100%!important;height:auto!important;min-height:52px!important;padding:14px 30px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:999px!important;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s!important}
@@ -291,7 +296,7 @@ async function renderPost(slug) {
     image: ogImage,
     datePublished: post.published_at || undefined,
     dateModified: post.published_at || undefined,
-    author: { "@type": "Person", name: post.author || "Anna Zelinska" },
+    author: { "@type": "Person", "@id": SITE + "/#anna", name: post.author || "Anna Zelinska", jobTitle: "Specjalistka makijażu permanentnego" },
     publisher: { "@type": "Organization", name: "Zelika Brows & More", url: SITE },
     mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
     inLanguage: "pl-PL",
@@ -314,6 +319,12 @@ async function renderPost(slug) {
   }</div>
 ${post.image ? `<img class="hero-img" src="${esc(post.image)}" alt="${esc(post.title)}">` : ""}
 ${renderBody(post.body)}
+<aside class="author-box">
+<div class="ab-eye">Autorka</div>
+<div class="ab-name">Anna Zelinska</div>
+<p class="ab-bio">Specjalistka makijażu permanentnego, Studio Zelika (Wieluń). Ponad 5 lat praktyki w PMU brwi; certyfikowana w zakresie ust i kreski (standard Hasnutdinova, 2026). Pracuję na certyfikowanych pigmentach i jednorazowych modułach.</p>
+<a class="ab-link" href="/#kwalifikacje">Poznaj kwalifikacje &#8594;</a>
+</aside>
 </article>
 ${ctaBlock()}
 <p><a href="/porady">← Wszystkie porady</a></p>`;
