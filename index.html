@@ -134,6 +134,8 @@
   .svc-note{text-align:center;color:var(--muted);font-size:.9rem;margin-top:34px;}
   .svc-note a{color:var(--green);text-decoration:none;border-bottom:1px solid var(--line-gold);}
   .svc-note a:hover{color:var(--gold);}
+  .svc-why{max-width:720px;margin:34px auto 0;padding:22px 26px;background:var(--bg-card);border:1px solid var(--line-gold);border-left:3px solid var(--gold);border-radius:6px;color:var(--muted);font-size:.96rem;line-height:1.7;text-align:left;}
+  .svc-why strong{color:var(--green);display:block;margin-bottom:6px;font-family:var(--serif);font-size:1.15rem;font-weight:600;}
   .gallery{background:linear-gradient(180deg,transparent,var(--bg-soft) 50%,transparent);}
   .gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
   .gitem{aspect-ratio:3/4;border-radius:4px;overflow:hidden;position:relative;border:1px solid var(--line-gold);cursor:pointer;transition:.5s;box-shadow:0 10px 26px rgba(31,94,48,.10);}
@@ -223,6 +225,32 @@
   @media(prefers-reduced-motion:reduce){.sticky-cta{transition:none;}}
   /* Nowość-бейдж на нових категоріях cennik */
   .cat-new{display:inline-block;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--green);border-radius:999px;padding:3px 10px;margin-left:12px;vertical-align:middle;font-weight:500;}
+  /* Jak pracujemy — процес (Process pillar) */
+  .jak-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+  .jstep{position:relative;padding:8px 6px;}
+  .jstep .jn{font-family:var(--serif);font-size:2.4rem;color:var(--gold-soft);line-height:1;display:block;margin-bottom:8px;}
+  .jstep h3{font-size:1.24rem;color:var(--green);margin-bottom:6px;}
+  .jstep p{color:var(--muted);font-size:.9rem;line-height:1.55;}
+  @media(max-width:920px){.jak-grid{grid-template-columns:1fr 1fr;gap:26px;}}
+  @media(max-width:560px){.jak-grid{grid-template-columns:1fr;}}
+  /* Efekty — слайдер до/після (Proof pillar; спить до фото) */
+  .efekty{background:linear-gradient(180deg,transparent,var(--bg-soft) 50%,transparent);}
+  .ba-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:900px;margin:0 auto;}
+  .ba{position:relative;margin:0;aspect-ratio:4/5;border-radius:6px;overflow:hidden;border:1px solid var(--line-gold);box-shadow:0 14px 40px rgba(31,94,48,.14);--p:50%;}
+  .ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+  .ba .ba-before{clip-path:inset(0 calc(100% - var(--p)) 0 0);}
+  .ba .ba-handle{position:absolute;top:0;bottom:0;left:var(--p);width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.18);transform:translateX(-1px);pointer-events:none;z-index:3;}
+  .ba .ba-handle::after{content:"\21C4";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;color:var(--green);display:flex;align-items:center;justify-content:center;font-size:.85rem;box-shadow:0 2px 8px rgba(0,0,0,.22);}
+  .ba .ba-range{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0;z-index:4;}
+  .ba .ba-tag{position:absolute;top:12px;font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:#fff;background:rgba(20,28,18,.55);padding:4px 10px;border-radius:999px;z-index:2;}
+  .ba .ba-tag-b{left:12px;}.ba .ba-tag-a{right:12px;}
+  .ba figcaption{position:absolute;left:0;right:0;bottom:0;padding:16px;font-family:var(--serif);font-style:italic;color:#fff;background:linear-gradient(transparent,rgba(20,28,18,.72));z-index:2;font-size:1.02rem;}
+  /* Promo-band запуску usta/kreska (спить до внесення послуг у cennik) */
+  .promo-band{background:var(--green);position:relative;overflow:hidden;}
+  .promo-band .container{text-align:center;padding:34px 32px;position:relative;z-index:2;}
+  .promo-band .promo-eyebrow{display:inline-block;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:#0f2a17;background:var(--gold-soft);padding:5px 14px;border-radius:999px;font-weight:700;margin-bottom:14px;}
+  .promo-band p{color:#fbf7ec;max-width:64ch;margin:0 auto 20px;font-size:1.05rem;}
+  .promo-band p strong{color:var(--gold-soft);}
   /* quiz invitation band */
   .quiz-band{background:var(--green);position:relative;overflow:hidden;}
   .quiz-band::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 62% 85% at 50% -10%,rgba(169,134,60,.18),transparent 64%);pointer-events:none;}
@@ -536,6 +564,7 @@
         <p data-i18n="about.p1" class="reveal d2">Studio Zelika w Wieluniu prowadzi <strong>Anna Zelinska — Ekspert PMU &amp; Architektura Brwi</strong> z ponad 5-letnim doświadczeniem. Specjalizujemy się w makijażu permanentnym oraz profesjonalnej pielęgnacji i stylizacji brwi i rzęs.</p>
         <p data-i18n="about.p2" class="reveal d2">Pracujemy indywidualnie: analiza rysów twarzy, brow mapping oraz dobór idealnego kształtu i odcienia. Korzystamy z certyfikowanych produktów, materiałów jednorazowych i rygorystycznych zasad higieny. Stawiamy na naturalny, zadbany efekt, który podkreśla Twoje rysy.</p>
         <p data-i18n="about.p3" class="reveal d2">Dogodna lokalizacja, elastyczne terminy i przypomnienia o wizycie. Umów konsultację — wspólnie stworzymy idealny kształt brwi i wyraziste spojrzenie.</p>
+        <p data-i18n="about.p4" class="reveal d2"><strong>Szczerze:</strong> największe doświadczenie mam w brwiach — to moja codzienność od lat. Usta i oczy to mój świeżo certyfikowany kierunek (2026), dlatego pierwsze zabiegi wykonuję w cenie wprowadzającej, z pełną starannością i bez pośpiechu. Uczciwość jest częścią profesjonalizmu.</p>
         <div class="about-stats reveal d3">
           <div class="s"><div class="n">5+</div><div class="t">lat<br>doświadczenia</div></div>
           <div class="s"><div class="n"><span data-google-rating>5,0</span> &#9733;</div><div class="t">średnia ocena<br>(<span data-google-reviews>51</span> opinie)</div></div>
@@ -561,6 +590,32 @@
     </div>
   </section>
 
+  <section class="jak" id="jak">
+    <div class="container">
+      <div class="section-head">
+        <span data-i18n="jak.eyebrow" class="eyebrow reveal">Jak pracujemy</span>
+        <h2 data-i18n="jak.h2" class="reveal d1">Zabieg <em>krok po kroku</em></h2>
+      </div>
+      <div class="jak-grid">
+        <div class="jstep reveal d1"><span class="jn">1</span><h3 data-i18n="jak.s1h">Konsultacja</h3><p data-i18n="jak.s1p">Analiza cery, oczekiwań i przeciwwskazań — zanim cokolwiek zaczniemy.</p></div>
+        <div class="jstep reveal d2"><span class="jn">2</span><h3 data-i18n="jak.s2h">Mapping</h3><p data-i18n="jak.s2p">Projektuję kształt pod Twoje rysy i dobieram odcień do podtonu skóry.</p></div>
+        <div class="jstep reveal d3"><span class="jn">3</span><h3 data-i18n="jak.s3h">Zabieg</h3><p data-i18n="jak.s3p">Certyfikowane pigmenty, jednorazowe, sterylne moduły, pełna higiena.</p></div>
+        <div class="jstep reveal d4"><span class="jn">4</span><h3 data-i18n="jak.s4h">Gojenie i korekta</h3><p data-i18n="jak.s4p">Dokładne wskazówki i retusz utrwalający efekt (4–6 tygodni).</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="efekty" id="efekty" data-tag-before="Przed" data-tag-after="Po" hidden>
+    <div class="container">
+      <div class="section-head">
+        <span data-i18n="ef.eyebrow" class="eyebrow">Efekty</span>
+        <h2 data-i18n="ef.h2">Przed i <em>po</em></h2>
+        <p data-i18n="ef.p">Prawdziwe realizacje — zdjęcia tuż po zabiegu, publikowane za zgodą klientek.</p>
+      </div>
+      <div class="ba-wrap" id="ba-wrap"></div>
+    </div>
+  </section>
+
   <section class="quiz-band">
     <div class="container">
       <span data-i18n="quiz.eyebrow" class="eyebrow reveal">Quiz</span>
@@ -569,6 +624,14 @@
       <a data-i18n="quiz.btn" href="/quiz" class="btn btn-gold reveal d3" data-quiz-open>Rozwiąż quiz</a>
     </div>
   </section>
+
+  <div class="promo-band" id="promo-band" hidden>
+    <div class="container">
+      <span class="promo-eyebrow" data-i18n="promo.eyebrow">Nowość</span>
+      <p data-i18n="promo.text">Makijaż permanentny <strong>ust</strong> i <strong>kreska</strong> — startujemy! Pracujemy na modelkach w cenie promocyjnej (za zgodę na zdjęcia), liczba miejsc ograniczona. Bezpłatna konsultacja.</p>
+      <a class="btn btn-gold" href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer" data-booksy data-i18n="promo.btn">Zapytaj o termin</a>
+    </div>
+  </div>
 
   <section class="services" id="services">
     <div class="container">
@@ -601,6 +664,7 @@
         </div>
       </div>
       <p data-i18n="svc.note" class="svc-note reveal">Oferujemy też brow mapping, makijaż okolicznościowy i farbowanie rzęs — pełny zakres usług i ceny w <a href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer">systemie Booksy</a>.</p>
+      <div class="svc-why reveal" data-i18n="svc.why"><strong>Dlaczego nie znajdziesz u nas „makijażu permanentnego za 199 zł”?</strong> Bo cena zabiegu to koszt sterylnych, jednorazowych modułów, certyfikowanych pigmentów i — przede wszystkim — wiedzy, dzięki której efekt goi się prawidłowo i utrzymuje latami. Na Twojej twarzy nie warto oszczędzać.</div>
     </div>
   </section>
 
@@ -760,6 +824,8 @@
   <script src="chat.js"></script>
 <script src="rating.js" defer></script>
 <script src="cennik.js" defer></script>
+<script src="ba-data.js" defer></script>
+<script src="ba.js" defer></script>
 
 <style>
 .qm{position:fixed;inset:0;z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;background:rgba(20,25,18,.55);backdrop-filter:blur(4px)}

@@ -81,6 +81,10 @@
         }
       });
       if (html) container.innerHTML = html; // podmiana statycznego cennika świeżymi danymi
+
+      // Промо-банер запуску показуємо АВТОМАТИЧНО, коли Anna внесла usta/oczy в cennik.
+      var promo = document.getElementById("promo-band");
+      if (promo && (byCat["Usta"] || byCat["Oczy"])) promo.hidden = false;
     })
     .catch(function () {}); // fetch padł → zostaje statyczny cennik (fallback)
 })();
