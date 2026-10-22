@@ -304,7 +304,10 @@ function makeApi(env, ctx) {
     if (ctx && ctx.waitUntil) ctx.waitUntil(q);
     return q;
   };
-  const cacheP = caches.open(LASTGOOD_CACHE).catch(() => null);
+  // Cache API otwierany leniwie — dopiero przy pierwszym zapytaniu o dane (przekierowania,
+  // pliki i proste 404 go nie dotykają).
+  let cacheP = null;
+  const openCache = () => cacheP || (cacheP = caches.open(LASTGOOD_CACHE).catch(() => null));
   const marker = () => new Response("1", { headers: { "Cache-Control": `max-age=${API_DOWN_TTL}` } });
 
   // Jedno zapytanie do originu. Zapisuje kopię / znaczniki. Zwraca
@@ -357,7 +360,7 @@ function makeApi(env, ctx) {
   }
 
   async function load(path, spec) {
-    const cache = await cacheP;
+    const cache = await openCache();
     let copy = null;
     let down = false;
     if (cache) {
@@ -2260,8 +2263,8 @@ async function localizedPage(request, env, api, lang, pageKey) {
 }
 
 // ── Kanoniczne adresy (301) ─────────────────────────────────────────────────────
-// Воркер запускається першим для ВСІХ запитів (wrangler.jsonc: run_worker_first: true),
-// тож www→apex і канонічні шляхи віддаємо самі як 301 — раніше частину робив шар
+// Воркер запускається першим для всіх сторінок (wrangler.jsonc: run_worker_first — усе,
+// крім статики), тож www→apex і канонічні шляхи віддаємо самі як 301 — раніше частину робив шар
 // assets (html_handling: auto-trailing-slash) тимчасовим 307, а частина (/index.html,
 // /porady/, /uk/quiz/) віддавала дубль сторінки з 200.
 const WWW_HOST = "www.zelika.pl";
@@ -2336,7 +2339,8 @@ export default {
 const site = {
   async route(request, env, ctx) {
     const url = new URL(request.url);
-    // www → apex: przed całym routingiem (także pliki statyczne, robots, sitemap)
+    // www → apex: przed całym routingiem (strony, robots, sitemap, llms, /media; zdjęcia i
+    // JS/CSS/ikony serwuje warstwa assets bez workera — patrz run_worker_first)
     if (url.hostname === WWW_HOST) return redirect301(SITE + url.pathname + url.search, 86400);
     const canon = canonicalPath(url.pathname);
     if (canon) return redirect301(new URL(canon + url.search, url).toString());
