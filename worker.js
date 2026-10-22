@@ -28,7 +28,8 @@ function absImg(img) {
 }
 
 function excerpt(post, n = 155) {
-  const base = post.meta_description || post.body || "";
+  // bez meta_description — tekst treści bez znaczników (##, **, [](…))
+  const base = post.meta_description || parseBody(post.body).map(blockText).join(" ");
   const flat = String(base).replace(/\s+/g, " ").trim();
   return flat.length > n ? flat.slice(0, n - 1).trimEnd() + "…" : flat;
 }
@@ -41,28 +42,165 @@ function plDate(iso) {
   return `${d.getUTCDate()} ${m[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-// Ciało: linia „## ” → <h2> (zawsze osobno); ciągłe linie → <p> (pusta linia
-// rozdziela akapity). Odporne na nagłówek tuż nad akapitem (pojedynczy \n).
-function renderBody(body) {
-  const out = [];
-  let para = [];
-  const flush = () => {
-    if (para.length) out.push(`<p>${esc(para.join(" "))}</p>`);
-    para = [];
-  };
+// ── Treść porady: podzbiór Markdown (wspólny kontrakt z botem, blog v2) ────────
+// Linia po linii: „## ”/„### ” → <h2>/<h3> (zawsze osobno); „- ” → <ul>,
+// „1. ” → <ol> (sąsiednie punkty — jedna lista, pusta linia między punktami jej
+// nie przerywa); pozostałe sąsiednie linie → jeden <p> (pusta linia rozdziela
+// akapity). W tekście: **pogrubienie** i [tekst](adres). Wszystko inne — także
+// HTML i niedomknięte ** — to zwykły, escapowany tekst.
+const LIST_RE = /^(?:-|(\d{1,3})\.)\s+(.+)$/;
+function parseBody(body) {
+  const blocks = [];
+  let open = null; // akapit albo lista, do której trafiają kolejne linie
   for (const raw of String(body || "").replace(/\r/g, "").split("\n")) {
     const line = raw.trim();
+    const m = line.match(LIST_RE);
     if (!line) {
-      flush();
-    } else if (line.startsWith("## ")) {
-      flush();
-      out.push(`<h2>${esc(line.slice(3).trim())}</h2>`);
+      if (open && open.type === "p") open = null;
+    } else if (line.startsWith("## ") || line.startsWith("### ")) {
+      const h3 = line.startsWith("### ");
+      blocks.push({ type: h3 ? "h3" : "h2", text: line.slice(h3 ? 4 : 3).trim() });
+      open = null;
+    } else if (m) {
+      const type = m[1] ? "ol" : "ul";
+      if (!open || open.type !== type) {
+        open = { type, start: m[1] ? Number(m[1]) : 1, items: [] };
+        blocks.push(open);
+      }
+      open.items.push(m[2]);
+    } else if (open && open.type === "p") {
+      open.lines.push(line);
     } else {
-      para.push(line);
+      open = { type: "p", lines: [line] };
+      blocks.push(open);
     }
   }
-  flush();
-  return out.join("\n");
+  return blocks;
+}
+
+// Tekst w linii → tokeny: tekst, link [etykieta](adres), ogranicznik **.
+// ** otwiera, gdy tuż za nim nie ma spacji; zamyka, gdy tuż przed nim nie ma
+// spacji. Parowanie stosem → <strong> zawsze poprawnie zagnieżdżone; link jest
+// niepodzielny (** z etykiety nie paruje się z ** spoza niej).
+const INLINE_RE = /\[([^\[\]\n]+)\]\(([^\s()]*)\)|\*\*/g;
+function inlineTokens(s) {
+  const toks = [];
+  let last = 0;
+  for (const m of s.matchAll(INLINE_RE)) {
+    if (m.index > last) toks.push({ text: s.slice(last, m.index) });
+    if (m[1] != null) {
+      toks.push({ label: m[1], url: m[2] });
+    } else {
+      const before = s[m.index - 1];
+      const after = s[m.index + 2];
+      toks.push({ delim: true, open: !!after && !/\s/.test(after), close: !!before && !/\s/.test(before) });
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < s.length) toks.push({ text: s.slice(last) });
+  const stack = [];
+  toks.forEach((t, i) => {
+    if (!t.delim) return;
+    const top = stack[stack.length - 1];
+    if (t.close && top !== undefined && top < i - 1) {
+      stack.pop();
+      toks[top].pair = "open";
+      t.pair = "close";
+    } else if (t.open) {
+      stack.push(i);
+    }
+  });
+  return toks;
+}
+
+// Adres linku z treści: względny adres strony (/…, /#…; nie //… ani /\…) albo
+// https://. Zwraca { external } albo null — wtedy zostaje sama etykieta (tekst).
+function linkTarget(url) {
+  if (/^\/(?![\/\\])/.test(url)) return { external: false };
+  if (!/^https:\/\//i.test(url)) return null;
+  let host;
+  try {
+    host = new URL(url).hostname;
+  } catch (_) {
+    return null;
+  }
+  if (!host) return null;
+  return { external: !(host === "zelika.pl" || host.endsWith(".zelika.pl")) };
+}
+
+function inlineHtml(s) {
+  return inlineTokens(s)
+    .map((t) => {
+      if (t.text != null) return esc(t.text);
+      if (t.delim) return t.pair === "open" ? "<strong>" : t.pair === "close" ? "</strong>" : "**";
+      const label = inlineHtml(t.label);
+      const link = linkTarget(t.url);
+      if (!link) return label;
+      return `<a href="${esc(t.url)}"${link.external ? ' rel="noopener" target="_blank"' : ""}>${label}</a>`;
+    })
+    .join("");
+}
+
+// Ten sam tekst bez znaczników (FAQPage JSON-LD, opis z treści).
+function inlineText(s) {
+  return inlineTokens(s)
+    .map((t) => (t.text != null ? t.text : t.delim ? (t.pair ? "" : "**") : inlineText(t.label)))
+    .join("");
+}
+
+function blockText(b) {
+  if (b.type === "p") return inlineText(b.lines.join(" "));
+  if (b.type === "ul") return b.items.map((it) => "• " + inlineText(it)).join("\n");
+  if (b.type === "ol") return b.items.map((it, i) => `${b.start + i}. ${inlineText(it)}`).join("\n");
+  return inlineText(b.text);
+}
+
+function renderBody(blocks) {
+  return blocks
+    .map((b) => {
+      if (b.type === "p") return `<p>${inlineHtml(b.lines.join(" "))}</p>`;
+      if (b.type === "ul" || b.type === "ol") {
+        const start = b.type === "ol" && b.start !== 1 ? ` start="${b.start}"` : "";
+        return `<${b.type}${start}>\n${b.items.map((it) => `<li>${inlineHtml(it)}</li>`).join("\n")}\n</${b.type}>`;
+      }
+      return `<${b.type}>${inlineHtml(b.text)}</${b.type}>`;
+    })
+    .join("\n");
+}
+
+// FAQ porady: „## Najczęstsze pytania” (lub „## FAQ”), w nim „### Pytanie?”, a
+// odpowiedź to akapity/listy aż do następnego nagłówka. Pary bez odpowiedzi
+// pomijamy. Format { ok, q, a } — jak dla faqPageLd().
+const FAQ_H2 = /^(najczęstsze pytania( \(faq\))?|faq)$/;
+function bodyFaq(blocks) {
+  const qa = [];
+  let inFaq = false;
+  let cur = null;
+  for (const b of blocks) {
+    if (b.type === "h2") {
+      const h = inlineText(b.text).normalize("NFC").toLowerCase().replace(/\s+/g, " ").replace(/[\s:]+$/, "");
+      inFaq = FAQ_H2.test(h);
+      cur = null;
+    } else if (!inFaq) {
+      continue;
+    } else if (b.type === "h3") {
+      cur = { ok: true, q: inlineText(b.text).trim(), a: [] };
+      qa.push(cur);
+    } else if (cur) {
+      cur.a.push(blockText(b));
+    }
+  }
+  return qa.map((x) => ({ ...x, a: x.a.join("\n").trim() })).filter((x) => x.q && x.a);
+}
+
+// Data ostatniej zmiany: updated_at (bot ustawia przy każdej poprawce
+// opublikowanej porady), ale nigdy wcześniejsza niż published_at.
+function modifiedAt(post) {
+  const pub = str(post.published_at);
+  const upd = str(post.updated_at);
+  const tu = Date.parse(upd);
+  const tp = Date.parse(pub);
+  return !isNaN(tu) && (isNaN(tp) || tu > tp) ? upd : pub;
 }
 
 // ── Dane z bota (/api/content, /api/posts) ─────────────────────────────────────
@@ -559,14 +697,21 @@ header.nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;just
 @media(max-width:760px){.nav-links li:not(.cta-li){display:none}.nav-links{gap:14px}header.nav{padding:10px 18px}.brand .mark{width:96px}}
 /* --- treść --- */
 main{padding-bottom:10px}
-h1,h2{font-family:var(--serif);color:var(--green);font-weight:600;line-height:1.15}
+h1,h2,h3{font-family:var(--serif);color:var(--green);font-weight:600;line-height:1.15}
 h1{font-size:2.2rem;margin:.5em 0 .2em}
 h2{font-size:1.55rem;margin:1.5em 0 .3em}
+h3{font-size:1.25rem;margin:1.3em 0 .3em}
 .crumbs{font-size:.85rem;color:var(--muted);margin:26px 0 0}
 .crumbs a{color:var(--muted)}
 .meta{font-size:.9rem;color:var(--muted);margin:.2em 0 1.4em;border-bottom:1px solid var(--line-gold);padding-bottom:1em}
 .hero-img{width:100%;max-height:400px;object-fit:cover;border-radius:16px;margin:1em 0}
 article p{margin:0 0 1.1em}
+article ul,article ol{margin:0 0 1.1em;padding-left:1.4em}
+article li{margin:0 0 .35em;padding-left:.2em}
+article li::marker{color:var(--gold)}
+article strong{font-weight:500}
+article :is(p,li) a{text-decoration:underline;text-decoration-color:var(--line-gold);text-underline-offset:3px}
+article :is(p,li) a:hover{text-decoration-color:currentColor}
 .lead{font-size:1.08rem;color:var(--muted);margin:.3em 0 2.2em}
 .card{display:block;background:var(--bg-card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:0 0 22px;transition:box-shadow .25s,transform .25s}
 .card:hover{box-shadow:0 12px 34px rgba(31,94,48,.12);transform:translateY(-2px);text-decoration:none}
@@ -700,7 +845,7 @@ async function renderIndex(api) {
       ? posts
           .map(
             (p) => `<a class="card" href="/porady/${esc(p.slug)}">
-${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" loading="lazy">` : ""}
+${p.image ? `<img src="${esc(p.image)}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : ""}
 <div class="body"><h2>${esc(p.title)}</h2><p>${esc(excerpt(p))}</p>
 <div class="date">${esc(plDate(p.published_at))}</div></div></a>`
           )
@@ -732,7 +877,7 @@ ${ctaBlock()}`;
 
   return htmlResponse(
     layout({
-      title: `${SECTION_TITLE} | Zelika PMU — Wieluń`,
+      title: `${SECTION_TITLE} | Zelika Wieluń`,
       description: SECTION_DESC,
       canonical,
       ogImage: SITE + "/og-image.jpg",
@@ -778,6 +923,8 @@ async function renderPost(api, slug) {
   const desc = excerpt(post, 160);
   const author = str(post.author) || ANNA;
   const byAnna = isAnna(author);
+  const blocks = parseBody(post.body);
+  const faqLd = faqPageLd(bodyFaq(blocks), "pl-PL");
   const jsonld = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -785,7 +932,7 @@ async function renderPost(api, slug) {
     description: desc,
     image: ogImage,
     datePublished: post.published_at || undefined,
-    dateModified: post.published_at || undefined,
+    dateModified: modifiedAt(post) || undefined,
     author: byAnna
       ? { "@type": "Person", "@id": SITE + "/#anna", name: ANNA, jobTitle: "Specjalistka makijażu permanentnego" }
       : { "@type": "Person", name: author },
@@ -803,14 +950,14 @@ async function renderPost(api, slug) {
     ],
   };
   const body = `<script type="application/ld+json">${scriptJson(crumbLd)}</script>
-<p class="crumbs"><a href="/">Strona główna</a> › <a href="/porady">${esc(SECTION_TITLE)}</a> › ${esc(post.title)}</p>
+${faqLd ? `<script type="application/ld+json">${scriptJson(faqLd)}</script>\n` : ""}<p class="crumbs"><a href="/">Strona główna</a> › <a href="/porady">${esc(SECTION_TITLE)}</a> › ${esc(post.title)}</p>
 <article>
 <h1>${esc(post.title)}</h1>
 <div class="meta">${esc(author)}${
     post.published_at ? " · " + esc(plDate(post.published_at)) : ""
   }</div>
-${post.image ? `<img class="hero-img" src="${esc(post.image)}" alt="${esc(post.title)}">` : ""}
-${renderBody(post.body)}
+${post.image ? `<img class="hero-img" src="${esc(post.image)}" alt="${esc(str(post.image_alt) || post.title)}">` : ""}
+${renderBody(blocks)}
 ${byAnna ? `<aside class="author-box">
 <div class="ab-eye">Autorka</div>
 <div class="ab-name">Anna Zelinska</div>
@@ -823,7 +970,7 @@ ${ctaBlock()}
 
   return htmlResponse(
     layout({
-      title: `${post.title} | Zelika PMU — Wieluń`,
+      title: `${post.title} | Zelika Wieluń`,
       description: desc,
       canonical,
       ogImage,
@@ -943,7 +1090,7 @@ async function renderSitemap(api) {
       loc: SITE + "/porady/" + encodeURIComponent(p.slug),
       pri: "0.7",
       freq: "monthly",
-      lastmod: (p.published_at || "").slice(0, 10) || undefined,
+      lastmod: modifiedAt(p).slice(0, 10) || undefined,
     })),
   ];
   const xml =
