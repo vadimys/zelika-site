@@ -5,3 +5,5 @@
 /.gitignore
 /.assetsignore
 /sitemap.xml
+/.git
+/.DS_Store
