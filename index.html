@@ -206,6 +206,14 @@
   .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
   @media(max-width:920px){
     .hero-grid,.about-grid,.contact-grid{grid-template-columns:1fr;gap:46px;}
+    /* Hero на телефонах/планшетах: менший логотип і верхній відступ — кнопка бронювання
+       («Rezerwacja online») на першому екрані (360×740 — повністю, у PL/UK/EN). Відступ не
+       менший за висоту фіксованої шапки (~104px). Розмір лого задає лише width (висота — з
+       viewBox), тож без CLS; display:block прибирає зазор під інлайн-SVG. Десктоп — без змін. */
+    .hero{padding-top:116px;}
+    .hero .brand-hero{margin-bottom:16px;}
+    .hero .brand-hero .mark{display:block;width:clamp(160px,46vw,300px);}
+    .hero .brand-hero .tag{font-size:.9rem;line-height:1.4;margin-top:8px;}
     /* Фото роботи + бейдж Google — ПІД H1/lead/CTA (раніше order:-1 ставив його над текстом),
        на всю ширину. Раніше margin:0 auto без потокового вмісту (img/бейдж — absolute)
        стискав блок до ~2×3px. Розмір задають width + aspect-ratio 4/5 (кадр як у файлі) ще
@@ -230,16 +238,42 @@
     section{padding:74px 0;}
     .about-stats{gap:24px;}
   }
+  /* Вузькі телефони (360×740 тощо): щільніше, щоб кнопка hero вмістилася на першому екрані */
+  @media(max-width:400px){
+    .hero{padding-top:110px;}
+    .hero .brand-hero{margin-bottom:12px;}
+    .hero .brand-hero .mark{width:clamp(140px,42vw,168px);}
+    .hero .brand-hero .tag{font-size:.8rem;margin-top:6px;}
+    .hero .kicker{margin-bottom:14px;}
+    .hero .lead{margin:16px 0 26px;}
+  }
 
-  /* Sticky mobile CTA (thumb-zone) + мікрорядок ціна·час·локація */
+  /* Sticky mobile CTA (thumb-zone) + мікрорядок ціна·час·локація.
+     Поки на екрані кнопка бронювання з hero — смуга прихована (раніше перекривала її на
+     першому екрані); коли кнопки не видно (проскролено або, на низькому екрані, вона ще
+     нижче згину) — смуга видима. Класи ставить /nav.js:
+     .sc-js — керування взяв JS, .sc-off — прихована (IntersectionObserver на кнопці hero;
+     без IO — показ після прокрутки >60% висоти екрана). Без JS — видима, як раніше.
+     Кнопка чату (.zchat-fab) не рухається: смуга лише з'являється/зникає поруч із нею. */
   .sticky-cta{display:none;}
   @media(max-width:920px){
-    .sticky-cta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:fixed;left:12px;right:84px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483200;background:var(--green);color:#fbf7ec;text-decoration:none;min-height:56px;padding:9px 18px;border-radius:999px;box-shadow:0 12px 30px -8px rgba(31,94,48,.6);transition:transform .18s;}
+    .sticky-cta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:fixed;left:12px;right:84px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483200;background:var(--green);color:#fbf7ec;text-decoration:none;min-height:56px;padding:9px 18px;border-radius:999px;box-shadow:0 12px 30px -8px rgba(31,94,48,.6);transition:transform .18s,opacity .25s ease-out,translate .35s cubic-bezier(.22,1,.36,1),visibility 0s;}
     .sticky-cta:active{transform:scale(.97);}
     .sticky-cta .sc-main{font-weight:500;font-size:1rem;letter-spacing:.02em;}
     .sticky-cta .sc-sub{font-size:.66rem;letter-spacing:.02em;opacity:.86;}
+    .sticky-cta.sc-off{opacity:0;translate:0 18px;visibility:hidden;pointer-events:none;transition:transform .18s,opacity .2s ease-in,translate .2s ease-in,visibility 0s linear .2s;}
   }
-  @media(prefers-reduced-motion:reduce){.sticky-cta{transition:none;}}
+  /* JS увімкнено, але /nav.js ще не відпрацював — теж прихована (без блимання над кнопкою
+     hero на першому кадрі). Запобіжник: якщо скрипт так і не запуститься — показ за 4 с.
+     Браузери без media-фічі scripting просто показують смугу до запуску /nav.js. */
+  @media(max-width:920px) and (scripting:enabled){
+    .sticky-cta:not(.sc-js){opacity:0;visibility:hidden;pointer-events:none;animation:sc-failsafe 0s 4s forwards;}
+  }
+  @keyframes sc-failsafe{to{opacity:1;visibility:visible;pointer-events:auto;}}
+  @media(prefers-reduced-motion:reduce){
+    .sticky-cta{transition:opacity .2s linear,visibility 0s;}
+    .sticky-cta.sc-off{translate:none;transition:opacity .2s linear,visibility 0s linear .2s;}
+  }
   /* Nowość-бейдж на нових категоріях cennik */
   .cat-new{display:inline-block;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--green);border-radius:999px;padding:3px 10px;margin-left:12px;vertical-align:middle;font-weight:500;}
   /* Jak pracujemy — процес (Process pillar) */
