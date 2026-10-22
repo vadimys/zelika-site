@@ -149,6 +149,279 @@ function makeApi(env, ctx) {
 
 const postsOf = (res) => (res && res.data && Array.isArray(res.data.posts) ? res.data.posts : []);
 
+// ── Katalog usług (cennik) z /api/content ──────────────────────────────────────
+// Kontrakt bota: cennik_items (publiczne usługi w kolejności position; name_uk/en,
+// description*, price, price_from, duration, category) + cennik_categories
+// [{key, pl, uk, en}] w kolejności na stronie. Stary kształt API (bez tłumaczeń
+// i bez cennik_categories) też działa: brak tłumaczenia → PL, brak kategorii →
+// wbudowana kolejność i nazwy poniżej, brak price_from → cena dokładna.
+const CAT_DEFAULTS = [
+  { key: "Makijaż permanentny brwi", pl: "Makijaż permanentny brwi", uk: "Перманентний макіяж брів", en: "Permanent brow makeup" },
+  { key: "Brwi", pl: "Brwi", uk: "Брови", en: "Brows" },
+  { key: "Rzęsy", pl: "Rzęsy", uk: "Вії", en: "Lashes" },
+  { key: "Usta", pl: "Usta", uk: "Губи", en: "Lips" },
+  { key: "Oczy", pl: "Oczy", uk: "Очі", en: "Eyes" },
+  { key: "Pozostałe", pl: "Pozostałe", uk: "Інше", en: "Other" },
+];
+const catKey = (s) => String(s == null ? "" : s).trim().toLowerCase();
+const CAT_BY_KEY = new Map(CAT_DEFAULTS.map((c) => [catKey(c.key), c]));
+const FEATURE_CAT = catKey("Makijaż permanentny brwi");
+const NEW_CATS = [catKey("Usta"), catKey("Oczy")]; // nowe strefy (certyfikaty 2026) — badge „Nowość”
+const FEAT_NOTE = {
+  pl: "Trwały, naturalny efekt dopasowany do kształtu twarzy. Cena zawiera konsultację, brow mapping i dobór koloru.",
+  uk: "Стійкий, природний ефект, підібраний до форми обличчя. У ціну входять консультація, brow mapping і підбір кольору.",
+  en: "A long-lasting, natural result tailored to your face shape. The price includes a consultation, brow mapping and colour matching.",
+};
+const NEW_BADGE = { pl: "Nowość", uk: "Новинка", en: "New" };
+const PRICE_FROM = { pl: "od", uk: "від", en: "from" };
+const OFFER_CATALOG_NAME = { pl: "Cennik usług", uk: "Послуги й ціни", en: "Services and prices" };
+// Strefy, od których zależą „uśpione” treści (FAQ o ustach, promo, akapit o cenie
+// wprowadzającej): pokazujemy je dopiero, gdy usługa jest w katalogu.
+const ZONES = { usta: /\b(usta|ust|warg\w*)\b/i, oczy: /\boczy\b|powiek|kresk/i };
+// knowsAbout firmy — tylko tematy potwierdzone usługami z katalogu.
+const TOPICS = [
+  ["Makijaż permanentny brwi", /makija[zż] permanentny brwi/i],
+  ["Architektura brwi", /makija[zż] permanentny brwi/i], // brow mapping wliczony w PMU brwi
+  ["Makijaż permanentny ust", ZONES.usta],
+  ["Makijaż permanentny powiek (kreska)", ZONES.oczy],
+  ["Laminacja brwi", /laminacja brwi/i],
+  ["Laminacja rzęs", /laminacja rzęs/i],
+  ["Lifting rzęs", /lifting/i],
+  ["Koloryzacja rzęs", /koloryzacja rzęs|farb\w* rzęs/i],
+  ["Regulacja brwi", /regulacja/i],
+];
+
+const tr = (it, field, lang) => (lang !== "pl" && str(it[field + "_" + lang])) || str(it[field]);
+
+function buildCatalogue(content) {
+  if (!content || !Array.isArray(content.cennik_items)) return null;
+  const items = [];
+  for (const it of content.cennik_items) {
+    if (!it || typeof it !== "object") continue;
+    const price =
+      typeof it.price === "number" ? it.price
+      : typeof it.price === "string" && it.price.trim() ? Number(it.price.trim().replace(",", "."))
+      : NaN; // null/""/brak → pomijamy (nie „0 zł”)
+    if (!str(it.name) || !str(it.category) || !Number.isFinite(price) || price < 0) continue;
+    items.push({
+      name: str(it.name), name_uk: str(it.name_uk), name_en: str(it.name_en),
+      description: str(it.description), description_uk: str(it.description_uk), description_en: str(it.description_en),
+      price, price_from: it.price_from === true || it.price_from === 1,
+      duration: str(it.duration), category: str(it.category),
+    });
+  }
+  if (!items.length) return null;
+
+  const cats = [];
+  const byKey = new Map();
+  const addCat = (key, titles) => {
+    const k = catKey(key);
+    if (!k || byKey.has(k)) return;
+    const def = CAT_BY_KEY.get(k) || {};
+    const pl = str(titles && titles.pl) || def.pl || str(key);
+    const c = { k, key: str(key), titles: { pl }, items: [] };
+    for (const l of ["uk", "en"]) c.titles[l] = str(titles && titles[l]) || def[l] || pl;
+    byKey.set(k, c);
+    cats.push(c);
+  };
+  const defs = Array.isArray(content.cennik_categories) ? content.cennik_categories.filter((d) => d && str(d.key)) : [];
+  (defs.length ? defs : CAT_DEFAULTS).forEach((d) => addCat(d.key, d));
+  for (const it of items) {
+    if (!byKey.has(catKey(it.category))) addCat(it.category, null); // nowa kategoria bez opisu → na końcu
+    byKey.get(catKey(it.category)).items.push(it);
+  }
+  const text = (it) => `${it.category} ${it.name}`;
+  const prices = items.map((it) => it.price);
+  const maxItem = items.reduce((a, b) => (b.price > a.price ? b : a));
+  return {
+    cats: cats.filter((c) => c.items.length),
+    items,
+    zones: new Set(Object.keys(ZONES).filter((z) => items.some((it) => ZONES[z].test(text(it))))),
+    min: Math.min(...prices),
+    max: Math.max(...prices),
+    maxIsFrom: maxItem.price_from,
+    topics: TOPICS.filter(([, re]) => items.some((it) => re.test(text(it)))).map(([t]) => t),
+    updatedAt: str(content.cennik_updated_at),
+  };
+}
+
+function fmtNumber(v, lang) {
+  const s = Number.isInteger(v) ? String(v) : v.toFixed(2);
+  return lang === "en" ? s : s.replace(".", ",");
+}
+function fmtPrice(it, lang) {
+  return (it.price_from ? PRICE_FROM[lang] + " " : "") + fmtNumber(it.price, lang) + " zł";
+}
+// „2 g 30 min” / „1 g” / „45 min” / „ok. 1,5 godz.” → UK „2 год 30 хв”, EN „2 h 30 min”.
+// Nierozpoznany zapis zostaje bez zmian (lepiej po polsku niż źle).
+const DUR_RE = /^(ok\.?\s*)?(?:(\d+(?:[.,]\d+)?)\s*(?:godz\.?|godzin[ay]?|g\.?|h)(?![a-ząćęłńóśźż]))?\s*(?:(\d+)\s*(?:min\.?|minut[y]?))?$/i;
+const DUR_WORDS = { uk: { approx: "бл. ", h: "год", m: "хв" }, en: { approx: "approx. ", h: "h", m: "min" } };
+function fmtDuration(d, lang) {
+  const s = str(d);
+  if (!s || lang === "pl") return s;
+  const m = s.match(DUR_RE);
+  if (!m || (!m[2] && !m[3])) return s;
+  const w = DUR_WORDS[lang];
+  const parts = [];
+  if (m[2]) parts.push(`${lang === "en" ? m[2].replace(",", ".") : m[2].replace(".", ",")} ${w.h}`);
+  if (m[3]) parts.push(`${m[3]} ${w.m}`);
+  return (m[1] ? w.approx : "") + parts.join(" ");
+}
+
+function priceRowHtml(it, lang) {
+  const desc = tr(it, "description", lang);
+  const dur = fmtDuration(it.duration, lang);
+  return (
+    `<div class="price-row"><span class="pname">${esc(tr(it, "name", lang))}` +
+    (desc ? `<span class="pdesc">${esc(desc)}</span>` : "") +
+    (dur ? `<span class="pdur">${esc(dur)}</span>` : "") +
+    `</span><span class="price">${esc(fmtPrice(it, lang))}</span></div>`
+  );
+}
+function cennikHtml(cat, lang) {
+  let num = 0;
+  return cat.cats
+    .map((c) => {
+      const rows = c.items.map((it) => priceRowHtml(it, lang)).join("");
+      const title = esc(c.titles[lang] || c.titles.pl);
+      if (c.k === FEATURE_CAT) {
+        return `<div class="cat feature reveal d1"><div class="cat-h"><span class="cat-num">&#10022;</span><h3>${title}</h3></div><p class="feat-note">${esc(FEAT_NOTE[lang])}</p>${rows}</div>`;
+      }
+      num += 1;
+      const badge = NEW_CATS.includes(c.k) ? `<span class="cat-new">${esc(NEW_BADGE[lang])}</span>` : "";
+      return `<div class="cat reveal ${num % 2 ? "d1" : "d2"}"><div class="cat-h"><span class="cat-num">${String(num).padStart(2, "0")}</span><h3>${title}</h3>${badge}</div>${rows}</div>`;
+    })
+    .join("\n");
+}
+
+// JSON-LD: OfferCatalog (kategorie → oferty), cena dokładna albo minPrice dla „od”.
+function offerLd(it, lang) {
+  const service = { "@type": "Service", name: tr(it, "name", lang) };
+  const desc = tr(it, "description", lang);
+  if (desc) service.description = desc;
+  const offer = { "@type": "Offer", itemOffered: service, priceCurrency: "PLN" };
+  if (it.price_from) offer.priceSpecification = { "@type": "PriceSpecification", minPrice: it.price, priceCurrency: "PLN" };
+  else offer.price = it.price;
+  return offer;
+}
+function offerCatalogLd(cat, lang) {
+  return {
+    "@type": "OfferCatalog",
+    name: OFFER_CATALOG_NAME[lang],
+    itemListElement: cat.cats.map((c) => ({
+      "@type": "OfferCatalog",
+      name: c.titles[lang] || c.titles.pl,
+      itemListElement: c.items.map((it) => offerLd(it, lang)),
+    })),
+  };
+}
+function priceRangeOf(cat) {
+  return cat.min === cat.max
+    ? `${fmtNumber(cat.min, "pl")} zł`
+    : `${fmtNumber(cat.min, "pl")}–${fmtNumber(cat.max, "pl")}${cat.maxIsFrom ? "+" : ""} zł`;
+}
+// LocalBusiness z index.html (adres, godziny, founder…) + dane z katalogu.
+// aggregateRating usuwamy zawsze: Google nie pokazuje gwiazdek dla ocen
+// wystawianych samemu sobie / zebranych z serwisów zewnętrznych na LocalBusiness.
+function businessLd(ld, cat, lang) {
+  if (!ld || typeof ld !== "object") return ld;
+  delete ld.aggregateRating;
+  if (cat) {
+    ld.priceRange = priceRangeOf(cat);
+    ld.knowsAbout = cat.topics;
+    ld.hasOfferCatalog = offerCatalogLd(cat, lang);
+  }
+  return ld;
+}
+// FAQPage: pytania z @id „#faq-<strefa>-…” zostają tylko, gdy strefa jest w katalogu.
+function faqLd(ld, zones) {
+  if (ld && Array.isArray(ld.mainEntity)) {
+    ld.mainEntity = ld.mainEntity.filter((q) => {
+      const m = String((q && q["@id"]) || "").match(/#faq-([a-z]+)-/);
+      return !m || zones.has(m[1]);
+    });
+  }
+  return ld;
+}
+// JSON w <script>: „<” → \u003c, więc treść z bota nie zamknie znacznika (</script>).
+const scriptJson = (v) => JSON.stringify(v).replace(/</g, "\\u003c");
+// HTMLRewriter: zbiera tekst <script> (przychodzi kawałkami), parsuje JSON,
+// podmienia na przekształcony. Błąd parsowania → oryginał bez zmian.
+function jsonScriptHandler(transform) {
+  let buf = "";
+  return {
+    text(t) {
+      buf += t.text;
+      if (!t.lastInTextNode) {
+        t.remove();
+        return;
+      }
+      let out = buf;
+      try {
+        out = scriptJson(transform(JSON.parse(buf)));
+      } catch (_) {}
+      t.replace(out, { html: true });
+      buf = "";
+    },
+  };
+}
+// Mały wyciąg dla quizu (ceny z tego samego katalogu) — <script type="application/json">.
+function quizDataJson(cat) {
+  return scriptJson({
+    items: cat.items.map((it) => ({ category: it.category, name: it.name, price: it.price, price_from: it.price_from })),
+  });
+}
+
+// ── Ocena Google (z /api/content) — liczba opinii z poprawną odmianą ───────────
+function parseRating(c) {
+  if (!c) return null;
+  const r = Number(String(c.google_rating == null ? "" : c.google_rating).replace(",", "."));
+  const n = parseInt(c.google_reviews, 10);
+  if (!(r > 0 && r <= 5) || !(n > 0)) return null;
+  const list = Array.isArray(c.google_reviews_list) ? c.google_reviews_list.filter((x) => x && str(x.text)) : [];
+  return { r, n, list };
+}
+const fmtRating = (r, lang) => (lang === "en" ? r.toFixed(1) : r.toFixed(1).replace(".", ","));
+const few = (n) => n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14);
+const one = (n) => n % 10 === 1 && n % 100 !== 11;
+// mianownik: 1 opinia, 2–4/22–24 opinie, 5–21/25+ opinii; po „na podstawie” zawsze „opinii”
+const plOpinie = (n) => (n === 1 ? "opinia" : few(n) ? "opinie" : "opinii");
+const ukVidguky = (n) => (one(n) ? "відгук" : few(n) ? "відгуки" : "відгуків");
+const ukVidgukivGen = (n) => (one(n) ? "відгуку" : "відгуків"); // «на основі N …»
+const enReviews = (n) => (n === 1 ? "review" : "reviews");
+const REVIEWS_TXT = {
+  pl: {
+    count: (r, n) => `${n} ${plOpinie(n)}`,
+    stat: (r, n) => `średnia ocena<br>(${n} ${plOpinie(n)})`,
+    lead: (r, n) => `Prawdziwe opinie z Google — ocena <strong>${r}</strong> &#9733; na podstawie <strong>${n}</strong> opinii.`,
+    note: (r, n) => `Ocena <strong>${r} &#9733;</strong> na podstawie ${n} opinii w Google`,
+    aria: (r) => `Opinie Google — ${r}`,
+  },
+  uk: {
+    count: (r, n) => `${n} ${ukVidguky(n)}`,
+    stat: (r, n) => `середня оцінка<br>(${n} ${ukVidguky(n)})`,
+    lead: (r, n) => `Справжні відгуки з Google — оцінка <strong>${r}</strong> &#9733; на основі <strong>${n}</strong> ${ukVidgukivGen(n)}.`,
+    note: (r, n) => `Оцінка <strong>${r} &#9733;</strong> на основі ${n} ${ukVidgukivGen(n)} у Google`,
+    aria: (r) => `Відгуки Google — ${r}`,
+  },
+  en: {
+    count: (r, n) => `${n} ${enReviews(n)}`,
+    stat: (r, n) => `average rating<br>(${n} ${enReviews(n)})`,
+    lead: (r, n) => `Real Google reviews — rated <strong>${r}</strong> &#9733; based on <strong>${n}</strong> ${enReviews(n)}.`,
+    note: (r, n) => `Rated <strong>${r} &#9733;</strong> based on ${n} Google ${enReviews(n)}`,
+    aria: (r) => `Google reviews — ${r}`,
+  },
+};
+function reviewCardsHtml(list) {
+  return list
+    .slice(0, 12)
+    .map((rv) => {
+      const n = Math.max(1, Math.min(5, parseInt(rv.rating, 10) || 5));
+      return `<figure class="rev-card"><div class="rev-stars">${"★".repeat(n)}</div><blockquote>${esc(rv.text)}</blockquote><figcaption>— ${esc(rv.author)}</figcaption></figure>`;
+    })
+    .join("");
+}
+
 // --- style (spójne ze stroną główną: kolory, fonty, nagłówek, przycisk Booksy) ---
 const CSS = `
 :root{--bg:#f4f1e7;--bg-soft:#ece7d8;--bg-card:#fffdf6;--green:#1f5e30;--green-mid:#2f7d44;--gold:#a9863c;--ink:#272b22;--muted:#6e7365;--line:rgba(31,94,48,.16);--line-gold:rgba(169,134,60,.30);--serif:'Cormorant Garamond',Georgia,serif;--sans:'Jost',system-ui,sans-serif}
@@ -454,32 +727,73 @@ function renderRobots() {
 }
 
 // llms.txt — agent-readable опис бізнесу для AI-пошуку/асистентів (AEO/GEO).
-function renderLlms() {
+// Cennik i lista artykułów — z tych samych danych co strona (katalog bota).
+const md = (s) => str(s).replace(/\s+/g, " ").replace(/([\\[\]])/g, "\\$1");
+async function renderLlms(api) {
+  const [contentRes, postsRes] = await Promise.all([api.content(), api.posts()]);
+  const c = contentRes.data;
+  const cat = buildCatalogue(c);
+  const rating = parseRating(c);
+  const posts = postsOf(postsRes);
+  const ratingTxt = rating ? ` Ocena ${fmtRating(rating.r, "pl")}/5 w Google (${rating.n} ${plOpinie(rating.n)}).` : "";
+
+  let services;
+  if (cat) {
+    const updated = cat.updatedAt ? ` Stan cennika: ${cat.updatedAt.slice(0, 10)}.` : "";
+    services =
+      `## Usługi i ceny\n\nCeny w PLN; „od” = cena minimalna (ostateczna po konsultacji).${updated} ` +
+      `Wolne terminy i rezerwacja: Booksy (link niżej).\n\n` +
+      cat.cats
+        .map(
+          (k) =>
+            `### ${md(k.titles.pl)}\n` +
+            k.items
+              .map((it) => {
+                const extra = [it.duration ? `czas: ${md(it.duration)}` : "", md(it.description)].filter(Boolean).join("; ");
+                return `- ${md(it.name)} — ${fmtPrice(it, "pl")}${extra ? ` (${extra})` : ""}`;
+              })
+              .join("\n")
+        )
+        .join("\n\n");
+  } else {
+    services = `## Usługi i ceny\n\nAktualny cennik: ${SITE}/#services oraz w Booksy (link niżej).`;
+  }
+
+  const blog = posts.length
+    ? `## Porady i inspiracje (blog)\n\n` +
+      posts
+        .map((p) => `- [${md(p.title)}](${SITE}/porady/${encodeURIComponent(p.slug)})${p.meta_description ? ": " + md(p.meta_description) : ""}`)
+        .join("\n") +
+      "\n\n"
+    : "";
+
   const body = `# Zelika — Makijaż Permanentny, Brwi, Rzęsy (Wieluń)
 
-> Studio makijażu permanentnego (PMU) oraz architektury i stylizacji brwi i rzęs w Wieluniu, Polska. Prowadzi Anna Zelinska, ekspertka PMU. Ocena 5,0 w Google.
+> Studio makijażu permanentnego (PMU) oraz stylizacji brwi i rzęs w Wieluniu (Polska). Prowadzi Anna Zelinska, specjalistka makijażu permanentnego.${ratingTxt}
 
-## Usługi
-- Makijaż permanentny brwi (metoda włosowa, pudrowa, mieszana)
-- Makijaż permanentny ust
-- Laminacja brwi, lifting rzęs
-- Architektura brwi (brow mapping)
+${services}
 
 ## Kontakt i rezerwacja
+
 - Adres: ul. Młodzieżowa 5B, 98-300 Wieluń
 - Telefon: +48 571 932 161
-- Rezerwacja online (Booksy): ${BOOKSY}
-- Instagram: https://www.instagram.com/annazelika
+- [Rezerwacja online (Booksy)](${BOOKSY})
+- [Instagram](https://www.instagram.com/annazelika)
 - Godziny: pon.–pt. 8:00–16:00, sob. 6:00–13:00, niedziela nieczynne
 
-## Ważne strony
-- Strona główna: ${SITE}/
-- Porady i inspiracje (blog): ${SITE}/porady
-- Quiz „Jaki zabieg brwi dla Ciebie?": ${SITE}/quiz
-- Polityka prywatności: ${SITE}/prywatnosc
+${blog}## Ważne strony
+
+- [Strona główna](${SITE}/): oferta, kwalifikacje, cennik, kontakt (wersje: [UA](${SITE}/uk/), [EN](${SITE}/en/))
+- [Porady i inspiracje (blog)](${SITE}/porady)
+- [Quiz „Jaki zabieg brwi dla Ciebie?”](${SITE}/quiz)
+- [Polityka prywatności](${SITE}/prywatnosc)
 `;
   return new Response(body, {
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" },
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=600",
+      "X-Zelika-Data": contentRes.source,
+    },
   });
 }
 
@@ -591,6 +905,7 @@ const I18N = {
     "about.h2": "Ваше обличчя в руках <em>експертки</em>",
     "about.p1": "Студію Zelika у Велюні веде <strong>Анна Зелінська — експертка PMU й архітектури брів</strong> із понад 5-річним досвідом. Ми спеціалізуємося на перманентному макіяжі та професійному догляді й стилізації брів і вій.",
     "about.p2": "Працюємо індивідуально: аналіз рис обличчя, brow mapping і добір ідеальної форми та відтінку. Використовуємо сертифіковані продукти, одноразові матеріали й суворі правила гігієни. Робимо ставку на природний, доглянутий ефект, що підкреслює ваші риси.",
+    "stat.years": "років<br>досвіду", "stat.cert": "сертифіковані<br>продукти",
     "about.p3": "Зручне розташування, гнучкий графік і нагадування про візит. Запишіться на консультацію — разом створимо ідеальну форму брів і виразний погляд.",
     "quiz.eyebrow": "Квіз",
     "quiz.h2": "Не знаєте, яку процедуру <em>обрати?</em>",
@@ -598,7 +913,7 @@ const I18N = {
     "quiz.btn": "Пройти квіз",
     "svc.eyebrow": "Ціни", "svc.h2": "Послуги й <em>ціни</em>",
     "svc.p": "Актуальні ціни та вільні терміни також знайдете в системі бронювання Booksy.",
-    "svc.note": "Також пропонуємо brow mapping, макіяж на подію та фарбування вій — повний перелік послуг і ціни в <a href='https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun' target='_blank' rel='noopener noreferrer'>системі Booksy</a>.",
+    "svc.note": "Кожну послугу з прайсу можна забронювати онлайн у <a href='https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun' target='_blank' rel='noopener noreferrer'>системі Booksy</a>.",
     "svc.why": "<strong>Чому у нас немає «перманентного макіяжу за 199 zł»?</strong> Бо ціна процедури — це вартість стерильних одноразових модулів, сертифікованих пігментів і, головне, знання, завдяки якому ефект правильно гоїться й тримається роками. На своєму обличчі не варто економити.",
     "about.p4": "<strong>Чесно:</strong> найбільший досвід маю в бровах — це моя щоденна робота роками. Губи й очі — мій свіжо сертифікований напрям (2026), тому перші процедури роблю за вступною ціною, з повною ретельністю й без поспіху. Чесність — частина професіоналізму.",
     "jak.eyebrow": "Як ми працюємо", "jak.h2": "Процедура <em>крок за кроком</em>",
@@ -673,6 +988,7 @@ const I18N = {
     "about.h2": "Your face in <em>expert hands</em>",
     "about.p1": "Studio Zelika in Wieluń is run by <strong>Anna Zelinska — PMU &amp; Brow Architecture expert</strong> with over 5 years of experience. We specialise in permanent makeup and professional brow &amp; lash care and styling.",
     "about.p2": "We work individually: facial feature analysis, brow mapping and selecting the perfect shape and shade. We use certified products, single-use materials and strict hygiene. We focus on a natural, well-groomed result that enhances your features.",
+    "stat.years": "years of<br>experience", "stat.cert": "certified<br>products",
     "about.p3": "Convenient location, flexible hours and appointment reminders. Book a consultation — together we'll create the perfect brow shape and an expressive look.",
     "quiz.eyebrow": "Quiz",
     "quiz.h2": "Not sure which treatment <em>to choose?</em>",
@@ -680,7 +996,7 @@ const I18N = {
     "quiz.btn": "Take the quiz",
     "svc.eyebrow": "Pricing", "svc.h2": "Services &amp; <em>prices</em>",
     "svc.p": "Current prices and available slots are also in the Booksy booking system.",
-    "svc.note": "We also offer brow mapping, occasion makeup and lash tinting — the full list of services and prices is in the <a href='https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun' target='_blank' rel='noopener noreferrer'>Booksy system</a>.",
+    "svc.note": "Every service on the price list can be booked online in the <a href='https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun' target='_blank' rel='noopener noreferrer'>Booksy system</a>.",
     "svc.why": "<strong>Why won't you find „permanent makeup for 199 zł” here?</strong> Because the price of the treatment is the cost of sterile single-use modules, certified pigments and — above all — the knowledge that makes the result heal properly and last for years. Your face is not the place to save money.",
     "about.p4": "<strong>Honestly:</strong> my greatest experience is in brows — my daily work for years. Lips and eyes are my freshly certified direction (2026), so I do the first treatments at an introductory price, with full care and no rush. Honesty is part of professionalism.",
     "jak.eyebrow": "How we work", "jak.h2": "The treatment <em>step by step</em>",
@@ -881,12 +1197,26 @@ const PAGES = {
   quiz: { asset: "/quiz", pl: "/quiz", meta: META_QUIZ },
   priv: { asset: "/prywatnosc", pl: "/prywatnosc", meta: META_PRIV },
 };
-async function localizedPage(request, env, lang, pageKey) {
+// Dane z bota (cennik, ocena) wstrzykujemy na stronę główną (PL/UK/EN) i do quizu.
+const DATA_PAGES = new Set(["home", "quiz"]);
+async function localizedPage(request, env, api, lang, pageKey) {
   const page = PAGES[pageKey];
   const u = new URL(request.url);
   u.pathname = page.asset;
   u.search = "";
-  const res = await env.ASSETS.fetch(new Request(u.toString(), { headers: request.headers }));
+  const withData = DATA_PAGES.has(pageKey);
+  // HTML zależy od danych z bota → bez warunkowych nagłówków (ETag zasobu nie
+  // odzwierciedla cennika; 304 zostawiłby w przeglądarce stare ceny).
+  const assetHeaders = new Headers(request.headers);
+  if (withData) for (const h of ["if-none-match", "if-modified-since", "range", "if-range"]) assetHeaders.delete(h);
+  const [res, contentRes] = await Promise.all([
+    env.ASSETS.fetch(new Request(u.toString(), { headers: assetHeaders })),
+    withData ? api.content() : null,
+  ]);
+  const content = contentRes && contentRes.data;
+  const cat = withData ? buildCatalogue(content) : null;
+  const zones = cat ? cat.zones : new Set();
+  const rating = withData ? parseRating(content) : null;
   const meta = page.meta[lang] || page.meta.pl;
   const dict = I18N[lang] || {};
   const canon = SITE + href(lang, page.pl);
@@ -927,10 +1257,48 @@ async function localizedPage(request, env, lang, pageKey) {
       },
     });
   }
+  if (withData && cat) {
+    // ceny dla quizu (quiz.js czyta #cennik-data; to dane, nie skrypt — CSP bez zmian)
+    rw = rw.on("head", { element(e) {
+      e.append(`<script type="application/json" id="cennik-data">${quizDataJson(cat)}</script>`, { html: true });
+    } });
+  }
+  if (home) {
+    // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
+    // Brak danych i kopii → zostaje statyczny cennik z index.html.
+    if (cat) rw = rw.on(".svc-cats", { element(e) { e.setInnerContent(cennikHtml(cat, lang), { html: true }); } });
+    rw = rw
+      .on("script#ld-business", jsonScriptHandler((ld) => businessLd(ld, cat, lang)))
+      .on("script#ld-faq", jsonScriptHandler((ld) => faqLd(ld, zones)))
+      // „uśpione” treści (np. FAQ o ustach) — tylko gdy strefa jest w katalogu
+      .on("[data-needs]", { element(e) {
+        const need = String(e.getAttribute("data-needs") || "").split(/\s+/).filter(Boolean);
+        if (need.some((z) => zones.has(z))) e.removeAttribute("hidden");
+        else e.remove();
+      } });
+    if (rating) {
+      const r = fmtRating(rating.r, lang);
+      const txt = REVIEWS_TXT[lang] || REVIEWS_TXT.pl;
+      rw = rw
+        .on("[data-google-rating]", { element(e) { e.setInnerContent(r); } })
+        .on("[data-reviews]", { element(e) {
+          const f = txt[e.getAttribute("data-reviews")];
+          if (f) e.setInnerContent(f(r, rating.n), { html: true });
+        } })
+        .on("a.hv-rating", { element(e) { e.setAttribute("aria-label", txt.aria(r)); } });
+      if (rating.list.length) rw = rw.on("#rev-track", { element(e) { e.setInnerContent(reviewCardsHtml(rating.list), { html: true }); } });
+    }
+  }
   const out = rw.transform(res);
   const h = new Headers(out.headers);
   h.set("Content-Security-Policy", HOMEPAGE_CSP);
   for (const k in SEC_HEADERS) h.set(k, SEC_HEADERS[k]);
+  if (withData) {
+    h.delete("ETag");
+    h.delete("Last-Modified");
+    h.set("Cache-Control", "public, max-age=0, must-revalidate");
+    h.set("X-Zelika-Data", contentRes.source);
+  }
   return new Response(out.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
@@ -952,7 +1320,7 @@ export default {
     }
     if (path === "/sitemap.xml") return renderSitemap(api);
     if (path === "/robots.txt") return renderRobots();
-    if (path === "/llms.txt") return renderLlms();
+    if (path === "/llms.txt") return renderLlms(api);
 
     // Strona główna: czat z widgetem Turnstile, który wstrzykuje inline-skrypt
     // (z losowym tokenem → hash niestabilny, nonce niemożliwy na statyce). Dlatego
@@ -960,14 +1328,14 @@ export default {
     // zostaje ścisła. Ryzyko znikome: strona statyczna, brak wstrzykiwania HTML.
     // Локалізовані сторінки (PL/UA/EN) через HTMLRewriter (data-i18n) + hreflang +
     // перемикач мов. PL теж через воркер — щоб мати hreflang і перемикач.
-    if (path === "/" || path === "/index.html") return localizedPage(request, env, "pl", "home");
-    if (path === "/uk" || path === "/uk/index.html") return localizedPage(request, env, "uk", "home");
-    if (path === "/en" || path === "/en/index.html") return localizedPage(request, env, "en", "home");
-    if (path === "/quiz") return localizedPage(request, env, "pl", "quiz");
-    if (path === "/uk/quiz") return localizedPage(request, env, "uk", "quiz");
-    if (path === "/en/quiz") return localizedPage(request, env, "en", "quiz");
+    if (path === "/" || path === "/index.html") return localizedPage(request, env, api, "pl", "home");
+    if (path === "/uk" || path === "/uk/index.html") return localizedPage(request, env, api, "uk", "home");
+    if (path === "/en" || path === "/en/index.html") return localizedPage(request, env, api, "en", "home");
+    if (path === "/quiz") return localizedPage(request, env, api, "pl", "quiz");
+    if (path === "/uk/quiz") return localizedPage(request, env, api, "uk", "quiz");
+    if (path === "/en/quiz") return localizedPage(request, env, api, "en", "quiz");
     // /prywatnosc — юридичний документ, лишається PL, але через воркер (уніфікований каркас)
-    if (path === "/prywatnosc") return localizedPage(request, env, "pl", "priv");
+    if (path === "/prywatnosc") return localizedPage(request, env, api, "pl", "priv");
 
     // wszystko inne → statyka
     return env.ASSETS.fetch(request);

@@ -118,6 +118,7 @@
   .price-row:first-of-type{border-top:none;}
   .price-row .pname{color:var(--ink);font-size:.96rem;}
   .price-row .pdur{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.05em;margin-top:2px;}
+  .price-row .pdesc{display:block;color:var(--muted);font-size:.84rem;line-height:1.55;margin-top:4px;max-width:520px;}
   .price-row .price{font-family:var(--serif);font-size:1.4rem;color:var(--green);white-space:nowrap;font-weight:600;}
   .cat.feature .price{font-size:1.7rem;color:var(--gold-ink);}
   /* Kwalifikacje — трест-смуга PMU-авторитету */
@@ -326,7 +327,7 @@
   "image": "https://zelika.pl/og-image.jpg",
   "url": "https://zelika.pl/",
   "telephone": "+48571932161",
-  "priceRange": "20–600 zł",
+  "priceRange": "20–900 zł",
   "currenciesAccepted": "PLN",
   "description": "Studio makijażu permanentnego, architektury i stylizacji brwi oraz rzęs w Wieluniu. Anna Zelinska — Ekspert PMU.",
   "address": {
@@ -357,20 +358,32 @@
   },
   "knowsAbout": [
     "Makijaż permanentny brwi",
-    "Makijaż permanentny ust",
+    "Architektura brwi",
     "Laminacja brwi",
-    "Lifting rzęs",
-    "Architektura brwi"
+    "Laminacja rzęs",
+    "Koloryzacja rzęs",
+    "Regulacja brwi"
   ],
   "hasOfferCatalog": {
     "@type": "OfferCatalog",
-    "name": "Usługi PMU i stylizacji",
+    "name": "Cennik usług",
     "itemListElement": [
-      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Makijaż permanentny brwi"}},
-      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Makijaż permanentny ust"}},
-      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Laminacja brwi"}},
-      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Lifting rzęs"}},
-      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Architektura brwi (brow mapping)"}}
+      {"@type": "OfferCatalog", "name": "Makijaż permanentny brwi", "itemListElement": [
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Makijaż permanentny brwi"}, "priceCurrency": "PLN", "price": 900},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Dopigmentowanie do 6 tygodni po pierwszym zabiegu"}, "priceCurrency": "PLN", "price": 200}
+      ]},
+      {"@type": "OfferCatalog", "name": "Brwi", "itemListElement": [
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Regulacja brwi"}, "priceCurrency": "PLN", "price": 50},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Laminacja brwi (regulacja+farba)"}, "priceCurrency": "PLN", "price": 140},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Regulacja + farba brwi"}, "priceCurrency": "PLN", "price": 90}
+      ]},
+      {"@type": "OfferCatalog", "name": "Rzęsy", "itemListElement": [
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Laminacja rzęs (farba)"}, "priceCurrency": "PLN", "price": 150},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Koloryzacja rzęs"}, "priceCurrency": "PLN", "price": 30}
+      ]},
+      {"@type": "OfferCatalog", "name": "Pozostałe", "itemListElement": [
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Depilacja wąsika"}, "priceCurrency": "PLN", "price": 20}
+      ]}
     ]
   },
   "sameAs": [
@@ -381,17 +394,10 @@
     "@type": "ReserveAction",
     "target": "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun",
     "name": "Rezerwacja online"
-  },
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "5.0",
-    "reviewCount": "51",
-    "bestRating": "5",
-    "worstRating": "1"
   }
 }
 </script>
-<script type="application/ld+json">
+<script type="application/ld+json" id="ld-faq">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -446,6 +452,7 @@
     },
     {
       "@type": "Question",
+      "@id": "https://zelika.pl/#faq-usta-1",
       "name": "Czy makijaż permanentny ust boli?",
       "acceptedAnswer": {
         "@type": "Answer",
@@ -454,6 +461,7 @@
     },
     {
       "@type": "Question",
+      "@id": "https://zelika.pl/#faq-usta-2",
       "name": "Jak goją się usta po makijażu permanentnym?",
       "acceptedAnswer": {
         "@type": "Answer",
@@ -462,6 +470,7 @@
     },
     {
       "@type": "Question",
+      "@id": "https://zelika.pl/#faq-usta-3",
       "name": "Kto nie powinien robić makijażu permanentnego ust?",
       "acceptedAnswer": {
         "@type": "Answer",
@@ -515,7 +524,7 @@
       </div>
       <div class="hero-visual reveal d2">
         <img src="img/photo-1.jpg" fetchpriority="high" width="880" height="1100" alt="Makijaż permanentny brwi — efekt pracy Studia Zelika, Wieluń" decoding="async">
-        <a class="hv-rating" href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer" aria-label="Opinie Google — 5,0"><span class="r" data-google-rating>5,0</span><span class="s">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="t"><span data-google-reviews>51</span> opinie</span></a>
+        <a class="hv-rating" href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer" aria-label="Opinie Google — 5,0"><span class="r" data-google-rating>5,0</span><span class="s">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="t" data-reviews="count">53 opinie</span></a>
       </div>
     </div>
   </section>
@@ -564,11 +573,11 @@
         <p data-i18n="about.p1" class="reveal d2">Studio Zelika w Wieluniu prowadzi <strong>Anna Zelinska — Ekspert PMU &amp; Architektura Brwi</strong> z ponad 5-letnim doświadczeniem. Specjalizujemy się w makijażu permanentnym oraz profesjonalnej pielęgnacji i stylizacji brwi i rzęs.</p>
         <p data-i18n="about.p2" class="reveal d2">Pracujemy indywidualnie: analiza rysów twarzy, brow mapping oraz dobór idealnego kształtu i odcienia. Korzystamy z certyfikowanych produktów, materiałów jednorazowych i rygorystycznych zasad higieny. Stawiamy na naturalny, zadbany efekt, który podkreśla Twoje rysy.</p>
         <p data-i18n="about.p3" class="reveal d2">Dogodna lokalizacja, elastyczne terminy i przypomnienia o wizycie. Umów konsultację — wspólnie stworzymy idealny kształt brwi i wyraziste spojrzenie.</p>
-        <p data-i18n="about.p4" class="reveal d2"><strong>Szczerze:</strong> największe doświadczenie mam w brwiach — to moja codzienność od lat. Usta i oczy to mój świeżo certyfikowany kierunek (2026), dlatego pierwsze zabiegi wykonuję w cenie wprowadzającej, z pełną starannością i bez pośpiechu. Uczciwość jest częścią profesjonalizmu.</p>
+        <p data-i18n="about.p4" data-needs="usta oczy" class="reveal d2"><strong>Szczerze:</strong> największe doświadczenie mam w brwiach — to moja codzienność od lat. Usta i oczy to mój świeżo certyfikowany kierunek (2026), dlatego pierwsze zabiegi wykonuję w cenie wprowadzającej, z pełną starannością i bez pośpiechu. Uczciwość jest częścią profesjonalizmu.</p>
         <div class="about-stats reveal d3">
-          <div class="s"><div class="n">5+</div><div class="t">lat<br>doświadczenia</div></div>
-          <div class="s"><div class="n"><span data-google-rating>5,0</span> &#9733;</div><div class="t">średnia ocena<br>(<span data-google-reviews>51</span> opinie)</div></div>
-          <div class="s"><div class="n">100%</div><div class="t">certyfikowane<br>produkty</div></div>
+          <div class="s"><div class="n">5+</div><div class="t" data-i18n="stat.years">lat<br>doświadczenia</div></div>
+          <div class="s"><div class="n"><span data-google-rating>5,0</span> &#9733;</div><div class="t" data-reviews="stat">średnia ocena<br>(53 opinie)</div></div>
+          <div class="s"><div class="n">100%</div><div class="t" data-i18n="stat.cert">certyfikowane<br>produkty</div></div>
         </div>
       </div>
     </div>
@@ -625,7 +634,7 @@
     </div>
   </section>
 
-  <div class="promo-band" id="promo-band" hidden>
+  <div class="promo-band" id="promo-band" data-needs="usta oczy" hidden>
     <div class="container">
       <span class="promo-eyebrow" data-i18n="promo.eyebrow">Nowość</span>
       <p data-i18n="promo.text">Makijaż permanentny <strong>ust</strong> i <strong>kreska</strong> — startujemy! Pracujemy na modelkach w cenie promocyjnej (za zgodę na zdjęcia), liczba miejsc ograniczona. Bezpłatna konsultacja.</p>
@@ -644,26 +653,26 @@
         <div class="cat feature reveal d1">
           <div class="cat-h"><span class="cat-num">&#10022;</span><h3>Makijaż permanentny brwi</h3></div>
           <p class="feat-note">Trwały, naturalny efekt dopasowany do kształtu twarzy. Cena zawiera konsultację, brow mapping i dobór koloru.</p>
-          <div class="price-row"><span class="pname">Zabieg<span class="pdur">czas trwania ok. 2 g 30 min</span></span><span class="price">600 zł</span></div>
-          <div class="price-row"><span class="pname">Dopigmentowanie (do 6 tygodni po pierwszym zabiegu)<span class="pdur">1 g 20 min</span></span><span class="price">200 zł</span></div>
+          <div class="price-row"><span class="pname">Makijaż permanentny brwi<span class="pdur">2 g 30 min</span></span><span class="price">900 zł</span></div>
+          <div class="price-row"><span class="pname">Dopigmentowanie do 6 tygodni po pierwszym zabiegu<span class="pdur">1 g 20 min</span></span><span class="price">200 zł</span></div>
         </div>
         <div class="cat reveal d1">
           <div class="cat-h"><span class="cat-num">01</span><h3>Brwi</h3></div>
           <div class="price-row"><span class="pname">Regulacja brwi<span class="pdur">30 min</span></span><span class="price">50 zł</span></div>
+          <div class="price-row"><span class="pname">Laminacja brwi (regulacja+farba)<span class="pdur">1 g</span></span><span class="price">140 zł</span></div>
           <div class="price-row"><span class="pname">Regulacja + farba brwi<span class="pdur">40 min</span></span><span class="price">90 zł</span></div>
-          <div class="price-row"><span class="pname">Laminacja brwi (regulacja + farba)<span class="pdur">1 g</span></span><span class="price">140 zł</span></div>
         </div>
         <div class="cat reveal d2">
           <div class="cat-h"><span class="cat-num">02</span><h3>Rzęsy</h3></div>
           <div class="price-row"><span class="pname">Laminacja rzęs (farba)<span class="pdur">1 g 20 min</span></span><span class="price">150 zł</span></div>
-          <div class="price-row"><span class="pname">Koloryzacja rzęs<span class="pdur">25 min</span></span><span class="price">20 zł</span></div>
+          <div class="price-row"><span class="pname">Koloryzacja rzęs<span class="pdur">25 min</span></span><span class="price">30 zł</span></div>
         </div>
         <div class="cat reveal d1">
           <div class="cat-h"><span class="cat-num">03</span><h3>Pozostałe</h3></div>
           <div class="price-row"><span class="pname">Depilacja wąsika<span class="pdur">10 min</span></span><span class="price">20 zł</span></div>
         </div>
       </div>
-      <p data-i18n="svc.note" class="svc-note reveal">Oferujemy też brow mapping, makijaż okolicznościowy i farbowanie rzęs — pełny zakres usług i ceny w <a href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer">systemie Booksy</a>.</p>
+      <p data-i18n="svc.note" class="svc-note reveal">Każdą usługę z cennika zarezerwujesz online w <a href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer">systemie Booksy</a>.</p>
       <div class="svc-why reveal" data-i18n="svc.why"><strong>Dlaczego nie znajdziesz u nas „makijażu permanentnego za 199 zł”?</strong> Bo cena zabiegu to koszt sterylnych, jednorazowych modułów, certyfikowanych pigmentów i — przede wszystkim — wiedzy, dzięki której efekt goi się prawidłowo i utrzymuje latami. Na Twojej twarzy nie warto oszczędzać.</div>
     </div>
   </section>
@@ -695,7 +704,7 @@
         <div class="section-head">
           <span data-i18n="rev.eyebrow" class="eyebrow reveal">Opinie</span>
           <h2 data-i18n="rev.h2" class="reveal d1">Co mówią <em>nasze klientki</em></h2>
-          <p class="reveal d2">Prawdziwe opinie z Google — ocena <strong data-google-rating>5,0</strong> &#9733; na podstawie <strong data-google-reviews>41</strong> opinii.</p>
+          <p class="reveal d2" data-reviews="lead">Prawdziwe opinie z Google — ocena <strong>5,0</strong> &#9733; na podstawie <strong>53</strong> opinii.</p>
         </div>
         <div class="rev-track" id="rev-track" aria-live="polite"></div>
         <p class="rev-cta reveal"><a href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer">Zobacz wszystkie opinie w Google &#8594;</a></p>
@@ -716,9 +725,9 @@
         <details class="faq-item reveal"><summary data-i18n="faq.q4">Którą metodę brwi wybrać — włosową, pudrową czy mieszaną?</summary><div data-i18n="faq.a4">To zależy od Twojej skóry i oczekiwanego efektu. Najlepiej rozwiązać nasz krótki quiz lub umówić się na niezobowiązującą konsultację — wspólnie dobierzemy idealne rozwiązanie.</div></details>
         <details class="faq-item reveal"><summary data-i18n="faq.q5">Czy są przeciwwskazania do zabiegu?</summary><div data-i18n="faq.a5">Tak — m.in. ciąża, karmienie piersią, niektóre choroby skóry czy przyjmowane leki. Każdy przypadek omawiamy indywidualnie podczas konsultacji z Anną.</div></details>
         <details class="faq-item reveal"><summary data-i18n="faq.q6">Jak umówić się na wizytę?</summary><div data-i18n="faq.a6">Najwygodniej przez rezerwację online w Booksy lub telefonicznie: 571 932 161. Możesz też zacząć od niezobowiązującej konsultacji.</div></details>
-        <details class="faq-item reveal"><summary data-i18n="faq.q7">Czy makijaż permanentny ust boli?</summary><div data-i18n="faq.a7">Usta są bardziej wrażliwe niż brwi, dlatego zawsze stosujemy znieczulenie. Większość klientek ocenia zabieg jako komfortowy — Twoje odczucia omawiamy na bieżąco podczas wizyty.</div></details>
-        <details class="faq-item reveal"><summary data-i18n="faq.q8">Jak goją się usta po makijażu permanentnym?</summary><div data-i18n="faq.a8">Pełne gojenie trwa około 7–10 dni — w tym czasie kolor jest intensywniejszy i stopniowo schodzi o kilka tonów. Finalny, naturalny efekt widać po zagojeniu i po korekcie (4–6 tygodni).</div></details>
-        <details class="faq-item reveal"><summary data-i18n="faq.q9">Kto nie powinien robić makijażu permanentnego ust?</summary><div data-i18n="faq.a9">Zabiegu nie wykonujemy przy aktywnej opryszczce — przy skłonności do opryszczki zalecamy profilaktykę antywirusową. Przeciwwskazaniem są też m.in. ciąża i karmienie, niektóre choroby oraz leki. Wszystko omawiamy na konsultacji.</div></details>
+        <details class="faq-item reveal" id="faq-usta-1" data-needs="usta" hidden><summary data-i18n="faq.q7">Czy makijaż permanentny ust boli?</summary><div data-i18n="faq.a7">Usta są bardziej wrażliwe niż brwi, dlatego zawsze stosujemy znieczulenie. Większość klientek ocenia zabieg jako komfortowy — Twoje odczucia omawiamy na bieżąco podczas wizyty.</div></details>
+        <details class="faq-item reveal" id="faq-usta-2" data-needs="usta" hidden><summary data-i18n="faq.q8">Jak goją się usta po makijażu permanentnym?</summary><div data-i18n="faq.a8">Pełne gojenie trwa około 7–10 dni — w tym czasie kolor jest intensywniejszy i stopniowo schodzi o kilka tonów. Finalny, naturalny efekt widać po zagojeniu i po korekcie (4–6 tygodni).</div></details>
+        <details class="faq-item reveal" id="faq-usta-3" data-needs="usta" hidden><summary data-i18n="faq.q9">Kto nie powinien robić makijażu permanentnego ust?</summary><div data-i18n="faq.a9">Zabiegu nie wykonujemy przy aktywnej opryszczce — przy skłonności do opryszczki zalecamy profilaktykę antywirusową. Przeciwwskazaniem są też m.in. ciąża i karmienie, niektóre choroby oraz leki. Wszystko omawiamy na konsultacji.</div></details>
         </div>
       </div>
     </section>
@@ -786,7 +795,7 @@
              «пливе» в кінець body. Тож НЕ додавати defer/async і НЕ переносити в body. -->
         <script src="https://booksy.com/widget/code.js?id=334211&amp;country=pl&amp;lang=pl"></script>
         <a data-i18n="bk.call" href="tel:+48571932161" class="btn btn-ghost">Zadzwoń: 571 932 161</a>
-        <p class="bk-note">Ocena <strong><span data-google-rating>5,0</span> &#9733;</strong> na podstawie <span data-google-reviews>51</span> opinii w Google</p>
+        <p class="bk-note" data-reviews="note">Ocena <strong>5,0 &#9733;</strong> na podstawie 53 opinii w Google</p>
       </div>
     </div>
   </section>
@@ -822,8 +831,6 @@
     <div class="zchat-foot">Wirtualny asystent &mdash; nie udziela porad medycznych</div>
   </section>
   <script src="chat.js"></script>
-<script src="rating.js" defer></script>
-<script src="cennik.js" defer></script>
 <script src="ba-data.js" defer></script>
 <script src="ba.js" defer></script>
 
