@@ -66,20 +66,33 @@ function renderBody(body) {
 }
 
 // ── Dane z bota (/api/content, /api/posts) ─────────────────────────────────────
-// Serwer domowy bywa niedostępny, a strona NIE może wtedy zgubić cennika ani oddać
-// artykułu jako 404+noindex. Kolejność:
-//   1) fetch przez cache krawędzi (5 min dla 2xx, 1 min dla 404, 5xx bez cache),
-//      z krótkim timeoutem — strona zostaje szybka;
-//   2) błąd/timeout → ostatnia udana kopia z nazwanego Cache API (30 dni; per data
-//      center, odświeżana przy każdym pobraniu z originu, nie przy HIT krawędzi);
-//   3) brak kopii → statyczny fallback (cennik w index.html) / 503 dla bloga.
-// Prawdziwy 404 z API (np. wycofany artykuł) kasuje kopię i daje 404.
+// Serwer domowy bywa wolny albo niedostępny, a strona NIE może wtedy zwalniać,
+// gubić cennika ani oddawać artykułu jako 404+noindex. Model: stale-while-revalidate
+// na Cache API (KV niedostępne) + znacznik „origin leży”.
+//   • Jest kopia (ostatnia udana odpowiedź, nazwany cache, 30 dni):
+//       młodsza niż API_FRESH_S → podajemy od razu;
+//       starsza → podajemy od razu i odświeżamy w tle (ctx.waitUntil).
+//     Ceny zmieniają się więc na stronie w ciągu ~API_FRESH_S + API_EDGE_TTL.
+//   • Brak kopii → jedno blokujące pobranie z krótkim timeoutem.
+//   • Błąd/timeout originu → znacznik „down” na API_DOWN_TTL: kolejne żądania nie
+//     czekają ponownie na timeout (kopia albo od razu brak danych).
+//   • 404 to „naprawdę nie ma” TYLKO dla pojedynczego artykułu (kasuje jego kopię);
+//     404 z list (/api/content, /api/posts) = awaria (kopia zostaje, 404 się nie cache'uje).
+// Kopia jest per data center i może zostać wyrzucona z cache — wtedy działa
+// blokujące pobranie, a przy awarii statyczny fallback (index.html) / 503 dla bloga.
 const API_BASE = "https://hooks.zelika.pl"; // nadpisywalne zmienną env.API_BASE (staging/testy)
-const API_TIMEOUT_MS = 1500;
-const API_EDGE_TTL = 300;
+const API_TIMEOUT_MS = 1500; // pobranie blokujące stronę (brak kopii)
+const API_BG_TIMEOUT_MS = 5000; // odświeżenie w tle (nie blokuje strony)
+const API_FRESH_S = 240; // kopia młodsza → bez odświeżania
+const API_EDGE_TTL = 60; // cache krawędzi dla fetch → origin (skleja równoległe odświeżenia)
+const API_DOWN_TTL = 60; // po awarii nie pytamy originu przez tyle sekund
 const LASTGOOD_TTL = 30 * 24 * 3600;
 const LASTGOOD_CACHE = "zelika-lastgood";
-const LASTGOOD_KEY = SITE + "/__lastgood/v1"; // syntetyczny klucz w nazwanym cache (nie publiczny URL)
+const LASTGOOD_KEY = SITE + "/__lastgood/v2"; // syntetyczne klucze w nazwanym cache (nie publiczne URL-e)
+const DOWN_ALL_KEY = LASTGOOD_KEY + "/__down"; // origin nieosiągalny (sieć/timeout/502–504/52x)
+const UNREACHABLE = (s) => s === 502 || s === 503 || s === 504 || (s >= 520 && s <= 530);
+const LIST_TTLS = { "200-299": API_EDGE_TTL, "300-599": -1 }; // 404 listy = awaria, nie cache'ujemy
+const POST_TTLS = { "200-299": API_EDGE_TTL, 404: 60, "300-403": -1, "405-599": -1 };
 
 function makeApi(env, ctx) {
   const base = String((env && env.API_BASE) || API_BASE).replace(/\/+$/, "");
@@ -87,63 +100,103 @@ function makeApi(env, ctx) {
   const later = (p) => {
     const q = Promise.resolve(p).catch(() => {});
     if (ctx && ctx.waitUntil) ctx.waitUntil(q);
+    return q;
   };
+  const cacheP = caches.open(LASTGOOD_CACHE).catch(() => null);
+  const marker = () => new Response("1", { headers: { "Cache-Control": `max-age=${API_DOWN_TTL}` } });
 
-  // valid(data) — czy odpowiedź nadaje się na „ostatnią udaną kopię” (np. bot przy
-  // błędzie bazy oddaje 200 z pustym cennikiem — wtedy wolimy kopię niż pustkę).
-  async function load(path, valid) {
+  // Jedno zapytanie do originu. Zapisuje kopię / znaczniki. Zwraca
+  // { ok, data } | { gone: true } | { invalid: data } | {}.
+  async function fromOrigin(path, spec, cache, background) {
     const key = LASTGOOD_KEY + path;
-    let live = null;
-    let cache = null;
-    try {
-      cache = await caches.open(LASTGOOD_CACHE);
-    } catch (_) {}
+    // w tle czekamy na zapis (jesteśmy już w waitUntil); na ścieżce blokującej — nie
+    const save = (p) => (background ? p.catch(() => {}) : void later(p));
+    let status = 0;
     try {
       const r = await fetch(base + path, {
         headers: { Accept: "application/json" },
-        cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": API_EDGE_TTL, 404: 60, "500-599": 0 } },
-        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+        cf: { cacheEverything: true, cacheTtlByStatus: spec.ttls },
+        signal: AbortSignal.timeout(background ? API_BG_TIMEOUT_MS : API_TIMEOUT_MS),
       });
+      status = r.status;
       if (r.ok) {
         const data = await r.json();
-        if (valid(data)) {
-          if (cache && r.headers.get("cf-cache-status") !== "HIT") {
+        if (spec.valid(data)) {
+          if (cache) {
             const copy = new Response(JSON.stringify(data), {
-              headers: { "Content-Type": "application/json", "Cache-Control": `max-age=${LASTGOOD_TTL}` },
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": `max-age=${LASTGOOD_TTL}`,
+                "X-Fetched-At": String(Date.now()),
+              },
             });
-            later(cache.put(key, copy));
+            await save(cache.put(key, copy));
           }
-          return { data, source: "live" };
+          return { ok: true, data };
         }
-        live = data;
-        console.warn(`api ${path}: niepełne dane, próbuję ostatniej kopii`);
-      } else if (r.status === 404) {
-        if (cache) later(cache.delete(key));
-        return { data: null, notFound: true, source: "live" };
-      } else {
-        console.warn(`api ${path}: HTTP ${r.status}`);
+        // origin żyje, ale dane niepełne (np. bot przy błędzie bazy: pusty cennik) —
+        // nie nadpisujemy kopii; bez znacznika „down”.
+        console.warn(`api ${path}: niepełne dane`);
+        return { invalid: data };
       }
+      if (r.status === 404 && spec.gone404) {
+        if (cache) await save(cache.delete(key));
+        return { gone: true };
+      }
+      console.warn(`api ${path}: HTTP ${r.status}`);
     } catch (e) {
       console.warn(`api ${path}: ${e && e.name ? e.name : e}`);
     }
     if (cache) {
-      try {
-        const hit = await cache.match(key);
-        if (hit) return { data: await hit.json(), source: "lastgood" };
-      } catch (_) {}
+      const k = !status || UNREACHABLE(status) ? DOWN_ALL_KEY : DOWN_ALL_KEY + path;
+      await save(cache.put(k, marker()));
     }
-    return live ? { data: live, source: "live" } : { data: null, source: "none" };
+    return {};
   }
 
-  const get = (path, valid) => {
-    if (!memo.has(path)) memo.set(path, load(path, valid));
+  async function load(path, spec) {
+    const cache = await cacheP;
+    let copy = null;
+    let down = false;
+    if (cache) {
+      try {
+        const [c, d1, d2] = await Promise.all([
+          cache.match(LASTGOOD_KEY + path),
+          cache.match(DOWN_ALL_KEY),
+          cache.match(DOWN_ALL_KEY + path),
+        ]);
+        down = !!(d1 || d2);
+        if (c) copy = { data: await c.json(), at: Number(c.headers.get("X-Fetched-At")) || 0 };
+      } catch (_) {}
+    }
+    if (copy) {
+      if (Date.now() - copy.at < API_FRESH_S * 1000) return { data: copy.data, source: "cache" };
+      if (down) return { data: copy.data, source: "lastgood" };
+      later(fromOrigin(path, spec, cache, true)); // stale-while-revalidate
+      return { data: copy.data, source: "stale" };
+    }
+    if (down) return { data: null, source: "none" };
+    const o = await fromOrigin(path, spec, cache, false);
+    if (o.ok) return { data: o.data, source: "live" };
+    if (o.gone) return { data: null, notFound: true, source: "live" };
+    if (o.invalid) return { data: o.invalid, source: "live" };
+    return { data: null, source: "none" };
+  }
+
+  const get = (path, spec) => {
+    if (!memo.has(path)) memo.set(path, load(path, spec));
     return memo.get(path);
   };
   const isObj = (d) => d != null && typeof d === "object";
   return {
-    content: () => get("/api/content", (d) => isObj(d) && Array.isArray(d.cennik_items) && d.cennik_items.length > 0),
-    posts: () => get("/api/posts", (d) => isObj(d) && Array.isArray(d.posts)),
-    post: (slug) => get("/api/posts/" + encodeURIComponent(slug), (d) => isObj(d) && !!d.slug),
+    content: () =>
+      get("/api/content", {
+        ttls: LIST_TTLS,
+        valid: (d) => isObj(d) && Array.isArray(d.cennik_items) && d.cennik_items.length > 0,
+      }),
+    posts: () => get("/api/posts", { ttls: LIST_TTLS, valid: (d) => isObj(d) && Array.isArray(d.posts) }),
+    post: (slug) =>
+      get("/api/posts/" + encodeURIComponent(slug), { ttls: POST_TTLS, gone404: true, valid: (d) => isObj(d) && !!d.slug }),
   };
 }
 
@@ -799,6 +852,12 @@ ${blog}## Ważne strony
 
 async function renderSitemap(api) {
   const [postsRes, contentRes] = await Promise.all([api.posts(), api.content()]);
+  if (postsRes.source === "none") {
+    return new Response("Sitemap chwilowo niedostępna.\n", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "120" },
+    });
+  }
   const posts = postsOf(postsRes);
   // lastmod stron głównych = ostatnia zmiana cennika (bot: cennik_updated_at), jeśli jest
   const homeMod = /^\d{4}-\d{2}-\d{2}/.test(str(contentRes.data && contentRes.data.cennik_updated_at))
