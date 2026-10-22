@@ -4,7 +4,6 @@
 // publikacja, jedno źródło prawdy w bocie. Reszta ścieżek → statyka (env.ASSETS).
 // Nagłówek i integracja Booksy — spójne ze stroną główną (ten sam widget-overlay).
 
-const POSTS_API = "https://hooks.zelika.pl/api/posts";
 const SITE = "https://zelika.pl";
 const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun";
 const BOOKSY_WIDGET = "https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl";
@@ -20,6 +19,8 @@ const esc = (s) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+
+const str = (v) => (v == null ? "" : String(v).trim());
 
 function absImg(img) {
   if (!img) return SITE + "/og-image.jpg";
@@ -64,23 +65,89 @@ function renderBody(body) {
   return out.join("\n");
 }
 
-async function fetchPosts() {
-  try {
-    const r = await fetch(POSTS_API, { cf: { cacheTtl: 300, cacheEverything: true } });
-    if (r.ok) return (await r.json()).posts || [];
-  } catch (_) {}
-  return null; // null = błąd (odróżniamy od pustej listy)
+// ── Dane z bota (/api/content, /api/posts) ─────────────────────────────────────
+// Serwer domowy bywa niedostępny, a strona NIE może wtedy zgubić cennika ani oddać
+// artykułu jako 404+noindex. Kolejność:
+//   1) fetch przez cache krawędzi (5 min dla 2xx, 1 min dla 404, 5xx bez cache),
+//      z krótkim timeoutem — strona zostaje szybka;
+//   2) błąd/timeout → ostatnia udana kopia z nazwanego Cache API (30 dni; per data
+//      center, odświeżana przy każdym pobraniu z originu, nie przy HIT krawędzi);
+//   3) brak kopii → statyczny fallback (cennik w index.html) / 503 dla bloga.
+// Prawdziwy 404 z API (np. wycofany artykuł) kasuje kopię i daje 404.
+const API_BASE = "https://hooks.zelika.pl"; // nadpisywalne zmienną env.API_BASE (staging/testy)
+const API_TIMEOUT_MS = 1500;
+const API_EDGE_TTL = 300;
+const LASTGOOD_TTL = 30 * 24 * 3600;
+const LASTGOOD_CACHE = "zelika-lastgood";
+const LASTGOOD_KEY = SITE + "/__lastgood/v1"; // syntetyczny klucz w nazwanym cache (nie publiczny URL)
+
+function makeApi(env, ctx) {
+  const base = String((env && env.API_BASE) || API_BASE).replace(/\/+$/, "");
+  const memo = new Map(); // jedno pobranie na ścieżkę w obrębie żądania
+  const later = (p) => {
+    const q = Promise.resolve(p).catch(() => {});
+    if (ctx && ctx.waitUntil) ctx.waitUntil(q);
+  };
+
+  // valid(data) — czy odpowiedź nadaje się na „ostatnią udaną kopię” (np. bot przy
+  // błędzie bazy oddaje 200 z pustym cennikiem — wtedy wolimy kopię niż pustkę).
+  async function load(path, valid) {
+    const key = LASTGOOD_KEY + path;
+    let live = null;
+    let cache = null;
+    try {
+      cache = await caches.open(LASTGOOD_CACHE);
+    } catch (_) {}
+    try {
+      const r = await fetch(base + path, {
+        headers: { Accept: "application/json" },
+        cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": API_EDGE_TTL, 404: 60, "500-599": 0 } },
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        if (valid(data)) {
+          if (cache && r.headers.get("cf-cache-status") !== "HIT") {
+            const copy = new Response(JSON.stringify(data), {
+              headers: { "Content-Type": "application/json", "Cache-Control": `max-age=${LASTGOOD_TTL}` },
+            });
+            later(cache.put(key, copy));
+          }
+          return { data, source: "live" };
+        }
+        live = data;
+        console.warn(`api ${path}: niepełne dane, próbuję ostatniej kopii`);
+      } else if (r.status === 404) {
+        if (cache) later(cache.delete(key));
+        return { data: null, notFound: true, source: "live" };
+      } else {
+        console.warn(`api ${path}: HTTP ${r.status}`);
+      }
+    } catch (e) {
+      console.warn(`api ${path}: ${e && e.name ? e.name : e}`);
+    }
+    if (cache) {
+      try {
+        const hit = await cache.match(key);
+        if (hit) return { data: await hit.json(), source: "lastgood" };
+      } catch (_) {}
+    }
+    return live ? { data: live, source: "live" } : { data: null, source: "none" };
+  }
+
+  const get = (path, valid) => {
+    if (!memo.has(path)) memo.set(path, load(path, valid));
+    return memo.get(path);
+  };
+  const isObj = (d) => d != null && typeof d === "object";
+  return {
+    content: () => get("/api/content", (d) => isObj(d) && Array.isArray(d.cennik_items) && d.cennik_items.length > 0),
+    posts: () => get("/api/posts", (d) => isObj(d) && Array.isArray(d.posts)),
+    post: (slug) => get("/api/posts/" + encodeURIComponent(slug), (d) => isObj(d) && !!d.slug),
+  };
 }
 
-async function fetchPost(slug) {
-  try {
-    const r = await fetch(POSTS_API + "/" + encodeURIComponent(slug), {
-      cf: { cacheTtl: 300, cacheEverything: true },
-    });
-    if (r.ok) return await r.json();
-  } catch (_) {}
-  return null;
-}
+const postsOf = (res) => (res && res.data && Array.isArray(res.data.posts) ? res.data.posts : []);
 
 // --- style (spójne ze stroną główną: kolory, fonty, nagłówek, przycisk Booksy) ---
 const CSS = `
@@ -189,12 +256,13 @@ ${footerHtml("pl")}
 </body></html>`;
 }
 
-function htmlResponse(html, status = 200, sMaxAge = 300) {
+function htmlResponse(html, status = 200, sMaxAge = 300, extra = {}) {
   return new Response(html, {
     status,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": `public, max-age=60, s-maxage=${sMaxAge}`,
+      ...extra,
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "X-Frame-Options": "DENY",
@@ -216,12 +284,34 @@ function htmlResponse(html, status = 200, sMaxAge = 300) {
   });
 }
 
+// Serwer domowy niedostępny i brak ostatniej kopii: 503 (tymczasowo), NIE 404 —
+// Google nie wyindeksuje strony z powodu krótkiej awarii.
+function unavailableResponse(canonical) {
+  const body = `<h1>Chwilowo niedostępne</h1><p class="lead">Ta strona jest na chwilę niedostępna. Spróbuj ponownie za kilka minut.</p>
+<p><a href="/">← Strona główna</a></p>`;
+  return htmlResponse(
+    layout({
+      title: "Chwilowo niedostępne | Zelika PMU",
+      description: "Strona chwilowo niedostępna.",
+      canonical,
+      ogImage: SITE + "/og-image.jpg",
+      noindex: true,
+      body,
+    }),
+    503,
+    0,
+    { "Cache-Control": "no-store", "Retry-After": "120", "X-Zelika-Data": "none" }
+  );
+}
+
 // --- strony ---
-async function renderIndex() {
-  const posts = await fetchPosts();
+async function renderIndex(api) {
+  const res = await api.posts();
   const canonical = SITE + "/porady";
+  if (res.source === "none") return unavailableResponse(canonical);
+  const posts = postsOf(res);
   const cards =
-    posts && posts.length
+    posts.length
       ? posts
           .map(
             (p) => `<a class="card" href="/porady/${esc(p.slug)}">
@@ -263,13 +353,22 @@ ${ctaBlock()}`;
       ogImage: SITE + "/og-image.jpg",
       jsonld,
       body,
-    })
+    }),
+    200,
+    300,
+    { "X-Zelika-Data": res.source }
   );
 }
 
-async function renderPost(slug) {
-  const post = await fetchPost(slug);
+// slug z bota: [a-z0-9-] (slugify); odrzucamy oczywiste śmieci bez pytania API.
+const SLUG_OK = /^[^/\s]{1,200}$/;
+
+async function renderPost(api, slug) {
   const canonical = SITE + "/porady/" + slug;
+  const res = SLUG_OK.test(slug) ? await api.post(slug) : { data: null, notFound: true, source: "live" };
+  // API niedostępne i brak ostatniej kopii → 503 (nie 404+noindex: to nie jest „nie ma artykułu”)
+  if (res.source === "none") return unavailableResponse(canonical);
+  const post = res.data;
   if (!post || post.status !== "published") {
     const body = `<h1>Nie znaleziono</h1><p class="lead">Taka porada nie istnieje lub została przeniesiona.</p>
 <p><a href="/porady">← Wróć do porad</a></p>`;
@@ -337,7 +436,10 @@ ${ctaBlock()}
       ogImage,
       jsonld,
       body,
-    })
+    }),
+    200,
+    300,
+    { "X-Zelika-Data": res.source }
   );
 }
 
@@ -381,19 +483,24 @@ function renderLlms() {
   });
 }
 
-async function renderSitemap() {
-  const posts = (await fetchPosts()) || [];
+async function renderSitemap(api) {
+  const [postsRes, contentRes] = await Promise.all([api.posts(), api.content()]);
+  const posts = postsOf(postsRes);
+  // lastmod stron głównych = ostatnia zmiana cennika (bot: cennik_updated_at), jeśli jest
+  const homeMod = /^\d{4}-\d{2}-\d{2}/.test(str(contentRes.data && contentRes.data.cennik_updated_at))
+    ? str(contentRes.data.cennik_updated_at).slice(0, 10)
+    : undefined;
   const urls = [
-    { loc: SITE + "/", pri: "1.0", freq: "monthly" },
-    { loc: SITE + "/uk/", pri: "0.9", freq: "monthly" },
-    { loc: SITE + "/en/", pri: "0.9", freq: "monthly" },
+    { loc: SITE + "/", pri: "1.0", freq: "monthly", lastmod: homeMod },
+    { loc: SITE + "/uk/", pri: "0.9", freq: "monthly", lastmod: homeMod },
+    { loc: SITE + "/en/", pri: "0.9", freq: "monthly", lastmod: homeMod },
     { loc: SITE + "/porady", pri: "0.8", freq: "weekly" },
     { loc: SITE + "/quiz", pri: "0.6", freq: "monthly" },
     { loc: SITE + "/uk/quiz", pri: "0.5", freq: "monthly" },
     { loc: SITE + "/en/quiz", pri: "0.5", freq: "monthly" },
     { loc: SITE + "/prywatnosc", pri: "0.3", freq: "yearly" },
     ...posts.map((p) => ({
-      loc: SITE + "/porady/" + p.slug,
+      loc: SITE + "/porady/" + encodeURIComponent(p.slug),
       pri: "0.7",
       freq: "monthly",
       lastmod: (p.published_at || "").slice(0, 10) || undefined,
@@ -828,13 +935,22 @@ async function localizedPage(request, env, lang, pageKey) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
+    const api = makeApi(env, ctx);
 
-    if (path === "/porady") return renderIndex();
-    if (path.startsWith("/porady/")) return renderPost(decodeURIComponent(path.slice("/porady/".length)));
-    if (path === "/sitemap.xml") return renderSitemap();
+    if (path === "/porady") return renderIndex(api);
+    if (path.startsWith("/porady/")) {
+      let slug;
+      try {
+        slug = decodeURIComponent(path.slice("/porady/".length));
+      } catch (_) {
+        slug = ""; // zepsute %-kodowanie → 404, nie wyjątek
+      }
+      return renderPost(api, slug);
+    }
+    if (path === "/sitemap.xml") return renderSitemap(api);
     if (path === "/robots.txt") return renderRobots();
     if (path === "/llms.txt") return renderLlms();
 
