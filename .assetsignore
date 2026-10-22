@@ -7,3 +7,5 @@
 /sitemap.xml
 /.git
 /.DS_Store
+/.wrangler
+/node_modules
