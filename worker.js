@@ -573,7 +573,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <style>${CSS}${SHELL_CSS}</style>
-${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>` : ""}
+${jsonld ? `<script type="application/ld+json">${scriptJson(jsonld)}</script>` : ""}
 </head><body>
 ${headerHtml("pl", { current: "porady", pl: "/porady" })}
 <main class="wrap">${body}</main>
@@ -664,7 +664,7 @@ ${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.title)}" loading="lazy">` :
       { "@type": "ListItem", position: 2, name: SECTION_TITLE, item: SITE + "/porady" },
     ],
   };
-  const body = `<script type="application/ld+json">${JSON.stringify(crumbLd)}</script>
+  const body = `<script type="application/ld+json">${scriptJson(crumbLd)}</script>
 <p class="crumbs"><a href="/">Strona główna</a> › ${esc(SECTION_TITLE)}</p>
 <h1>${esc(SECTION_TITLE)}</h1>
 <p class="lead">${esc(SECTION_DESC)}</p>
@@ -685,6 +685,10 @@ ${ctaBlock()}`;
     { "X-Zelika-Data": res.source }
   );
 }
+
+// Autorka strony (Person #anna). Bot podaje „Anna Zelińska” — ta sama osoba co „Zelinska”.
+const ANNA = "Anna Zelinska";
+const isAnna = (name) => /^anna\s+zeli[nń]ska$/i.test(str(name).normalize("NFC"));
 
 // slug z bota: [a-z0-9-] (slugify); odrzucamy oczywiste śmieci bez pytania API.
 const SLUG_OK = /^[^/\s]{1,200}$/;
@@ -713,6 +717,8 @@ async function renderPost(api, slug) {
 
   const ogImage = absImg(post.image);
   const desc = excerpt(post, 160);
+  const author = str(post.author) || ANNA;
+  const byAnna = isAnna(author);
   const jsonld = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -721,7 +727,9 @@ async function renderPost(api, slug) {
     image: ogImage,
     datePublished: post.published_at || undefined,
     dateModified: post.published_at || undefined,
-    author: { "@type": "Person", "@id": SITE + "/#anna", name: post.author || "Anna Zelinska", jobTitle: "Specjalistka makijażu permanentnego" },
+    author: byAnna
+      ? { "@type": "Person", "@id": SITE + "/#anna", name: ANNA, jobTitle: "Specjalistka makijażu permanentnego" }
+      : { "@type": "Person", name: author },
     publisher: { "@type": "Organization", name: "Zelika Brows & More", url: SITE },
     mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
     inLanguage: "pl-PL",
@@ -735,21 +743,21 @@ async function renderPost(api, slug) {
       { "@type": "ListItem", position: 3, name: post.title, item: canonical },
     ],
   };
-  const body = `<script type="application/ld+json">${JSON.stringify(crumbLd)}</script>
+  const body = `<script type="application/ld+json">${scriptJson(crumbLd)}</script>
 <p class="crumbs"><a href="/">Strona główna</a> › <a href="/porady">${esc(SECTION_TITLE)}</a> › ${esc(post.title)}</p>
 <article>
 <h1>${esc(post.title)}</h1>
-<div class="meta">${esc(post.author || "Anna Zelinska")}${
+<div class="meta">${esc(author)}${
     post.published_at ? " · " + esc(plDate(post.published_at)) : ""
   }</div>
 ${post.image ? `<img class="hero-img" src="${esc(post.image)}" alt="${esc(post.title)}">` : ""}
 ${renderBody(post.body)}
-<aside class="author-box">
+${byAnna ? `<aside class="author-box">
 <div class="ab-eye">Autorka</div>
 <div class="ab-name">Anna Zelinska</div>
 <p class="ab-bio">Specjalistka makijażu permanentnego, Studio Zelika (Wieluń). Ponad 5 lat praktyki w PMU brwi; certyfikowana w zakresie ust i kreski (standard Hasnutdinova, 2026). Pracuję na certyfikowanych pigmentach i jednorazowych modułach.</p>
 <a class="ab-link" href="/#kwalifikacje">Poznaj kwalifikacje &#8594;</a>
-</aside>
+</aside>` : ""}
 </article>
 ${ctaBlock()}
 <p><a href="/porady">← Wszystkie porady</a></p>`;
