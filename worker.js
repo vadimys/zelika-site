@@ -2133,9 +2133,49 @@ async function localizedPage(request, env, api, lang, pageKey) {
   return new Response(out.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
+// ── Kanoniczne adresy (301) ─────────────────────────────────────────────────────
+// Воркер запускається першим для ВСІХ запитів (wrangler.jsonc: run_worker_first: true),
+// тож www→apex і канонічні шляхи віддаємо самі як 301 — раніше частину робив шар
+// assets (html_handling: auto-trailing-slash) тимчасовим 307, а частина (/index.html,
+// /porady/, /uk/quiz/) віддавала дубль сторінки з 200.
+const WWW_HOST = "www.zelika.pl";
+const CANON_PATHS = new Map([
+  ["/index.html", "/"],
+  ["/uk", "/uk/"],
+  ["/uk/index.html", "/uk/"],
+  ["/en", "/en/"],
+  ["/en/index.html", "/en/"],
+  ["/quiz.html", "/quiz"],
+  ["/prywatnosc.html", "/prywatnosc"],
+]);
+// strony bez końcowego „/” (adres z „/” → 301 bez niego); strony usług /<slug>/ — osobno
+// (renderServicePage: 301 tylko dla istniejącej strony)
+const NO_SLASH_RE = /^\/(?:porady(?:\/[^/]+)?|quiz|uk\/quiz|en\/quiz|prywatnosc)$/;
+function canonicalPath(p) {
+  if (CANON_PATHS.has(p)) return CANON_PATHS.get(p);
+  if (p.length > 1 && p.endsWith("/")) {
+    const s = p.replace(/\/+$/, "");
+    if (s === "") return "/"; // „//”
+    if (s === "/uk" || s === "/en") return p === s + "/" ? null : s + "/"; // „/uk//”
+    if (NO_SLASH_RE.test(s)) return s;
+  }
+  return null;
+}
+function redirect301(location, maxAge = 3600) {
+  return new Response(null, {
+    status: 301,
+    headers: { Location: location, "Cache-Control": `public, max-age=${maxAge}`, ...SEC_HEADERS },
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // www → apex: przed całym routingiem (także pliki statyczne, robots, sitemap)
+    if (url.hostname === WWW_HOST) return redirect301(SITE + url.pathname + url.search, 86400);
+    const canon = canonicalPath(url.pathname);
+    if (canon) return redirect301(new URL(canon + url.search, url).toString());
+
     const path = url.pathname.replace(/\/+$/, "") || "/";
     const api = makeApi(env, ctx);
 
@@ -2161,9 +2201,10 @@ export default {
     // zostaje ścisła. Ryzyko znikome: strona statyczna, brak wstrzykiwania HTML.
     // Локалізовані сторінки (PL/UA/EN) через HTMLRewriter (data-i18n) + hreflang +
     // перемикач мов. PL теж через воркер — щоб мати hreflang і перемикач.
-    if (path === "/" || path === "/index.html") return localizedPage(request, env, api, "pl", "home");
-    if (path === "/uk" || path === "/uk/index.html") return localizedPage(request, env, api, "uk", "home");
-    if (path === "/en" || path === "/en/index.html") return localizedPage(request, env, api, "en", "home");
+    // (/index.html, /uk, /uk/index.html, /en… → 301 wyżej; tu już tylko /, /uk/, /en/)
+    if (path === "/") return localizedPage(request, env, api, "pl", "home");
+    if (path === "/uk") return localizedPage(request, env, api, "uk", "home");
+    if (path === "/en") return localizedPage(request, env, api, "en", "home");
     if (path === "/quiz") return localizedPage(request, env, api, "pl", "quiz");
     if (path === "/uk/quiz") return localizedPage(request, env, api, "uk", "quiz");
     if (path === "/en/quiz") return localizedPage(request, env, api, "en", "quiz");
@@ -2171,9 +2212,9 @@ export default {
     if (path === "/prywatnosc") return localizedPage(request, env, api, "pl", "priv");
 
     // Strony usług /<slug> (opublikowane z /api/pages, a bez listy — znane slugi przez
-    // /api/pages/<slug>, KNOWN_PAGE_SLUGS; /<slug>/ → 301). Trafiają tu
-    // wyłącznie ścieżki bez pliku w statyce (pliki serwuje warstwa assets przed workerem),
-    // a zajęte nazwy (RESERVED_SLUGS) i trasy wyżej mają pierwszeństwo.
+    // /api/pages/<slug>, KNOWN_PAGE_SLUGS; /<slug>/ → 301). Wzorzec bez kropki nie
+    // zasłania plików statycznych (wszystkie mają rozszerzenie), a zajęte nazwy
+    // (RESERVED_SLUGS, np. katalog img) i trasy wyżej mają pierwszeństwo.
     const sp = url.pathname.match(/^\/([a-z0-9-]{1,120})(\/+)?$/);
     if (sp && isPageSlug(sp[1])) {
       const r = await renderServicePage(request, api, sp[1], !!sp[2]);
@@ -2181,6 +2222,11 @@ export default {
     }
 
     // wszystko inne → statyka
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(request);
+    // przekierowania warstwy assets (html_handling, np. /index → /) — trwałe 301, nie 307
+    if ((res.status === 307 || res.status === 308) && res.headers.has("Location")) {
+      return redirect301(new URL(res.headers.get("Location"), url).toString());
+    }
+    return res;
   },
 };
