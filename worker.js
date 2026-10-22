@@ -899,7 +899,7 @@ ${services}
 - Telefon: +48 571 932 161
 - [Rezerwacja online (Booksy)](${BOOKSY})
 - [Instagram](https://www.instagram.com/annazelika)
-- Godziny: pon.–pt. 8:00–16:00, sob. 6:00–13:00, niedziela nieczynne
+- Godziny: pon. i pt. 8:00–15:30, wt. i czw. 9:30–15:30, śr. 8:00–14:30, sob. 6:00–13:00, niedziela nieczynne
 
 ${blog}## Ważne strony
 
