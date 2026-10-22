@@ -3,9 +3,17 @@
   "compatibility_date": "2026-06-17",
   "main": "worker.js",
   "observability": { "enabled": true, "head_sampling_rate": 1 },
+  // id версії Workera → ?v=… для локальних JS/CSS у HTML (cache-busting на кожен деплой)
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/index.html", "/quiz", "/uk", "/en", "/uk/*", "/en/*", "/prywatnosc", "/robots.txt", "/sitemap.xml", "/llms.txt"]
+    // Воркер першим для всього, КРІМ статики (фото, JS/CSS, іконки, og-image): її шар assets
+    // віддає сам — без виклику воркера (ліміт запитів Workers), з _headers. Сторінки,
+    // robots/sitemap/llms, /media/*, редіректи (www→apex, канонічні 301) — через воркер.
+    // Файл, якого немає серед assets (напр. /worker.js у .assetsignore), однаково йде у
+    // воркер → 404. «*» матчить і «/» (глибоко); заперечення «!» мають пріоритет.
+    // www-запити саме до цих файлів шар assets віддає з 200 (HTML на www — 301).
+    "run_worker_first": ["/*", "!/img/*", "!/*.js", "!/*.css", "!/*.svg", "!/*.ico", "!/*.png", "!/*.webp", "!/og-image.jpg"]
   }
 }

@@ -162,6 +162,9 @@ const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-w
   let step = 0;
   let answers = [];
   const card = document.getElementById('card');
+  // Strona /quiz: ekran startowy (H1 + wstęp) renderuje worker w #card[data-ssr] —
+  // ten sam HTML służy za ekran startowy także po restarcie. Modal na głównej — bez SSR.
+  const SSR_INTRO = card && card.hasAttribute('data-ssr') ? card.innerHTML : '';
 
   function computeResult(){
     const s = {wlosowa:0,pudrowa:0,mieszana:0,laminacja:0,regulacja:0};
@@ -177,6 +180,7 @@ const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-w
   function esc(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
   function introHTML(){
+    if(SSR_INTRO) return SSR_INTRO;
     return `
       <span class="eyebrow">${ui.eyebrow}</span>
       <h1>${ui.h1}</h1>
@@ -296,6 +300,6 @@ const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-w
     document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeQuiz(); });
   }
 
-  card.innerHTML = buildHTML();
+  if(!SSR_INTRO) card.innerHTML = buildHTML();
 
 })();

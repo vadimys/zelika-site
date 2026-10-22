@@ -7,6 +7,8 @@
 
 const SITE = "https://zelika.pl";
 const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun";
+// Oficjalny publiczny adres widgetu (Booksy przekierowuje go 307 na bieżącą wersję
+// /widget-2021/ — trzymamy się adresu z dokumentacji Booksy, nie wewnętrznej ścieżki).
 const BOOKSY_WIDGET = "https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl";
 const SECTION_TITLE = "Porady i inspiracje";
 const SECTION_DESC =
@@ -42,6 +44,26 @@ function mediaSrc(img) {
 function pageImgSrc(img) {
   const s = mediaSrc(img);
   return /^\/(?![\/\\])/.test(s) ? s : "";
+}
+
+// Zdjęcia strony /img/photo-N.jpg: obok leży wersja WebP (img/photo-N.webp), a wymiary są
+// znane (width/height → miejsce zarezerwowane przed wczytaniem, bez skoku układu / CLS).
+// <picture>: WebP dla przeglądarek, które go obsługują, JPG jako zapas; og:image dalej JPG.
+// Inne obrazy (np. /media/<id>.jpg z bota) — zwykły <img>. attrs — gotowe, escapowane.
+const SITE_IMG_SIZES = {
+  "/img/photo-1.jpg": [880, 1100],
+  "/img/photo-2.jpg": [820, 1025],
+  "/img/photo-3.jpg": [740, 986],
+  "/img/photo-4.jpg": [740, 986],
+  "/img/photo-5.jpg": [740, 986],
+  "/img/photo-6.jpg": [740, 986],
+  "/img/photo-7.jpg": [740, 986],
+  "/img/photo-8.jpg": [740, 986],
+};
+function imgHtml(src, attrs = "") {
+  const size = SITE_IMG_SIZES[src];
+  const img = `<img src="${esc(src)}"${size ? ` width="${size[0]}" height="${size[1]}"` : ""}${attrs}>`;
+  return size ? `<picture><source type="image/webp" srcset="${esc(src.slice(0, -4))}.webp">${img}</picture>` : img;
 }
 
 function absImg(img) {
@@ -282,7 +304,10 @@ function makeApi(env, ctx) {
     if (ctx && ctx.waitUntil) ctx.waitUntil(q);
     return q;
   };
-  const cacheP = caches.open(LASTGOOD_CACHE).catch(() => null);
+  // Cache API otwierany leniwie — dopiero przy pierwszym zapytaniu o dane (przekierowania,
+  // pliki i proste 404 go nie dotykają).
+  let cacheP = null;
+  const openCache = () => cacheP || (cacheP = caches.open(LASTGOOD_CACHE).catch(() => null));
   const marker = () => new Response("1", { headers: { "Cache-Control": `max-age=${API_DOWN_TTL}` } });
 
   // Jedno zapytanie do originu. Zapisuje kopię / znaczniki. Zwraca
@@ -335,7 +360,7 @@ function makeApi(env, ctx) {
   }
 
   async function load(path, spec) {
-    const cache = await cacheP;
+    const cache = await openCache();
     let copy = null;
     let down = false;
     if (cache) {
@@ -763,6 +788,7 @@ const CSS = `
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;line-height:1.75;-webkit-font-smoothing:antialiased}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline}
+picture{display:contents}
 .wrap{max-width:760px;margin:0 auto;padding:0 24px}
 /* --- nagłówek jak na stronie głównej --- */
 header.nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
@@ -863,15 +889,28 @@ const PAGE_CSS = `
 
 // Blok CTA z realnym widgetem Booksy (rysuje zielony przycisk „Rezerwuj wizytę”,
 // a link „Umów wizytę" w nagłówku [data-booksy] deleguje do niego przez booksy-fix.js).
+// Widget z defer (nie blokuje renderu): sam szuka swojego <script> (querySelectorAll po
+// src z „code.js”) i wstawia przycisk tuż przed nim — miejsce w bloku CTA się nie zmienia.
 function ctaBlock() {
   return `<div class="cta">
 <p class="cta-h">Masz pytanie o swój zabieg?</p>
 <p class="cta-p">Umów niezobowiązującą konsultację — dobierzemy metodę idealną dla Ciebie.</p>
 <div class="bk-widget" id="bk-widget"><noscript><a class="btn" href="${BOOKSY}" target="_blank" rel="noopener noreferrer">Rezerwuj na Booksy</a></noscript></div>
 <script src="/booksy-fix.js" defer></script>
-<script src="${BOOKSY_WIDGET}"></script>
+<script src="${esc(BOOKSY_WIDGET)}" defer></script>
 </div>`;
 }
+
+// Fonty Google bez blokowania renderu — jak na stronie głównej: preload + stylesheet
+// z media="print" przełączany na "all" po wczytaniu + <noscript>. Przełącza /nav.js
+// (link[data-async-css]), nie inline onload: CSP tych stron nie ma 'unsafe-inline'.
+// display=swap — tekst od razu fontem zapasowym (Georgia / system-ui), potem podmiana.
+const FONTS_LAYOUT =
+  "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap";
+const asyncFontsHtml = (href) =>
+  `<link rel="preload" as="style" href="${href}">` +
+  `<link rel="stylesheet" href="${href}" media="print" data-async-css>` +
+  `<noscript><link rel="stylesheet" href="${href}"></noscript>`;
 
 // header: opcje headerHtml (domyślnie — sekcja porad); css: dodatkowe style strony.
 function layout({ title, description, canonical, ogImage, jsonld, body, noindex, header, css = "" }) {
@@ -884,17 +923,17 @@ function layout({ title, description, canonical, ogImage, jsonld, body, noindex,
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 ${noindex ? '<meta name="robots" content="noindex">' : ""}
-<link rel="canonical" href="${esc(canonical)}">
+${canonical ? `<link rel="canonical" href="${esc(canonical)}">` : ""}
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:type" content="${jsonld && jsonld["@type"] === "BlogPosting" ? "article" : "website"}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
-<meta property="og:url" content="${esc(canonical)}">
+${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <meta property="og:image" content="${esc(ogImage)}">
 <meta property="og:locale" content="pl_PL">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+${asyncFontsHtml(FONTS_LAYOUT)}
 <style>${CSS}${SHELL_CSS}${css}</style>
 ${jsonld ? `<script type="application/ld+json">${scriptJson(jsonld)}</script>` : ""}
 </head><body>
@@ -953,6 +992,59 @@ function unavailableResponse(canonical) {
   );
 }
 
+// Brandowana 404 (zamiast pustej odpowiedzi warstwy assets): status 404, noindex, bez
+// canonical, linki dalej. Strony usług — tylko z listy opublikowanych (/api/pages czytane
+// „soft”: kopia bez czekania na origin); bez listy — tylko strona główna i reszta linków.
+const NOT_FOUND_CSS = `
+.nf-links{list-style:none;margin:0 0 2.4em;padding:0;border-top:1px solid var(--line)}
+.nf-links li{padding:13px 2px;border-bottom:1px solid var(--line)}
+.nf-links a{font-weight:400}
+.nf-links span{display:block;color:var(--muted);font-size:.9rem}
+`;
+async function notFoundResponse(api) {
+  const pagesRes = await api.pages({ soft: true });
+  const pages = pagesOf(pagesRes).slice(0, 6);
+  const li = (href, label, note = "") =>
+    `<li><a href="${esc(href)}">${esc(label)}</a>${note ? `<span>${esc(note)}</span>` : ""}</li>`;
+  const body = `<p class="crumbs"><a href="/">Strona główna</a> › Nie znaleziono</p>
+<h1>Nie znaleziono strony</h1>
+<p class="lead">Pod tym adresem nie ma strony — mogła zostać przeniesiona albo w adresie jest literówka. Zajrzyj tutaj:</p>
+<ul class="nf-links">
+${li("/", "Strona główna", "Oferta, cennik i rezerwacja online")}
+${pages.map((p) => li("/" + p.slug, str(p.title))).join("\n")}
+${li("/porady", SECTION_TITLE, "Porady o makijażu permanentnym, brwiach i rzęsach")}
+${li("/#contact", "Kontakt", "Adres, telefon i godziny otwarcia studia")}
+</ul>`;
+  return htmlResponse(
+    layout({
+      title: "Nie znaleziono strony (404) | Zelika",
+      description: "Strona nie istnieje.",
+      canonical: "",
+      ogImage: SITE + "/og-image.jpg",
+      noindex: true,
+      body,
+      header: { current: "", pl: "/" },
+      css: NOT_FOUND_CSS,
+    }),
+    404,
+    60
+  );
+}
+
+// Brak pliku z rozszerzeniem innym niż .html/.htm (.jpg, .js, .php, .env, .map…) albo
+// żądanie bez text/html w Accept (skrypty, obrazki, skanery) → pusta 404 z krótkim cache:
+// bez strony HTML i bez czytania danych (Cache API / origin nietknięte).
+const FILE_EXT_RE = /\.([a-z0-9]{1,10})$/i;
+function wantsHtmlPage(request, url) {
+  const last = url.pathname.slice(url.pathname.lastIndexOf("/") + 1);
+  const m = last.match(FILE_EXT_RE);
+  if (m && !/^html?$/i.test(m[1])) return false;
+  return /text\/html/i.test(request.headers.get("Accept") || "");
+}
+function plainNotFound() {
+  return new Response(null, { status: 404, headers: { "Cache-Control": "public, max-age=60", ...SEC_HEADERS } });
+}
+
 // --- strony ---
 async function renderIndex(api) {
   const res = await api.posts();
@@ -964,7 +1056,7 @@ async function renderIndex(api) {
       ? posts
           .map(
             (p) => `<a class="card" href="/porady/${esc(p.slug)}">
-${mediaSrc(p.image) ? `<img src="${esc(mediaSrc(p.image))}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : ""}
+${mediaSrc(p.image) ? imgHtml(mediaSrc(p.image), ` alt="${esc(str(p.image_alt) || p.title)}" loading="lazy"`) : ""}
 <div class="body"><h2>${esc(p.title)}</h2><p>${esc(excerpt(p))}</p>
 <div class="date">${esc(plDate(p.published_at))}</div></div></a>`
           )
@@ -1075,7 +1167,7 @@ ${faqLd ? `<script type="application/ld+json">${scriptJson(faqLd)}</script>\n` :
 <div class="meta">${esc(author)}${
     post.published_at ? " · " + esc(plDate(post.published_at)) : ""
   }</div>
-${mediaSrc(post.image) ? `<img class="hero-img" src="${esc(mediaSrc(post.image))}" alt="${esc(str(post.image_alt) || post.title)}">` : ""}
+${mediaSrc(post.image) ? imgHtml(mediaSrc(post.image), ` class="hero-img" alt="${esc(str(post.image_alt) || post.title)}" fetchpriority="high"`) : ""}
 ${renderBody(blocks)}
 ${byAnna ? `<aside class="author-box">
 <div class="ab-eye">Autorka</div>
@@ -1095,6 +1187,7 @@ ${ctaBlock()}
       ogImage,
       jsonld,
       body,
+      header: { current: "porady", pl: canonical.slice(SITE.length) }, // PL → ten artykuł; UA/EN → /uk/, /en/
     }),
     200,
     300,
@@ -1148,7 +1241,7 @@ function pageGalleryHtml(page, title) {
   }
   if (!items.length) return "";
   const figs = items
-    .map((g) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt || title)}" loading="lazy" decoding="async"></figure>`)
+    .map((g) => `<figure>${imgHtml(g.src, ` alt="${esc(g.alt || title)}" loading="lazy" decoding="async"`)}</figure>`)
     .join("");
   return `<div class="svc-gallery${items.length === 1 ? " one" : ""}">${figs}</div>`;
 }
@@ -1232,7 +1325,7 @@ function relatedHtml(posts) {
       const img = mediaSrc(p.image);
       return (
         `<a class="card" href="/porady/${esc(encodeURIComponent(p.slug))}">` +
-        (img ? `<img src="${esc(img)}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : "") +
+        (img ? imgHtml(img, ` alt="${esc(str(p.image_alt) || p.title)}" loading="lazy"`) : "") +
         `<div class="body"><h3>${esc(p.title)}</h3><p>${esc(excerpt(p, 110))}</p></div></a>`
       );
     })
@@ -1332,7 +1425,7 @@ ${relatedHtml(relatedPosts(postsOf(postsRes), slug, title))}`;
       ogImage,
       jsonld,
       body,
-      header: { current: "", pl: "/" + slug, langHrefs: { pl: "/" + slug, uk: "/uk/", en: "/en/" } },
+      header: { current: "", pl: "/" + slug }, // UA/EN → /uk/, /en/ (strona tylko po polsku)
       css: PAGE_CSS,
     }),
     200,
@@ -1414,8 +1507,14 @@ async function mediaResponse(request, env, ctx, id) {
 // Власний robots.txt: ВІДКРИТИЙ для всіх (вкл. AI-краулери цитувань — GPTBot,
 // Google-Extended, PerplexityBot, ClaudeBot тощо), бо ціль — видимість і цитування
 // в AI-пошуку. Перебиває Cloudflare-керований robots, що за замовч. блокував AI-ботів.
+// AI-боти — ще й окремими групами з явним Allow (рішення власника; блок на боці
+// Cloudflare — налаштування в панелі, не тут).
+const AI_BOTS = ["GPTBot", "OAI-SearchBot", "ClaudeBot", "Claude-SearchBot", "Google-Extended", "PerplexityBot"];
 function renderRobots() {
-  const body = `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`;
+  const body =
+    `User-agent: *\nAllow: /\n\n` +
+    AI_BOTS.map((b) => `User-agent: ${b}\nAllow: /\n\n`).join("") +
+    `Sitemap: ${SITE}/sitemap.xml\n`;
   return new Response(body, {
     headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" },
   });
@@ -1806,6 +1905,42 @@ const META_QUIZ = {
     ogdesc: "Answer 5 questions and find the ideal treatment for your brows.",
   },
 };
+// Ekran startowy quizu (/quiz, /uk/quiz, /en/quiz) renderowany na serwerze w #card:
+// surowy HTML ma H1 i wstęp (Google/AI bez JS). quiz.js używa tego samego HTML
+// (data-ssr) jako ekranu startowego — także po „Zacznij od nowa”. Treść: HTML (em/b).
+const QUIZ_INTRO = {
+  pl: {
+    eyebrow: "Quiz",
+    h1: "Quiz: jaki zabieg na brwi <em>wybrać?</em>",
+    lead: "Odpowiedz na 5 krótkich pytań, a podpowiem, który zabieg najlepiej pasuje do Twoich brwi — makijaż permanentny (metoda włosowa, pudrowa lub mieszana), laminacja czy regulacja z koloryzacją. Na końcu zobaczysz rekomendację i aktualną cenę.",
+    start: "Rozpocznij quiz",
+    note: "5 pytań &middot; <b>około 1 minuty</b> &middot; bez zobowiązań",
+  },
+  uk: {
+    eyebrow: "Квіз",
+    h1: "Квіз: яку процедуру для брів <em>обрати?</em>",
+    lead: "Дай відповідь на 5 коротких запитань — і я підкажу, яка процедура найкраще підійде твоїм бровам: перманентний макіяж (волосковий, пудровий чи комбінований метод), ламінування чи корекція з фарбуванням. Наприкінці побачиш рекомендацію та актуальну ціну.",
+    start: "Почати квіз",
+    note: "5 запитань &middot; <b>близько 1 хвилини</b> &middot; без зобов'язань",
+  },
+  en: {
+    eyebrow: "Quiz",
+    h1: "Quiz: which brow treatment <em>should you choose?</em>",
+    lead: "Answer 5 short questions and I'll suggest the treatment that suits your brows best — permanent makeup (hair-stroke, powder or combined method), lamination, or shaping with tint. At the end you'll see a recommendation and the current price.",
+    start: "Start the quiz",
+    note: "5 questions &middot; <b>about 1 minute</b> &middot; no commitment",
+  },
+};
+function quizIntroHtml(lang) {
+  const t = QUIZ_INTRO[lang] || QUIZ_INTRO.pl;
+  return (
+    `<span class="eyebrow">${t.eyebrow}</span>` +
+    `<h1>${t.h1}</h1>` +
+    `<p class="lead">${t.lead}</p>` +
+    `<div class="btn-row"><button class="btn" type="button" data-action="start">${t.start}</button></div>` +
+    `<p class="intro-note">${t.note}</p>`
+  );
+}
 const META_PRIV = {
   pl: {
     title: "Polityka prywatności · Zelika PMU — Wieluń",
@@ -1830,10 +1965,18 @@ function hreflangFor(pl) {
       .join("") + `<link rel="alternate" hreflang="x-default" href="${SITE}${pl}">`
   );
 }
-// langHrefs: { pl, uk, en } — dla stron bez wersji językowych (strony usług → /uk/, /en/)
+// Wersje UA/EN mają tylko strona główna i quiz. Strony tylko po polsku (blog, porady,
+// polityka prywatności, strony usług, 404) → UA/EN prowadzą na /uk/ i /en/, nigdy na
+// nieistniejące /uk/porady, /en/prywatnosc itd.
+const LOCALIZED_PATHS = new Set(["/", "/quiz"]);
+function langHref(code, pl, langHrefs) {
+  if (langHrefs && langHrefs[code]) return langHrefs[code];
+  return href(code, code === "pl" || LOCALIZED_PATHS.has(pl) ? pl : "/");
+}
+// langHrefs: { pl, uk, en } — jawne adresy (nadpisują domyślne)
 function switcher(lang, pl, langHrefs) {
   const item = (code, label) =>
-    `<a href="${esc(langHrefs && langHrefs[code] ? langHrefs[code] : href(code, pl))}" style="padding:7px 8px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
+    `<a href="${esc(langHref(code, pl, langHrefs))}" style="padding:7px 8px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
   // <span> (не <li>) — інжектимо в <header> будь-якої сторінки (навбар або topbar quizу)
   return (
     `<span class="lang-switch" style="display:inline-flex;gap:2px;align-items:center;font-size:.72rem;font-weight:600;letter-spacing:.02em;padding-left:6px">` +
@@ -1944,10 +2087,12 @@ const SEC_HEADERS = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
 };
+// hreflang — tylko strony z wersjami PL/UA/EN; polityka prywatności jest tylko po polsku
+// (sam canonical, bez alternates).
 const PAGES = {
-  home: { asset: "/", pl: "/", meta: META },
-  quiz: { asset: "/quiz", pl: "/quiz", meta: META_QUIZ },
-  priv: { asset: "/prywatnosc", pl: "/prywatnosc", meta: META_PRIV },
+  home: { asset: "/", pl: "/", meta: META, hreflang: true },
+  quiz: { asset: "/quiz", pl: "/quiz", meta: META_QUIZ, hreflang: true },
+  priv: { asset: "/prywatnosc", pl: "/prywatnosc", meta: META_PRIV, hreflang: false },
 };
 // Dane z bota (cennik, ocena) wstrzykujemy na stronę główną (PL/UK/EN) i do quizu.
 const DATA_PAGES = new Set(["home", "quiz"]);
@@ -1957,10 +2102,11 @@ async function localizedPage(request, env, api, lang, pageKey) {
   u.pathname = page.asset;
   u.search = "";
   const withData = DATA_PAGES.has(pageKey);
-  // HTML zależy od danych z bota → bez warunkowych nagłówków (ETag zasobu nie
-  // odzwierciedla cennika; 304 zostawiłby w przeglądarce stare ceny).
+  // HTML zależy od danych z bota i od wersji wdrożenia (?v= przy JS/CSS, wspólny
+  // nagłówek/stopka z workera) → bez warunkowych nagłówków: ETag pliku tego nie
+  // odzwierciedla, a 304 zostawiłby w przeglądarce stare ceny / stare adresy skryptów.
   const assetHeaders = new Headers(request.headers);
-  if (withData) for (const h of ["if-none-match", "if-modified-since", "range", "if-range"]) assetHeaders.delete(h);
+  for (const h of ["if-none-match", "if-modified-since", "range", "if-range"]) assetHeaders.delete(h);
   const [res, contentRes, pagesRes] = await Promise.all([
     env.ASSETS.fetch(new Request(u.toString(), { headers: assetHeaders })),
     withData ? api.content() : null,
@@ -1987,7 +2133,7 @@ async function localizedPage(request, env, api, lang, pageKey) {
     .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", locale); } })
     .on('link[rel="canonical"]', { element(e) { e.remove(); } }) // приберемо статичний, щоб не було дубля
     .on("head", { element(e) {
-      e.append(hreflangFor(page.pl), { html: true });
+      if (page.hreflang) e.append(hreflangFor(page.pl), { html: true });
       e.append(`<link rel="canonical" href="${canon}">`, { html: true });
       e.append(`<style>${SHELL_CSS}</style>`, { html: true }); // канон-каркас: авторитетний, останнім
       e.append(`<script src="/nav.js" defer></script>`, { html: true });
@@ -2020,6 +2166,13 @@ async function localizedPage(request, env, api, lang, pageKey) {
           }
         },
       });
+  }
+  if (pageKey === "quiz") {
+    // H1 + wstęp w surowym HTML (tylko strona quizu; #card w modalu na głównej — bez zmian)
+    rw = rw.on("#card", { element(e) {
+      e.setAttribute("data-ssr", "");
+      e.setInnerContent(quizIntroHtml(lang), { html: true });
+    } });
   }
   if (withData && cat) {
     // ceny dla quizu (quiz.js czyta #cennik-data; to dane, nie skrypt — CSP bez zmian)
@@ -2114,18 +2267,103 @@ async function localizedPage(request, env, api, lang, pageKey) {
   const h = new Headers(out.headers);
   h.set("Content-Security-Policy", HOMEPAGE_CSP);
   for (const k in SEC_HEADERS) h.set(k, SEC_HEADERS[k]);
+  h.delete("ETag");
+  h.delete("Last-Modified");
   if (withData) {
-    h.delete("ETag");
-    h.delete("Last-Modified");
     h.set("Cache-Control", "public, max-age=0, must-revalidate");
     h.set("X-Zelika-Data", contentRes.source);
   }
   return new Response(out.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
+// ── Kanoniczne adresy (301) ─────────────────────────────────────────────────────
+// Воркер запускається першим для всіх сторінок (wrangler.jsonc: run_worker_first — усе,
+// крім статики), тож www→apex і канонічні шляхи віддаємо самі як 301 — раніше частину робив шар
+// assets (html_handling: auto-trailing-slash) тимчасовим 307, а частина (/index.html,
+// /porady/, /uk/quiz/) віддавала дубль сторінки з 200.
+const WWW_HOST = "www.zelika.pl";
+const CANON_PATHS = new Map([
+  ["/index.html", "/"],
+  ["/index", "/"], // (warstwa assets robi to 307, a dla /index/ — dwoma skokami)
+  ["/uk", "/uk/"],
+  ["/uk/index.html", "/uk/"],
+  ["/en", "/en/"],
+  ["/en/index.html", "/en/"],
+  ["/quiz.html", "/quiz"],
+  ["/prywatnosc.html", "/prywatnosc"],
+]);
+// strony i pliki z workera bez końcowego „/” (adres z „/” → 301 bez niego); strony usług
+// /<slug>/ — osobno (renderServicePage: 301 tylko dla istniejącej strony)
+const NO_SLASH_RE = /^\/(?:porady(?:\/[^/]+)?|quiz|uk\/quiz|en\/quiz|prywatnosc|robots\.txt|sitemap\.xml|llms\.txt)$/;
+function canonicalPath(p) {
+  if (CANON_PATHS.has(p)) return CANON_PATHS.get(p);
+  if (p.length > 1 && p.endsWith("/")) {
+    const s = p.replace(/\/+$/, "");
+    if (s === "") return "/"; // „//”
+    if (s === "/uk" || s === "/en") return p === s + "/" ? null : s + "/"; // „/uk//”
+    if (CANON_PATHS.has(s)) return CANON_PATHS.get(s); // „/index/”, „/quiz.html/”
+    if (NO_SLASH_RE.test(s)) return s;
+  }
+  return null;
+}
+function redirect301(location, maxAge = 3600) {
+  return new Response(null, {
+    status: 301,
+    headers: { Location: location, "Cache-Control": `public, max-age=${maxAge}`, ...SEC_HEADERS },
+  });
+}
+
+// ── Wersjonowanie lokalnych JS/CSS per wdrożenie (cache-busting) ─────────────────
+// JS/CSS mają w _headers długi cache (doba + SWR), a nazwy plików są bez hasha. Każdy
+// HTML z workera (statyczne strony przez HTMLRewriter i szablony) dostaje więc przy
+// lokalnych <script src> i <link rel=stylesheet|preload href> → .js/.css parametr
+// ?v=<8 znaków id wersji Workera> (binding version_metadata) — po wdrożeniu nowy adres,
+// stara kopia z cache przeglądarki nie zostanie użyta. Bez bindingu (dev) — "dev".
+const LOCAL_JS_CSS_RE = /^(?![a-z][a-z0-9+.-]*:|\/\/)[^?#]*\.(?:js|css)(?:[?#]|$)/i;
+function assetVersion(env) {
+  const id = env && env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id;
+  return (id && String(id).replace(/[^A-Za-z0-9]/g, "").slice(0, 8)) || "dev";
+}
+function versionedUrl(u, v) {
+  if (!u || !LOCAL_JS_CSS_RE.test(u)) return null;
+  const i = u.indexOf("#");
+  const base = i < 0 ? u : u.slice(0, i);
+  if (/[?&]v=/.test(base)) return null;
+  return base + (base.includes("?") ? "&" : "?") + "v=" + v + (i < 0 ? "" : u.slice(i));
+}
+function versionAssets(res, v) {
+  if (!res.body || !/^text\/html/i.test(res.headers.get("Content-Type") || "")) return res;
+  const attr = (name) => ({
+    element(e) {
+      const t = versionedUrl(e.getAttribute(name), v);
+      if (t) e.setAttribute(name, t);
+    },
+  });
+  return new HTMLRewriter()
+    .on("script[src]", attr("src"))
+    .on('link[href][rel~="stylesheet"]', attr("href"))
+    .on('link[href][rel~="preload"]', attr("href"))
+    .transform(res);
+}
+
 export default {
   async fetch(request, env, ctx) {
+    return versionAssets(await site.route(request, env, ctx), assetVersion(env));
+  },
+};
+
+const site = {
+  async route(request, env, ctx) {
     const url = new URL(request.url);
+    // www → apex: przed całym routingiem (strony, robots, sitemap, llms, /media; zdjęcia i
+    // JS/CSS/ikony serwuje warstwa assets bez workera — patrz run_worker_first)
+    // (od razu na kanoniczną ścieżkę: www…/index.html → https://zelika.pl/ jednym skokiem)
+    if (url.hostname === WWW_HOST) {
+      return redirect301(SITE + (canonicalPath(url.pathname) || url.pathname) + url.search, 86400);
+    }
+    const canon = canonicalPath(url.pathname);
+    if (canon) return redirect301(new URL(canon + url.search, url).toString());
+
     const path = url.pathname.replace(/\/+$/, "") || "/";
     const api = makeApi(env, ctx);
 
@@ -2151,9 +2389,10 @@ export default {
     // zostaje ścisła. Ryzyko znikome: strona statyczna, brak wstrzykiwania HTML.
     // Локалізовані сторінки (PL/UA/EN) через HTMLRewriter (data-i18n) + hreflang +
     // перемикач мов. PL теж через воркер — щоб мати hreflang і перемикач.
-    if (path === "/" || path === "/index.html") return localizedPage(request, env, api, "pl", "home");
-    if (path === "/uk" || path === "/uk/index.html") return localizedPage(request, env, api, "uk", "home");
-    if (path === "/en" || path === "/en/index.html") return localizedPage(request, env, api, "en", "home");
+    // (/index.html, /uk, /uk/index.html, /en… → 301 wyżej; tu już tylko /, /uk/, /en/)
+    if (path === "/") return localizedPage(request, env, api, "pl", "home");
+    if (path === "/uk") return localizedPage(request, env, api, "uk", "home");
+    if (path === "/en") return localizedPage(request, env, api, "en", "home");
     if (path === "/quiz") return localizedPage(request, env, api, "pl", "quiz");
     if (path === "/uk/quiz") return localizedPage(request, env, api, "uk", "quiz");
     if (path === "/en/quiz") return localizedPage(request, env, api, "en", "quiz");
@@ -2161,16 +2400,29 @@ export default {
     if (path === "/prywatnosc") return localizedPage(request, env, api, "pl", "priv");
 
     // Strony usług /<slug> (opublikowane z /api/pages, a bez listy — znane slugi przez
-    // /api/pages/<slug>, KNOWN_PAGE_SLUGS; /<slug>/ → 301). Trafiają tu
-    // wyłącznie ścieżki bez pliku w statyce (pliki serwuje warstwa assets przed workerem),
-    // a zajęte nazwy (RESERVED_SLUGS) i trasy wyżej mają pierwszeństwo.
+    // /api/pages/<slug>, KNOWN_PAGE_SLUGS; /<slug>/ → 301). Wzorzec bez kropki nie
+    // zasłania plików statycznych (wszystkie mają rozszerzenie), a zajęte nazwy
+    // (RESERVED_SLUGS, np. katalog img) i trasy wyżej mają pierwszeństwo.
     const sp = url.pathname.match(/^\/([a-z0-9-]{1,120})(\/+)?$/);
     if (sp && isPageSlug(sp[1])) {
       const r = await renderServicePage(request, api, sp[1], !!sp[2]);
       if (r) return r;
     }
 
-    // wszystko inne → statyka
-    return env.ASSETS.fetch(request);
+    // wszystko inne → statyka; brak pliku (też /uk/…, /en/…, /.git/…, /worker.js — wykluczone
+    // w .assetsignore) → brandowana 404
+    const res = await env.ASSETS.fetch(request);
+    if (res.status === 404) return wantsHtmlPage(request, url) ? notFoundResponse(api) : plainNotFound();
+    // przekierowania warstwy assets (html_handling, np. /index/ → /index) — trwałe 301 zamiast
+    // 307 i od razu na kanoniczną ścieżkę (/index/ → / jednym skokiem), z query żądania
+    if ((res.status === 307 || res.status === 308) && res.headers.has("Location")) {
+      const loc = new URL(res.headers.get("Location"), url);
+      if (loc.origin === url.origin) {
+        loc.pathname = canonicalPath(loc.pathname) || loc.pathname;
+        if (!loc.search) loc.search = url.search;
+      }
+      return redirect301(loc.toString());
+    }
+    return res;
   },
 };
