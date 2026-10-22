@@ -7,7 +7,9 @@
 
 const SITE = "https://zelika.pl";
 const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun";
-const BOOKSY_WIDGET = "https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl";
+// Docelowy adres widgetu (/widget/code.js → 307 → /widget-2021/code.js): bez przekierowań
+// także dla widget.css i iframe (widget liczy ich adres od własnego src).
+const BOOKSY_WIDGET = "https://booksy.com/widget-2021/code.js?id=334211&country=pl&lang=pl";
 const SECTION_TITLE = "Porady i inspiracje";
 const SECTION_DESC =
   "Porady, inspiracje i ciekawostki o makijażu permanentnym, brwiach i rzęsach — od Anny Zelinskiej, ekspertki PMU ze Studia Zelika w Wieluniu.";
@@ -863,13 +865,15 @@ const PAGE_CSS = `
 
 // Blok CTA z realnym widgetem Booksy (rysuje zielony przycisk „Rezerwuj wizytę”,
 // a link „Umów wizytę" w nagłówku [data-booksy] deleguje do niego przez booksy-fix.js).
+// Widget z defer (nie blokuje renderu): sam szuka swojego <script> (querySelectorAll po
+// src z „code.js”) i wstawia przycisk tuż przed nim — miejsce w bloku CTA się nie zmienia.
 function ctaBlock() {
   return `<div class="cta">
 <p class="cta-h">Masz pytanie o swój zabieg?</p>
 <p class="cta-p">Umów niezobowiązującą konsultację — dobierzemy metodę idealną dla Ciebie.</p>
 <div class="bk-widget" id="bk-widget"><noscript><a class="btn" href="${BOOKSY}" target="_blank" rel="noopener noreferrer">Rezerwuj na Booksy</a></noscript></div>
 <script src="/booksy-fix.js" defer></script>
-<script src="${BOOKSY_WIDGET}"></script>
+<script src="${esc(BOOKSY_WIDGET)}" defer></script>
 </div>`;
 }
 
