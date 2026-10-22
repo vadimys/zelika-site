@@ -2270,6 +2270,7 @@ async function localizedPage(request, env, api, lang, pageKey) {
 const WWW_HOST = "www.zelika.pl";
 const CANON_PATHS = new Map([
   ["/index.html", "/"],
+  ["/index", "/"], // (warstwa assets robi to 307, a dla /index/ — dwoma skokami)
   ["/uk", "/uk/"],
   ["/uk/index.html", "/uk/"],
   ["/en", "/en/"],
@@ -2277,15 +2278,16 @@ const CANON_PATHS = new Map([
   ["/quiz.html", "/quiz"],
   ["/prywatnosc.html", "/prywatnosc"],
 ]);
-// strony bez końcowego „/” (adres z „/” → 301 bez niego); strony usług /<slug>/ — osobno
-// (renderServicePage: 301 tylko dla istniejącej strony)
-const NO_SLASH_RE = /^\/(?:porady(?:\/[^/]+)?|quiz|uk\/quiz|en\/quiz|prywatnosc)$/;
+// strony i pliki z workera bez końcowego „/” (adres z „/” → 301 bez niego); strony usług
+// /<slug>/ — osobno (renderServicePage: 301 tylko dla istniejącej strony)
+const NO_SLASH_RE = /^\/(?:porady(?:\/[^/]+)?|quiz|uk\/quiz|en\/quiz|prywatnosc|robots\.txt|sitemap\.xml|llms\.txt)$/;
 function canonicalPath(p) {
   if (CANON_PATHS.has(p)) return CANON_PATHS.get(p);
   if (p.length > 1 && p.endsWith("/")) {
     const s = p.replace(/\/+$/, "");
     if (s === "") return "/"; // „//”
     if (s === "/uk" || s === "/en") return p === s + "/" ? null : s + "/"; // „/uk//”
+    if (CANON_PATHS.has(s)) return CANON_PATHS.get(s); // „/index/”, „/quiz.html/”
     if (NO_SLASH_RE.test(s)) return s;
   }
   return null;
@@ -2341,7 +2343,10 @@ const site = {
     const url = new URL(request.url);
     // www → apex: przed całym routingiem (strony, robots, sitemap, llms, /media; zdjęcia i
     // JS/CSS/ikony serwuje warstwa assets bez workera — patrz run_worker_first)
-    if (url.hostname === WWW_HOST) return redirect301(SITE + url.pathname + url.search, 86400);
+    // (od razu na kanoniczną ścieżkę: www…/index.html → https://zelika.pl/ jednym skokiem)
+    if (url.hostname === WWW_HOST) {
+      return redirect301(SITE + (canonicalPath(url.pathname) || url.pathname) + url.search, 86400);
+    }
     const canon = canonicalPath(url.pathname);
     if (canon) return redirect301(new URL(canon + url.search, url).toString());
 
@@ -2394,9 +2399,15 @@ const site = {
     // w .assetsignore) → brandowana 404
     const res = await env.ASSETS.fetch(request);
     if (res.status === 404) return notFoundResponse(api);
-    // przekierowania warstwy assets (html_handling, np. /index → /) — trwałe 301, nie 307
+    // przekierowania warstwy assets (html_handling, np. /index/ → /index) — trwałe 301 zamiast
+    // 307 i od razu na kanoniczną ścieżkę (/index/ → / jednym skokiem), z query żądania
     if ((res.status === 307 || res.status === 308) && res.headers.has("Location")) {
-      return redirect301(new URL(res.headers.get("Location"), url).toString());
+      const loc = new URL(res.headers.get("Location"), url);
+      if (loc.origin === url.origin) {
+        loc.pathname = canonicalPath(loc.pathname) || loc.pathname;
+        if (!loc.search) loc.search = url.search;
+      }
+      return redirect301(loc.toString());
     }
     return res;
   },
