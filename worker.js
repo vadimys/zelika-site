@@ -379,20 +379,16 @@ function priceRangeOf(cat) {
 function businessLd(ld, cat, lang) {
   if (!ld || typeof ld !== "object") return ld;
   delete ld.aggregateRating;
+  if (lang !== "pl") {
+    // opis i etykiety jak w widocznej (zlokalizowanej) stronie
+    if (META[lang] && META[lang].ogdesc) ld.description = META[lang].ogdesc;
+    if (ld.potentialAction && I18N[lang]["hero.book"]) ld.potentialAction.name = htmlToText(I18N[lang]["hero.book"]);
+    if (ld.founder) ld.founder.jobTitle = JOB_TITLE[lang];
+  }
   if (cat) {
     ld.priceRange = priceRangeOf(cat);
     ld.knowsAbout = cat.topics;
     ld.hasOfferCatalog = offerCatalogLd(cat, lang);
-  }
-  return ld;
-}
-// FAQPage: pytania z @id „#faq-<strefa>-…” zostają tylko, gdy strefa jest w katalogu.
-function faqLd(ld, zones) {
-  if (ld && Array.isArray(ld.mainEntity)) {
-    ld.mainEntity = ld.mainEntity.filter((q) => {
-      const m = String((q && q["@id"]) || "").match(/#faq-([a-z]+)-/);
-      return !m || zones.has(m[1]);
-    });
   }
   return ld;
 }
@@ -416,6 +412,69 @@ function jsonScriptHandler(transform) {
       t.replace(out, { html: true });
       buf = "";
     },
+  };
+}
+// Tekst z HTML (słowniki i18n, treść FAQ) → czysty tekst do JSON-LD / atrybutów.
+const ENTITIES = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", mdash: "—", ndash: "–", hellip: "…",
+  middot: "·", rarr: "→", larr: "←", laquo: "«", raquo: "»", bdquo: "„", ldquo: "“", rdquo: "”", rsquo: "’",
+};
+const decodeEntities = (s) =>
+  String(s).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+    if (e[0] === "#") {
+      const cp = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      return Number.isFinite(cp) && cp > 0 && cp < 0x110000 ? String.fromCodePoint(cp) : m;
+    }
+    return ENTITIES[e.toLowerCase()] != null ? ENTITIES[e.toLowerCase()] : m;
+  });
+const htmlToText = (s) =>
+  decodeEntities(String(s == null ? "" : s).replace(/<br\s*\/?>/gi, " ").replace(/<[^>]*>/g, ""))
+    .replace(/\s+/g, " ")
+    .trim();
+// HTMLRewriter: podmiana tekstu elementu (tekst przychodzi kawałkami). fn: surowy HTML → HTML.
+function textMapHandler(fn) {
+  let buf = "";
+  return {
+    text(t) {
+      buf += t.text;
+      if (!t.lastInTextNode) {
+        t.remove();
+        return;
+      }
+      t.replace(fn(buf), { html: true });
+      buf = "";
+    },
+  };
+}
+const JOB_TITLE = {
+  pl: "Specjalistka makijażu permanentnego",
+  uk: "Спеціалістка з перманентного макіяжу",
+  en: "Permanent makeup specialist",
+};
+// Gwiazdki z oceny (zaokrąglonej), nie na sztywno 5.
+const starsOf = (r) => {
+  const full = Math.max(0, Math.min(5, Math.round(r)));
+  return "★".repeat(full) + "☆".repeat(5 - full);
+};
+// <meta name="zelika:google-rating" content="5.0/53"> — snapshot z index.html na brak danych
+function parseRatingSnapshot(v) {
+  const [a, b] = String(v || "").split("/");
+  return parseRating({ google_rating: a, google_reviews: b });
+}
+// FAQPage z widocznego FAQ (te same, zlokalizowane teksty; pytania ukryte przez
+// data-needs nie trafiają do schematu).
+function faqPageLd(items, lang) {
+  const qa = items.filter((it) => it.ok && it.q && it.a);
+  if (!qa.length) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    inLanguage: lang,
+    mainEntity: qa.map((it) => ({
+      "@type": "Question",
+      name: it.q,
+      acceptedAnswer: { "@type": "Answer", text: it.a },
+    })),
   };
 }
 // Mały wyciąg dla quizu (ceny z tego samego katalogu) — <script type="application/json">.
@@ -961,6 +1020,21 @@ const I18N = {
     "kwal.eyebrow": "Кваліфікація та безпека",
     "kwal.h2": "Чому перманентний макіяж варто довірити <em>фахівцю</em>",
     "kwal.intro": "Пігмент лягає у шкіру на роки — тому важлива не ціна, а знання: підбір відтінку під підтон шкіри, техніка під тип шкіри, гігієна й правильне загоєння. Погано зроблений перманент складно й дорого виправити.",
+    "kwal.z1": "Брови", "kwal.z2": "Губи", "kwal.z3": "Очі",
+    "hero.alt": "Перманентний макіяж брів — робота студії Zelika, Велюнь",
+    "about.alt": "Анна Зелінська під час процедури в студії Zelika",
+    "about.sig": "Експертка PMU й архітектура брів",
+    "gal.1t": "Ламінування вій", "gal.1s": "Стилізація", "gal.1a": "Ламінування вій",
+    "gal.2t": "Брови: змішана методика", "gal.2s": "Перманентний макіяж", "gal.2a": "Брови, змішана методика — перманентний макіяж",
+    "gal.3t": "Брови: волоскова методика", "gal.3s": "Перманентний макіяж", "gal.3a": "Брови, волоскова методика — перманентний макіяж",
+    "gal.4t": "Архітектура брів", "gal.4s": "Brow mapping", "gal.4a": "Архітектура брів",
+    "gal.5t": "Сертифікат експерта", "gal.5s": "Навчання й розвиток", "gal.5a": "Анна Зелінська — сертифікат експерта",
+    "gal.6t": "Pigmentology", "gal.6s": "Сертифікат", "gal.6a": "Анна Зелінська — сертифікат Pigmentology",
+    "rev.all": "Усі відгуки в Google &#8594;", "por.all": "Усі поради &#8594;",
+    "day.1": "Понеділок", "day.2": "Вівторок", "day.3": "Середа", "day.4": "Четвер", "day.5": "Пʼятниця", "day.6": "Субота", "day.7": "Неділя",
+    "hours.closed": "вихідний",
+    "chat.fab": "Відкрити чат із консультанткою",
+    "ef.before": "До", "ef.after": "Після",
     "kwal.b1t": "Перманентний макіяж &middot; архітектура брів",
     "kwal.b1b": "Понад 5 років практики",
     "kwal.b2t": "Перманентний макіяж &middot; метод Aquarelle",
@@ -1044,6 +1118,21 @@ const I18N = {
     "kwal.eyebrow": "Qualifications & safety",
     "kwal.h2": "Why permanent makeup is worth trusting to a <em>specialist</em>",
     "kwal.intro": "Pigment stays in the skin for years — so what matters is not the price but the knowledge: matching the shade to your skin's undertone, technique suited to your skin type, hygiene and proper healing. Poorly done permanent makeup is hard and costly to fix.",
+    "kwal.z1": "Brows", "kwal.z2": "Lips", "kwal.z3": "Eyes",
+    "hero.alt": "Permanent brow makeup — work by Zelika studio, Wieluń",
+    "about.alt": "Anna Zelinska during a treatment at Zelika studio",
+    "about.sig": "PMU expert &amp; brow architecture",
+    "gal.1t": "Lash lamination", "gal.1s": "Styling", "gal.1a": "Lash lamination",
+    "gal.2t": "Brows: combined method", "gal.2s": "Permanent makeup", "gal.2a": "Brows, combined method — permanent makeup",
+    "gal.3t": "Brows: hair-stroke method", "gal.3s": "Permanent makeup", "gal.3a": "Brows, hair-stroke method — permanent makeup",
+    "gal.4t": "Brow architecture", "gal.4s": "Brow mapping", "gal.4a": "Brow architecture",
+    "gal.5t": "Expert certificate", "gal.5s": "Training &amp; development", "gal.5a": "Anna Zelinska — expert certificate",
+    "gal.6t": "Pigmentology", "gal.6s": "Certificate", "gal.6a": "Anna Zelinska — Pigmentology certificate",
+    "rev.all": "See all reviews on Google &#8594;", "por.all": "All tips &#8594;",
+    "day.1": "Monday", "day.2": "Tuesday", "day.3": "Wednesday", "day.4": "Thursday", "day.5": "Friday", "day.6": "Saturday", "day.7": "Sunday",
+    "hours.closed": "closed",
+    "chat.fab": "Open chat with our consultant",
+    "ef.before": "Before", "ef.after": "After",
     "kwal.b1t": "Permanent makeup &middot; brow architecture",
     "kwal.b1b": "Over 5 years of practice",
     "kwal.b2t": "Permanent makeup &middot; Aquarelle method",
@@ -1197,8 +1286,14 @@ ${switcher(lang, pl)}
 <button class="burger" id="burger" type="button" aria-label="Menu" aria-expanded="false">&#9776;</button>
 </header>`;
 }
+const FOOT = {
+  pl: { line: "Makijaż permanentny &middot; Brwi &middot; Rzęsy", city: "Wieluń", priv: "Polityka prywatności" },
+  uk: { line: "Перманентний макіяж &middot; Брови &middot; Вії", city: "Велюнь", priv: "Політика конфіденційності" },
+  en: { line: "Permanent makeup &middot; Brows &middot; Lashes", city: "Wieluń", priv: "Privacy policy" },
+};
 function footerHtml(lang) {
-  return `<footer class="site"><div class="container"><a href="${href(lang, "/")}" class="brand" aria-label="Zelika — Home"><svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg><span class="tag">Brows &amp; More</span></a><p class="fline">Anna Zelinska &middot; Makijaż permanentny &middot; Brwi &middot; Rzęsy <span class="fdot">|</span> Wieluń <span class="fdot">&middot;</span> &copy; 2026 <span class="fdot">&middot;</span> <a href="/prywatnosc">Polityka prywatności</a> <span class="fdot">&middot;</span> <a href="#" data-cookies>Cookies</a></p></div></footer>`;
+  const f = FOOT[lang] || FOOT.pl;
+  return `<footer class="site"><div class="container"><a href="${href(lang, "/")}" class="brand" aria-label="Zelika — Home"><svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg><span class="tag">Brows &amp; More</span></a><p class="fline">Anna Zelinska &middot; ${f.line} <span class="fdot">|</span> ${f.city} <span class="fdot">&middot;</span> &copy; 2026 <span class="fdot">&middot;</span> <a href="/prywatnosc">${f.priv}</a> <span class="fdot">&middot;</span> <a href="#" data-cookies>Cookies</a></p></div></footer>`;
 }
 const SHELL_CSS = `
 header.nav{position:sticky;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line,#e6e1d3);transition:.45s ease}
@@ -1317,12 +1412,21 @@ async function localizedPage(request, env, api, lang, pageKey) {
     .on("script[src]", { element(e) { const s = e.getAttribute("src"); if (s && !/^(https?:|\/)/.test(s)) e.setAttribute("src", "/" + s); } })
     .on("a[href]", { element(e) { const t = localizeHref(e.getAttribute("href"), lang); if (t) e.setAttribute("href", t); } });
   if (lang !== "pl") {
-    rw = rw.on("[data-i18n]", {
-      element(e) {
-        const v = dict[e.getAttribute("data-i18n")];
-        if (v != null) e.setInnerContent(v, { html: true });
-      },
-    });
+    rw = rw
+      .on("[data-i18n]", {
+        element(e) {
+          const v = dict[e.getAttribute("data-i18n")];
+          if (v != null) e.setInnerContent(v, { html: true });
+        },
+      })
+      .on("[data-i18n-attrs]", {
+        element(e) {
+          for (const pair of String(e.getAttribute("data-i18n-attrs")).split(/\s+/)) {
+            const [attr, k] = pair.split("=");
+            if (attr && k && dict[k] != null) e.setAttribute(attr, htmlToText(dict[k]));
+          }
+        },
+      });
   }
   if (withData && cat) {
     // ceny dla quizu (quiz.js czyta #cennik-data; to dane, nie skrypt — CSP bez zmian)
@@ -1332,29 +1436,86 @@ async function localizedPage(request, env, api, lang, pageKey) {
   }
   if (home) {
     // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
-    // Brak danych i kopii → zostaje statyczny cennik z index.html.
-    if (cat) rw = rw.on(".svc-cats", { element(e) { e.setInnerContent(cennikHtml(cat, lang), { html: true }); } });
+    if (cat) {
+      rw = rw.on(".svc-cats", { element(e) { e.setInnerContent(cennikHtml(cat, lang), { html: true }); } });
+    } else if (lang !== "pl") {
+      // Brak danych i kopii → statyczny snapshot z index.html (jedyna kopia offline),
+      // ale z przetłumaczonymi kategoriami, notą, „od” i czasem trwania (nazwy usług — PL,
+      // jak przy braku tłumaczeń w API).
+      rw = rw
+        .on(".svc-cats .cat-h h3", textMapHandler((raw) => {
+          const d = CAT_BY_KEY.get(catKey(decodeEntities(raw)));
+          return d ? esc(d[lang]) : raw;
+        }))
+        .on(".svc-cats .feat-note", { element(e) { e.setInnerContent(FEAT_NOTE[lang]); } })
+        .on(".svc-cats .cat-new", { element(e) { e.setInnerContent(NEW_BADGE[lang]); } })
+        .on(".svc-cats .pdur", textMapHandler((raw) => esc(fmtDuration(decodeEntities(raw), lang))))
+        .on(".svc-cats .price", textMapHandler((raw) => raw.replace(/^od\s/, PRICE_FROM[lang] + " ")));
+    }
+
+    // Ocena Google: z API, a bez danych — ze snapshotu <meta name="zelika:google-rating">
+    // (head, więc jest przeczytany, zanim dojdziemy do elementów w body).
+    let snapshot = null;
+    const R = () => rating || snapshot;
+    const txt = REVIEWS_TXT[lang] || REVIEWS_TXT.pl;
+    // FAQPage budujemy z widocznego FAQ (PL — z HTML, UK/EN — ze słownika), z pominięciem
+    // pytań ukrytych przez data-needs; wstawiamy na końcu <body>.
+    const faq = [];
+    let faqCur = null;
+    const needsOk = (e) => {
+      const need = String(e.getAttribute("data-needs") || "").split(/\s+/).filter(Boolean);
+      return !need.length || need.some((z) => zones.has(z));
+    };
+    const faqPart = (field) => ({
+      element(e) {
+        if (!faqCur) return;
+        const k = e.getAttribute("data-i18n");
+        if (lang !== "pl" && k && dict[k] != null) faqCur[field] = htmlToText(dict[k]);
+        else faqCur[field + "Raw"] = "";
+      },
+      text(t) {
+        if (faqCur && faqCur[field + "Raw"] != null) {
+          faqCur[field + "Raw"] += t.text;
+          if (t.lastInTextNode) faqCur[field] = htmlToText(faqCur[field + "Raw"]);
+        }
+      },
+    });
+
     rw = rw
+      .on('meta[name="zelika:google-rating"]', { element(e) { snapshot = parseRatingSnapshot(e.getAttribute("content")); e.remove(); } })
       .on("script#ld-business", jsonScriptHandler((ld) => businessLd(ld, cat, lang)))
-      .on("script#ld-faq", jsonScriptHandler((ld) => faqLd(ld, zones)))
+      .on("script#ld-person", jsonScriptHandler((ld) => {
+        if (lang !== "pl" && ld && typeof ld === "object") ld.jobTitle = JOB_TITLE[lang];
+        return ld;
+      }))
+      // (kolejność ważna: pozycję FAQ zapisujemy, zanim [data-needs] ewentualnie ją usunie)
+      .on("details.faq-item", { element(e) { faqCur = { ok: needsOk(e), q: "", a: "" }; faq.push(faqCur); } })
       // „uśpione” treści (np. FAQ o ustach) — tylko gdy strefa jest w katalogu
       .on("[data-needs]", { element(e) {
-        const need = String(e.getAttribute("data-needs") || "").split(/\s+/).filter(Boolean);
-        if (need.some((z) => zones.has(z))) e.removeAttribute("hidden");
+        if (needsOk(e)) e.removeAttribute("hidden");
+        else e.remove();
+      } })
+      .on("details.faq-item > summary", faqPart("q"))
+      .on("details.faq-item > div", faqPart("a"))
+      .on("body", { element(e) {
+        e.onEndTag((end) => {
+          const ld = faqPageLd(faq, lang);
+          if (ld) end.before(`<script type="application/ld+json">${scriptJson(ld)}</script>`, { html: true });
+        });
+      } })
+      .on("[data-google-rating]", { element(e) { const v = R(); if (v) e.setInnerContent(fmtRating(v.r, lang)); } })
+      .on("[data-stars]", { element(e) { const v = R(); if (v) e.setInnerContent(starsOf(v.r)); } })
+      .on("[data-reviews]", { element(e) {
+        const v = R();
+        const f = txt[e.getAttribute("data-reviews")];
+        if (v && f) e.setInnerContent(f(fmtRating(v.r, lang), v.n), { html: true });
+      } })
+      .on("a.hv-rating", { element(e) { const v = R(); if (v) e.setAttribute("aria-label", txt.aria(fmtRating(v.r, lang))); } })
+      // karuzela tylko z prawdziwymi opiniami; bez nich — bez pustego pudełka
+      .on("#rev-track", { element(e) {
+        if (rating && rating.list.length) e.setInnerContent(reviewCardsHtml(rating.list), { html: true });
         else e.remove();
       } });
-    if (rating) {
-      const r = fmtRating(rating.r, lang);
-      const txt = REVIEWS_TXT[lang] || REVIEWS_TXT.pl;
-      rw = rw
-        .on("[data-google-rating]", { element(e) { e.setInnerContent(r); } })
-        .on("[data-reviews]", { element(e) {
-          const f = txt[e.getAttribute("data-reviews")];
-          if (f) e.setInnerContent(f(r, rating.n), { html: true });
-        } })
-        .on("a.hv-rating", { element(e) { e.setAttribute("aria-label", txt.aria(r)); } });
-      if (rating.list.length) rw = rw.on("#rev-track", { element(e) { e.setInnerContent(reviewCardsHtml(rating.list), { html: true }); } });
-    }
   }
   const out = rw.transform(res);
   const h = new Headers(out.headers);

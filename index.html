@@ -22,6 +22,8 @@
 <meta property="og:image" content="https://zelika.pl/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#1f5e30">
+<!-- Snapshot oceny Google na wypadek braku danych z bota (Worker czyta i usuwa ten tag): "ocena/liczba opinii" -->
+<meta name="zelika:google-rating" content="5.0/53">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -397,90 +399,7 @@
   }
 }
 </script>
-<script type="application/ld+json" id="ld-faq">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "Czy makijaż permanentny boli?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Stosujemy znieczulenie, dzięki czemu zabieg jest komfortowy — większość klientek odczuwa jedynie delikatne mrowienie. Twoje odczucia zawsze omawiamy na początku wizyty."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Jak długo utrzymuje się makijaż permanentny brwi?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Efekt utrzymuje się zwykle od 1 do 3 lat, w zależności od typu skóry i pielęgnacji. Po pierwszym zabiegu zalecamy dopigmentowanie (do 6 tygodni), które utrwala kolor i kształt."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Jak wygląda proces gojenia?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Pełne gojenie trwa około 4–6 tygodni. W pierwszych dniach kolor jest intensywniejszy i stopniowo się wysubtelnia. Otrzymasz od nas dokładne wskazówki dotyczące pielęgnacji."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Którą metodę brwi wybrać — włosową, pudrową czy mieszaną?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "To zależy od Twojej skóry i oczekiwanego efektu. Najlepiej rozwiązać nasz krótki quiz lub umówić się na niezobowiązującą konsultację — wspólnie dobierzemy idealne rozwiązanie."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Czy są przeciwwskazania do zabiegu?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Tak — m.in. ciąża, karmienie piersią, niektóre choroby skóry czy przyjmowane leki. Każdy przypadek omawiamy indywidualnie podczas konsultacji z Anną."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Jak umówić się na wizytę?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Najwygodniej przez rezerwację online w Booksy lub telefonicznie: 571 932 161. Możesz też zacząć od niezobowiązującej konsultacji."
-      }
-    },
-    {
-      "@type": "Question",
-      "@id": "https://zelika.pl/#faq-usta-1",
-      "name": "Czy makijaż permanentny ust boli?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Usta są bardziej wrażliwe niż brwi, dlatego zawsze stosujemy znieczulenie. Większość klientek ocenia zabieg jako komfortowy — odczucia omawiamy na bieżąco podczas wizyty."
-      }
-    },
-    {
-      "@type": "Question",
-      "@id": "https://zelika.pl/#faq-usta-2",
-      "name": "Jak goją się usta po makijażu permanentnym?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Pełne gojenie trwa około 7–10 dni — kolor jest początkowo intensywniejszy i stopniowo schodzi o kilka tonów. Finalny, naturalny efekt widać po zagojeniu i po korekcie (4–6 tygodni)."
-      }
-    },
-    {
-      "@type": "Question",
-      "@id": "https://zelika.pl/#faq-usta-3",
-      "name": "Kto nie powinien robić makijażu permanentnego ust?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Zabiegu nie wykonujemy przy aktywnej opryszczce — przy skłonności do opryszczki zalecamy profilaktykę antywirusową. Przeciwwskazaniem są też m.in. ciąża i karmienie, niektóre choroby oraz leki. Wszystko omawiamy na konsultacji."
-      }
-    }
-  ]
-}
-</script>
-<script type="application/ld+json">
+<script type="application/ld+json" id="ld-person">
 {
   "@context": "https://schema.org",
   "@type": "Person",
@@ -523,13 +442,13 @@
         </div>
       </div>
       <div class="hero-visual reveal d2">
-        <img src="img/photo-1.jpg" fetchpriority="high" width="880" height="1100" alt="Makijaż permanentny brwi — efekt pracy Studia Zelika, Wieluń" decoding="async">
-        <a class="hv-rating" href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer" aria-label="Opinie Google — 5,0"><span class="r" data-google-rating>5,0</span><span class="s">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="t" data-reviews="count">53 opinie</span></a>
+        <img src="img/photo-1.jpg" fetchpriority="high" width="880" height="1100" alt="Makijaż permanentny brwi — efekt pracy Studia Zelika, Wieluń" data-i18n-attrs="alt=hero.alt" decoding="async">
+        <a class="hv-rating" href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer" aria-label="Opinie Google — 5,0"><span class="r" data-google-rating>5,0</span><span class="s" data-stars aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="t" data-reviews="count">53 opinie</span></a>
       </div>
     </div>
   </section>
 
-  <a class="sticky-cta" href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer" data-booksy aria-label="Umów wizytę online">
+  <a class="sticky-cta" href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer" data-booksy>
     <span class="sc-main" data-i18n="nav.book">Umów wizytę</span>
     <span class="sc-sub" data-i18n="sticky.sub">konsultacja gratis · Wieluń</span>
   </a>
@@ -564,8 +483,8 @@
   <section class="about" id="about">
     <div class="container about-grid">
       <div class="about-visual reveal">
-        <img src="img/photo-2.jpg" alt="Anna Zelinska podczas zabiegu w studiu Zelika" loading="lazy" decoding="async">
-        <div class="av-sig"><span>Anna Zelinska</span><small>Ekspert PMU &amp; Architektura Brwi</small></div>
+        <img src="img/photo-2.jpg" alt="Anna Zelinska podczas zabiegu w studiu Zelika" data-i18n-attrs="alt=about.alt" loading="lazy" decoding="async">
+        <div class="av-sig"><span>Anna Zelinska</span><small data-i18n="about.sig">Ekspert PMU &amp; Architektura Brwi</small></div>
       </div>
       <div class="about-text">
         <span data-i18n="about.eyebrow" class="eyebrow reveal">O studiu</span>
@@ -591,9 +510,9 @@
         <p data-i18n="kwal.intro" class="reveal d2">Pigment trafia w skórę na lata — dlatego liczy się nie cena, a wiedza: dobór odcienia do podtonu skóry, technika dopasowana do typu cery, higiena i prawidłowe gojenie. Źle wykonany makijaż permanentny jest trudny i kosztowny do poprawienia.</p>
       </div>
       <div class="kwal-grid">
-        <div class="kcard reveal d1"><div class="kzone">Brwi</div><div class="ktitle" data-i18n="kwal.b1t">Makijaż permanentny &middot; architektura brwi</div><div class="kbadge" data-i18n="kwal.b1b">Ponad 5 lat praktyki</div></div>
-        <div class="kcard reveal d2"><div class="kzone">Usta</div><div class="ktitle" data-i18n="kwal.b2t">Makijaż permanentny &middot; metoda Aquarelle</div><div class="kbadge new" data-i18n="kwal.b2b">Certyfikat 2026 &middot; Warszawa</div></div>
-        <div class="kcard reveal d3"><div class="kzone">Oczy</div><div class="ktitle" data-i18n="kwal.b3t">Kreska międzyrzęsowa (linia rzęs)</div><div class="kbadge new" data-i18n="kwal.b3b">Certyfikat 2026 &middot; Warszawa</div></div>
+        <div class="kcard reveal d1"><div class="kzone" data-i18n="kwal.z1">Brwi</div><div class="ktitle" data-i18n="kwal.b1t">Makijaż permanentny &middot; architektura brwi</div><div class="kbadge" data-i18n="kwal.b1b">Ponad 5 lat praktyki</div></div>
+        <div class="kcard reveal d2"><div class="kzone" data-i18n="kwal.z2">Usta</div><div class="ktitle" data-i18n="kwal.b2t">Makijaż permanentny &middot; metoda Aquarelle</div><div class="kbadge new" data-i18n="kwal.b2b">Certyfikat 2026 &middot; Warszawa</div></div>
+        <div class="kcard reveal d3"><div class="kzone" data-i18n="kwal.z3">Oczy</div><div class="ktitle" data-i18n="kwal.b3t">Kreska międzyrzęsowa (linia rzęs)</div><div class="kbadge new" data-i18n="kwal.b3b">Certyfikat 2026 &middot; Warszawa</div></div>
       </div>
       <p class="kwal-note reveal" data-i18n="kwal.note"><strong>Bezpieczeństwo przede wszystkim.</strong> Pracuję wyłącznie na certyfikowanych pigmentach i jednorazowych, sterylnych modułach. Przed każdym zabiegiem omawiamy przeciwwskazania (m.in. ciąża, karmienie, opryszczka przy ustach, niektóre leki). Szkolenia w standardzie Hasnutdinova (Warszawa, 2026).</p>
     </div>
@@ -614,7 +533,7 @@
     </div>
   </section>
 
-  <section class="efekty" id="efekty" data-tag-before="Przed" data-tag-after="Po" hidden>
+  <section class="efekty" id="efekty" data-tag-before="Przed" data-tag-after="Po" data-i18n-attrs="data-tag-before=ef.before data-tag-after=ef.after" hidden>
     <div class="container">
       <div class="section-head">
         <span data-i18n="ef.eyebrow" class="eyebrow">Efekty</span>
@@ -685,12 +604,12 @@
         <p data-i18n="gal.p" class="reveal d2">Realizacje, certyfikaty i kulisy naszego studia. Pełna galeria — na Instagramie.</p>
       </div>
       <div class="gallery-grid">
-        <div class="gitem reveal d1"><img src="img/photo-3.jpg" alt="Laminacja rzęs" loading="lazy" decoding="async"><div class="glabel"><div class="gt">Laminacja rzęs</div><div class="gs">Stylizacja</div></div></div>
-        <div class="gitem reveal d2"><img src="img/photo-4.jpg" alt="Brwi metoda mieszana — makijaż permanentny" loading="lazy" decoding="async"><div class="glabel"><div class="gt">Brwi metoda mieszana</div><div class="gs">Makijaż permanentny</div></div></div>
-        <div class="gitem reveal d3"><img src="img/photo-5.jpg" alt="Brwi metodą włosową — makijaż permanentny" loading="lazy" decoding="async"><div class="glabel"><div class="gt">Brwi metodą włosową</div><div class="gs">Makijaż permanentny</div></div></div>
-        <div class="gitem reveal d1"><img src="img/photo-6.jpg" alt="Architektura brwi" loading="lazy" decoding="async"><div class="glabel"><div class="gt">Architektura brwi</div><div class="gs">Brow mapping</div></div></div>
-        <div class="gitem reveal d2"><img src="img/photo-7.jpg" alt="Anna Zelinska — certyfikat eksperta" loading="lazy" decoding="async"><div class="glabel"><div class="gt">Certyfikat ekspercki</div><div class="gs">Szkolenia &amp; rozwój</div></div></div>
-        <div class="gitem reveal d3"><img src="img/photo-8.jpg" alt="Anna Zelinska — certyfikat Pigmentology" loading="lazy" decoding="async"><div class="glabel"><div class="gt">Pigmentology</div><div class="gs">Certyfikat</div></div></div>
+        <div class="gitem reveal d1"><img src="img/photo-3.jpg" alt="Laminacja rzęs" data-i18n-attrs="alt=gal.1a" loading="lazy" decoding="async"><div class="glabel"><div class="gt" data-i18n="gal.1t">Laminacja rzęs</div><div class="gs" data-i18n="gal.1s">Stylizacja</div></div></div>
+        <div class="gitem reveal d2"><img src="img/photo-4.jpg" alt="Brwi metoda mieszana — makijaż permanentny" data-i18n-attrs="alt=gal.2a" loading="lazy" decoding="async"><div class="glabel"><div class="gt" data-i18n="gal.2t">Brwi metoda mieszana</div><div class="gs" data-i18n="gal.2s">Makijaż permanentny</div></div></div>
+        <div class="gitem reveal d3"><img src="img/photo-5.jpg" alt="Brwi metodą włosową — makijaż permanentny" data-i18n-attrs="alt=gal.3a" loading="lazy" decoding="async"><div class="glabel"><div class="gt" data-i18n="gal.3t">Brwi metodą włosową</div><div class="gs" data-i18n="gal.3s">Makijaż permanentny</div></div></div>
+        <div class="gitem reveal d1"><img src="img/photo-6.jpg" alt="Architektura brwi" data-i18n-attrs="alt=gal.4a" loading="lazy" decoding="async"><div class="glabel"><div class="gt" data-i18n="gal.4t">Architektura brwi</div><div class="gs" data-i18n="gal.4s">Brow mapping</div></div></div>
+        <div class="gitem reveal d2"><img src="img/photo-7.jpg" alt="Anna Zelinska — certyfikat eksperta" data-i18n-attrs="alt=gal.5a" loading="lazy" decoding="async"><div class="glabel"><div class="gt" data-i18n="gal.5t">Certyfikat ekspercki</div><div class="gs" data-i18n="gal.5s">Szkolenia &amp; rozwój</div></div></div>
+        <div class="gitem reveal d3"><img src="img/photo-8.jpg" alt="Anna Zelinska — certyfikat Pigmentology" data-i18n-attrs="alt=gal.6a" loading="lazy" decoding="async"><div class="glabel"><div class="gt" data-i18n="gal.6t">Pigmentology</div><div class="gs" data-i18n="gal.6s">Certyfikat</div></div></div>
       </div>
       <div class="gallery-cta reveal">
         <a data-i18n="gal.btn" href="https://www.instagram.com/annazelika/" target="_blank" rel="noopener noreferrer" class="btn btn-gold">&#9670; Zobacz więcej na Instagramie</a>
@@ -707,7 +626,7 @@
           <p class="reveal d2" data-reviews="lead">Prawdziwe opinie z Google — ocena <strong>5,0</strong> &#9733; na podstawie <strong>53</strong> opinii.</p>
         </div>
         <div class="rev-track" id="rev-track" aria-live="polite"></div>
-        <p class="rev-cta reveal"><a href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer">Zobacz wszystkie opinie w Google &#8594;</a></p>
+        <p class="rev-cta reveal"><a href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer" data-i18n="rev.all">Zobacz wszystkie opinie w Google &#8594;</a></p>
       </div>
     </section>
 
@@ -740,7 +659,7 @@
           <p data-i18n="por.p" class="reveal d2">Krótkie porady i ciekawostki o makijażu permanentnym, brwiach i rzęsach — prosto od Anny.</p>
         </div>
         <div class="ptease-grid" id="porady-teaser" aria-live="polite"></div>
-        <p class="rev-cta reveal"><a href="/porady">Zobacz wszystkie porady &#8594;</a></p>
+        <p class="rev-cta reveal"><a href="/porady" data-i18n="por.all">Zobacz wszystkie porady &#8594;</a></p>
       </div>
       <style>
         .porady-teaser-sec{padding:84px 0;background:var(--bg-soft)}
@@ -768,13 +687,13 @@
           <div class="info-row"><div class="ic">&#9670;</div><div><div class="it">Instagram</div><div class="iv"><a href="https://www.instagram.com/annazelika/" target="_blank" rel="noopener noreferrer">@annazelika</a></div></div></div>
           <div class="info-row"><div class="ic">&#9719;</div><div style="flex:1"><div data-i18n="con.hours" class="it">Godziny otwarcia</div>
             <div class="hours">
-              <span class="d">Poniedziałek</span><span class="h">8:00 – 16:00</span>
-              <span class="d">Wtorek</span><span class="h">8:00 – 16:00</span>
-              <span class="d">Środa</span><span class="h">8:00 – 16:00</span>
-              <span class="d">Czwartek</span><span class="h">8:00 – 16:00</span>
-              <span class="d">Piątek</span><span class="h">8:00 – 16:00</span>
-              <span class="d">Sobota</span><span class="h">6:00 – 13:00</span>
-              <span class="d">Niedziela</span><span class="h closed">nieczynne</span>
+              <span class="d" data-i18n="day.1">Poniedziałek</span><span class="h">8:00 – 16:00</span>
+              <span class="d" data-i18n="day.2">Wtorek</span><span class="h">8:00 – 16:00</span>
+              <span class="d" data-i18n="day.3">Środa</span><span class="h">8:00 – 16:00</span>
+              <span class="d" data-i18n="day.4">Czwartek</span><span class="h">8:00 – 16:00</span>
+              <span class="d" data-i18n="day.5">Piątek</span><span class="h">8:00 – 16:00</span>
+              <span class="d" data-i18n="day.6">Sobota</span><span class="h">6:00 – 13:00</span>
+              <span class="d" data-i18n="day.7">Niedziela</span><span class="h closed" data-i18n="hours.closed">nieczynne</span>
             </div>
           </div></div>
         </div>
@@ -811,7 +730,7 @@
 })();
 </script>
   <!-- AI konsultantka -->
-  <button id="zchat-fab" class="zchat-fab" type="button" aria-label="Otwórz czat z konsultantką">
+  <button id="zchat-fab" class="zchat-fab" type="button" aria-label="Otwórz czat z konsultantką" data-i18n-attrs="aria-label=chat.fab">
     <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
   </button>
   <section id="zchat-panel" class="zchat-panel" role="dialog" aria-label="Konsultantka Zelika" aria-hidden="true">
