@@ -3,6 +3,8 @@
   "compatibility_date": "2026-06-17",
   "main": "worker.js",
   "observability": { "enabled": true, "head_sampling_rate": 1 },
+  // id версії Workera → ?v=… для локальних JS/CSS у HTML (cache-busting на кожен деплой)
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",

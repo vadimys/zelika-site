@@ -2085,10 +2085,11 @@ async function localizedPage(request, env, api, lang, pageKey) {
   u.pathname = page.asset;
   u.search = "";
   const withData = DATA_PAGES.has(pageKey);
-  // HTML zależy od danych z bota → bez warunkowych nagłówków (ETag zasobu nie
-  // odzwierciedla cennika; 304 zostawiłby w przeglądarce stare ceny).
+  // HTML zależy od danych z bota i od wersji wdrożenia (?v= przy JS/CSS, wspólny
+  // nagłówek/stopka z workera) → bez warunkowych nagłówków: ETag pliku tego nie
+  // odzwierciedla, a 304 zostawiłby w przeglądarce stare ceny / stare adresy skryptów.
   const assetHeaders = new Headers(request.headers);
-  if (withData) for (const h of ["if-none-match", "if-modified-since", "range", "if-range"]) assetHeaders.delete(h);
+  for (const h of ["if-none-match", "if-modified-since", "range", "if-range"]) assetHeaders.delete(h);
   const [res, contentRes, pagesRes] = await Promise.all([
     env.ASSETS.fetch(new Request(u.toString(), { headers: assetHeaders })),
     withData ? api.content() : null,
@@ -2249,9 +2250,9 @@ async function localizedPage(request, env, api, lang, pageKey) {
   const h = new Headers(out.headers);
   h.set("Content-Security-Policy", HOMEPAGE_CSP);
   for (const k in SEC_HEADERS) h.set(k, SEC_HEADERS[k]);
+  h.delete("ETag");
+  h.delete("Last-Modified");
   if (withData) {
-    h.delete("ETag");
-    h.delete("Last-Modified");
     h.set("Cache-Control", "public, max-age=0, must-revalidate");
     h.set("X-Zelika-Data", contentRes.source);
   }
@@ -2293,8 +2294,47 @@ function redirect301(location, maxAge = 3600) {
   });
 }
 
+// ── Wersjonowanie lokalnych JS/CSS per wdrożenie (cache-busting) ─────────────────
+// JS/CSS mają w _headers długi cache (doba + SWR), a nazwy plików są bez hasha. Każdy
+// HTML z workera (statyczne strony przez HTMLRewriter i szablony) dostaje więc przy
+// lokalnych <script src> i <link rel=stylesheet|preload href> → .js/.css parametr
+// ?v=<8 znaków id wersji Workera> (binding version_metadata) — po wdrożeniu nowy adres,
+// stara kopia z cache przeglądarki nie zostanie użyta. Bez bindingu (dev) — "dev".
+const LOCAL_JS_CSS_RE = /^(?![a-z][a-z0-9+.-]*:|\/\/)[^?#]*\.(?:js|css)(?:[?#]|$)/i;
+function assetVersion(env) {
+  const id = env && env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id;
+  return (id && String(id).replace(/[^A-Za-z0-9]/g, "").slice(0, 8)) || "dev";
+}
+function versionedUrl(u, v) {
+  if (!u || !LOCAL_JS_CSS_RE.test(u)) return null;
+  const i = u.indexOf("#");
+  const base = i < 0 ? u : u.slice(0, i);
+  if (/[?&]v=/.test(base)) return null;
+  return base + (base.includes("?") ? "&" : "?") + "v=" + v + (i < 0 ? "" : u.slice(i));
+}
+function versionAssets(res, v) {
+  if (!res.body || !/^text\/html/i.test(res.headers.get("Content-Type") || "")) return res;
+  const attr = (name) => ({
+    element(e) {
+      const t = versionedUrl(e.getAttribute(name), v);
+      if (t) e.setAttribute(name, t);
+    },
+  });
+  return new HTMLRewriter()
+    .on("script[src]", attr("src"))
+    .on('link[href][rel~="stylesheet"]', attr("href"))
+    .on('link[href][rel~="preload"]', attr("href"))
+    .transform(res);
+}
+
 export default {
   async fetch(request, env, ctx) {
+    return versionAssets(await site.route(request, env, ctx), assetVersion(env));
+  },
+};
+
+const site = {
+  async route(request, env, ctx) {
     const url = new URL(request.url);
     // www → apex: przed całym routingiem (także pliki statyczne, robots, sitemap)
     if (url.hostname === WWW_HOST) return redirect301(SITE + url.pathname + url.search, 86400);

@@ -12,13 +12,14 @@
   Cache-Control: public, max-age=2592000
 
 # Кеш статики (файли без хешу в імені → помірні строки; HTML — без довгого кешу, його
-# Cache-Control задає воркер). Фото — тиждень, JS/SVG/іконки — година; обидва + SWR доба.
+# Cache-Control задає воркер). Фото — тиждень; JS/CSS — доба + SWR тиждень (у HTML воркер
+# додає ?v=<версія Workera>, тож після деплою адреса нова); SVG/іконки — година.
 /img/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 /*.js
-  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /*.css
-  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /*.svg
   Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 /*.ico
