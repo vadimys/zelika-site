@@ -46,6 +46,26 @@ function pageImgSrc(img) {
   return /^\/(?![\/\\])/.test(s) ? s : "";
 }
 
+// Zdjęcia strony /img/photo-N.jpg: obok leży wersja WebP (img/photo-N.webp), a wymiary są
+// znane (width/height → miejsce zarezerwowane przed wczytaniem, bez skoku układu / CLS).
+// <picture>: WebP dla przeglądarek, które go obsługują, JPG jako zapas; og:image dalej JPG.
+// Inne obrazy (np. /media/<id>.jpg z bota) — zwykły <img>. attrs — gotowe, escapowane.
+const SITE_IMG_SIZES = {
+  "/img/photo-1.jpg": [880, 1100],
+  "/img/photo-2.jpg": [820, 1025],
+  "/img/photo-3.jpg": [740, 986],
+  "/img/photo-4.jpg": [740, 986],
+  "/img/photo-5.jpg": [740, 986],
+  "/img/photo-6.jpg": [740, 986],
+  "/img/photo-7.jpg": [740, 986],
+  "/img/photo-8.jpg": [740, 986],
+};
+function imgHtml(src, attrs = "") {
+  const size = SITE_IMG_SIZES[src];
+  const img = `<img src="${esc(src)}"${size ? ` width="${size[0]}" height="${size[1]}"` : ""}${attrs}>`;
+  return size ? `<picture><source type="image/webp" srcset="${esc(src.slice(0, -4))}.webp">${img}</picture>` : img;
+}
+
 function absImg(img) {
   img = mediaSrc(img);
   if (!img) return SITE + "/og-image.jpg";
@@ -765,6 +785,7 @@ const CSS = `
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;line-height:1.75;-webkit-font-smoothing:antialiased}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline}
+picture{display:contents}
 .wrap{max-width:760px;margin:0 auto;padding:0 24px}
 /* --- nagłówek jak na stronie głównej --- */
 header.nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
@@ -1007,7 +1028,7 @@ async function renderIndex(api) {
       ? posts
           .map(
             (p) => `<a class="card" href="/porady/${esc(p.slug)}">
-${mediaSrc(p.image) ? `<img src="${esc(mediaSrc(p.image))}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : ""}
+${mediaSrc(p.image) ? imgHtml(mediaSrc(p.image), ` alt="${esc(str(p.image_alt) || p.title)}" loading="lazy"`) : ""}
 <div class="body"><h2>${esc(p.title)}</h2><p>${esc(excerpt(p))}</p>
 <div class="date">${esc(plDate(p.published_at))}</div></div></a>`
           )
@@ -1118,7 +1139,7 @@ ${faqLd ? `<script type="application/ld+json">${scriptJson(faqLd)}</script>\n` :
 <div class="meta">${esc(author)}${
     post.published_at ? " · " + esc(plDate(post.published_at)) : ""
   }</div>
-${mediaSrc(post.image) ? `<img class="hero-img" src="${esc(mediaSrc(post.image))}" alt="${esc(str(post.image_alt) || post.title)}">` : ""}
+${mediaSrc(post.image) ? imgHtml(mediaSrc(post.image), ` class="hero-img" alt="${esc(str(post.image_alt) || post.title)}" fetchpriority="high"`) : ""}
 ${renderBody(blocks)}
 ${byAnna ? `<aside class="author-box">
 <div class="ab-eye">Autorka</div>
@@ -1192,7 +1213,7 @@ function pageGalleryHtml(page, title) {
   }
   if (!items.length) return "";
   const figs = items
-    .map((g) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt || title)}" loading="lazy" decoding="async"></figure>`)
+    .map((g) => `<figure>${imgHtml(g.src, ` alt="${esc(g.alt || title)}" loading="lazy" decoding="async"`)}</figure>`)
     .join("");
   return `<div class="svc-gallery${items.length === 1 ? " one" : ""}">${figs}</div>`;
 }
@@ -1276,7 +1297,7 @@ function relatedHtml(posts) {
       const img = mediaSrc(p.image);
       return (
         `<a class="card" href="/porady/${esc(encodeURIComponent(p.slug))}">` +
-        (img ? `<img src="${esc(img)}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : "") +
+        (img ? imgHtml(img, ` alt="${esc(str(p.image_alt) || p.title)}" loading="lazy"`) : "") +
         `<div class="body"><h3>${esc(p.title)}</h3><p>${esc(excerpt(p, 110))}</p></div></a>`
       );
     })
