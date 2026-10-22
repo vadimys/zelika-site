@@ -206,7 +206,16 @@
   .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
   @media(max-width:920px){
     .hero-grid,.about-grid,.contact-grid{grid-template-columns:1fr;gap:46px;}
-    .hero-visual{max-width:360px;margin:0 auto;order:-1;}
+    /* Фото роботи + бейдж Google — ПІД H1/lead/CTA (раніше order:-1 ставив його над текстом),
+       на всю ширину. Раніше margin:0 auto без потокового вмісту (img/бейдж — absolute)
+       стискав блок до ~2×3px. Розмір задають width + aspect-ratio 4/5 (кадр як у файлі) ще
+       до завантаження фото (без CLS); max-height обрізає (object-fit:cover) на планшетах.
+       fetchpriority="high" у <img> лишаємо: на десктопі це фото = LCP, а на телефоні LCP —
+       текст hero (Lighthouse: LCP однаковий з high і без нього). */
+    .hero-visual{width:100%;max-height:min(70vh,560px);max-height:min(70svh,560px);}
+    .hv-rating{top:14px;right:14px;padding:10px 14px 9px;}
+    .hv-rating .s{font-size:.78rem;}
+    .hv-rating .t{font-size:.62rem;letter-spacing:.12em;}
     .values-grid{grid-template-columns:1fr 1fr;gap:30px;}
     .svc-cats{grid-template-columns:1fr;}
     .gallery-grid{grid-template-columns:1fr 1fr;}
