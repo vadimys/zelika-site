@@ -1031,6 +1031,20 @@ ${li("/#contact", "Kontakt", "Adres, telefon i godziny otwarcia studia")}
   );
 }
 
+// Brak pliku z rozszerzeniem innym niż .html/.htm (.jpg, .js, .php, .env, .map…) albo
+// żądanie bez text/html w Accept (skrypty, obrazki, skanery) → pusta 404 z krótkim cache:
+// bez strony HTML i bez czytania danych (Cache API / origin nietknięte).
+const FILE_EXT_RE = /\.([a-z0-9]{1,10})$/i;
+function wantsHtmlPage(request, url) {
+  const last = url.pathname.slice(url.pathname.lastIndexOf("/") + 1);
+  const m = last.match(FILE_EXT_RE);
+  if (m && !/^html?$/i.test(m[1])) return false;
+  return /text\/html/i.test(request.headers.get("Accept") || "");
+}
+function plainNotFound() {
+  return new Response(null, { status: 404, headers: { "Cache-Control": "public, max-age=60", ...SEC_HEADERS } });
+}
+
 // --- strony ---
 async function renderIndex(api) {
   const res = await api.posts();
@@ -2398,7 +2412,7 @@ const site = {
     // wszystko inne → statyka; brak pliku (też /uk/…, /en/…, /.git/…, /worker.js — wykluczone
     // w .assetsignore) → brandowana 404
     const res = await env.ASSETS.fetch(request);
-    if (res.status === 404) return notFoundResponse(api);
+    if (res.status === 404) return wantsHtmlPage(request, url) ? notFoundResponse(api) : plainNotFound();
     // przekierowania warstwy assets (html_handling, np. /index/ → /index) — trwałe 301 zamiast
     // 307 i od razu na kanoniczną ścieżkę (/index/ → / jednym skokiem), z query żądania
     if ((res.status === 307 || res.status === 308) && res.headers.has("Location")) {
