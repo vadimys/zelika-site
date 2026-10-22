@@ -1138,6 +1138,7 @@ ${ctaBlock()}
       ogImage,
       jsonld,
       body,
+      header: { current: "porady", pl: canonical.slice(SITE.length) }, // PL → ten artykuł; UA/EN → /uk/, /en/
     }),
     200,
     300,
@@ -1375,7 +1376,7 @@ ${relatedHtml(relatedPosts(postsOf(postsRes), slug, title))}`;
       ogImage,
       jsonld,
       body,
-      header: { current: "", pl: "/" + slug, langHrefs: { pl: "/" + slug, uk: "/uk/", en: "/en/" } },
+      header: { current: "", pl: "/" + slug }, // UA/EN → /uk/, /en/ (strona tylko po polsku)
       css: PAGE_CSS,
     }),
     200,
@@ -1879,10 +1880,18 @@ function hreflangFor(pl) {
       .join("") + `<link rel="alternate" hreflang="x-default" href="${SITE}${pl}">`
   );
 }
-// langHrefs: { pl, uk, en } — dla stron bez wersji językowych (strony usług → /uk/, /en/)
+// Wersje UA/EN mają tylko strona główna i quiz. Strony tylko po polsku (blog, porady,
+// polityka prywatności, strony usług, 404) → UA/EN prowadzą na /uk/ i /en/, nigdy na
+// nieistniejące /uk/porady, /en/prywatnosc itd.
+const LOCALIZED_PATHS = new Set(["/", "/quiz"]);
+function langHref(code, pl, langHrefs) {
+  if (langHrefs && langHrefs[code]) return langHrefs[code];
+  return href(code, code === "pl" || LOCALIZED_PATHS.has(pl) ? pl : "/");
+}
+// langHrefs: { pl, uk, en } — jawne adresy (nadpisują domyślne)
 function switcher(lang, pl, langHrefs) {
   const item = (code, label) =>
-    `<a href="${esc(langHrefs && langHrefs[code] ? langHrefs[code] : href(code, pl))}" style="padding:7px 8px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
+    `<a href="${esc(langHref(code, pl, langHrefs))}" style="padding:7px 8px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
   // <span> (не <li>) — інжектимо в <header> будь-якої сторінки (навбар або topbar quizу)
   return (
     `<span class="lang-switch" style="display:inline-flex;gap:2px;align-items:center;font-size:.72rem;font-weight:600;letter-spacing:.02em;padding-left:6px">` +
@@ -1993,10 +2002,12 @@ const SEC_HEADERS = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
 };
+// hreflang — tylko strony z wersjami PL/UA/EN; polityka prywatności jest tylko po polsku
+// (sam canonical, bez alternates).
 const PAGES = {
-  home: { asset: "/", pl: "/", meta: META },
-  quiz: { asset: "/quiz", pl: "/quiz", meta: META_QUIZ },
-  priv: { asset: "/prywatnosc", pl: "/prywatnosc", meta: META_PRIV },
+  home: { asset: "/", pl: "/", meta: META, hreflang: true },
+  quiz: { asset: "/quiz", pl: "/quiz", meta: META_QUIZ, hreflang: true },
+  priv: { asset: "/prywatnosc", pl: "/prywatnosc", meta: META_PRIV, hreflang: false },
 };
 // Dane z bota (cennik, ocena) wstrzykujemy na stronę główną (PL/UK/EN) i do quizu.
 const DATA_PAGES = new Set(["home", "quiz"]);
@@ -2036,7 +2047,7 @@ async function localizedPage(request, env, api, lang, pageKey) {
     .on('meta[property="og:locale"]', { element(e) { e.setAttribute("content", locale); } })
     .on('link[rel="canonical"]', { element(e) { e.remove(); } }) // приберемо статичний, щоб не було дубля
     .on("head", { element(e) {
-      e.append(hreflangFor(page.pl), { html: true });
+      if (page.hreflang) e.append(hreflangFor(page.pl), { html: true });
       e.append(`<link rel="canonical" href="${canon}">`, { html: true });
       e.append(`<style>${SHELL_CSS}</style>`, { html: true }); // канон-каркас: авторитетний, останнім
       e.append(`<script src="/nav.js" defer></script>`, { html: true });
