@@ -14,7 +14,11 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Шрифти non-blocking (як на головній): preload + media=print → all після завантаження
+     (перемикає /nav.js за data-async-css — без inline onload) + noscript. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" media="print" data-async-css>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap"></noscript>
 <style>
 :root{--bg:#f4f1e7;--bg-card:#fffdf6;--green:#1f5e30;--green-mid:#2f7d44;--gold:#a9863c;--ink:#272b22;--muted:#6e7365;--line:rgba(31,94,48,.16);--line-gold:rgba(169,134,60,.30);--serif:'Cormorant Garamond',Georgia,serif;--sans:'Jost',system-ui,sans-serif}
 *{box-sizing:border-box}

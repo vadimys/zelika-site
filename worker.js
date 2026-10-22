@@ -898,6 +898,17 @@ function ctaBlock() {
 </div>`;
 }
 
+// Fonty Google bez blokowania renderu — jak na stronie głównej: preload + stylesheet
+// z media="print" przełączany na "all" po wczytaniu + <noscript>. Przełącza /nav.js
+// (link[data-async-css]), nie inline onload: CSP tych stron nie ma 'unsafe-inline'.
+// display=swap — tekst od razu fontem zapasowym (Georgia / system-ui), potem podmiana.
+const FONTS_LAYOUT =
+  "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap";
+const asyncFontsHtml = (href) =>
+  `<link rel="preload" as="style" href="${href}">` +
+  `<link rel="stylesheet" href="${href}" media="print" data-async-css>` +
+  `<noscript><link rel="stylesheet" href="${href}"></noscript>`;
+
 // header: opcje headerHtml (domyślnie — sekcja porad); css: dodatkowe style strony.
 function layout({ title, description, canonical, ogImage, jsonld, body, noindex, header, css = "" }) {
   return `<!doctype html><html lang="pl"><head>
@@ -919,7 +930,7 @@ ${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <meta property="og:locale" content="pl_PL">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+${asyncFontsHtml(FONTS_LAYOUT)}
 <style>${CSS}${SHELL_CSS}${css}</style>
 ${jsonld ? `<script type="application/ld+json">${scriptJson(jsonld)}</script>` : ""}
 </head><body>

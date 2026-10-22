@@ -3,6 +3,18 @@
    що стає непрозорим при скролі. Ідемпотентний, безпечний скрізь. */
 (function () {
   "use strict";
+  // Шрифти без блокування рендеру: <link rel="stylesheet" media="print" data-async-css>
+  // → media="all", щойно CSS завантажено (те саме, що onload="this.media='all'" на
+  // головній, але без inline-обробника — CSP блогу/послуг/404 не має 'unsafe-inline').
+  var css = document.querySelectorAll("link[data-async-css]");
+  for (var i = 0; i < css.length; i++) {
+    (function (l) {
+      var on = function () { l.media = "all"; };
+      if (l.sheet) on();
+      else l.addEventListener("load", on);
+    })(css[i]);
+  }
+
   var nav = document.querySelector("header.nav");
   if (!nav) return;
 
