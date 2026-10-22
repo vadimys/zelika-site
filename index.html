@@ -720,8 +720,9 @@
              Віджет шукає свій <script> через querySelectorAll("script") за src з «code.js»
              і вставляє кнопку перед ним — тож з defer кнопка там само, у картці.
              НЕ інжектити через appendChild у body (тоді кнопка «пливе» в кінець body).
-             Одразу кінцевий адрес widget-2021 (/widget/ → 307), без зайвих редиректів. -->
-        <script src="https://booksy.com/widget-2021/code.js?id=334211&amp;country=pl&amp;lang=pl" defer></script>
+             Офіційна публічна адреса /widget/ (Booksy сам робить 307 на поточну версію) —
+             надійніше, ніж внутрішній шлях /widget-2021/. -->
+        <script src="https://booksy.com/widget/code.js?id=334211&amp;country=pl&amp;lang=pl" defer></script>
         <a data-i18n="bk.call" href="tel:+48571932161" class="btn btn-ghost">Zadzwoń: 571 932 161</a>
         <p class="bk-note" data-reviews="note">Ocena <strong>5,0 &#9733;</strong> na podstawie 53 opinii w Google</p>
       </div>

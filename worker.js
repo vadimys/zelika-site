@@ -7,9 +7,9 @@
 
 const SITE = "https://zelika.pl";
 const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun";
-// Docelowy adres widgetu (/widget/code.js → 307 → /widget-2021/code.js): bez przekierowań
-// także dla widget.css i iframe (widget liczy ich adres od własnego src).
-const BOOKSY_WIDGET = "https://booksy.com/widget-2021/code.js?id=334211&country=pl&lang=pl";
+// Oficjalny publiczny adres widgetu (Booksy przekierowuje go 307 na bieżącą wersję
+// /widget-2021/ — trzymamy się adresu z dokumentacji Booksy, nie wewnętrznej ścieżki).
+const BOOKSY_WIDGET = "https://booksy.com/widget/code.js?id=334211&country=pl&lang=pl";
 const SECTION_TITLE = "Porady i inspiracje";
 const SECTION_DESC =
   "Porady, inspiracje i ciekawostki o makijażu permanentnym, brwiach i rzęsach — od Anny Zelinskiej, ekspertki PMU ze Studia Zelika w Wieluniu.";
