@@ -54,15 +54,15 @@ const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-w
   ];
 
   const RESULTS = {
-    wlosowa: { service:"Makijaż permanentny brwi", title:"Metoda włosowa", price:"od 600 zł",
+    wlosowa: { service:"Makijaż permanentny brwi", title:"Metoda włosowa",
       desc:"Twój typ to naturalność. Metoda włosowa odtwarza pojedyncze włoski tak realistycznie, że nikt nie pozna, że to makijaż permanentny. Idealna, gdy masz prześwity, ale chcesz wyglądać po prostu jak lepsza, wyspana wersja siebie — każdego dnia, bez malowania." },
-    pudrowa: { service:"Makijaż permanentny brwi", title:"Metoda pudrowa (ombré)", price:"od 600 zł",
+    pudrowa: { service:"Makijaż permanentny brwi", title:"Metoda pudrowa (ombré)",
       desc:"Marzysz o efekcie makijażu, który się nie ściera. Metoda pudrowa daje miękki, równomiernie wypełniony look — jak po delikatnej pomadce do brwi. Świetnie sprawdza się również przy cerze tłustej. Obudzisz się z gotowymi brwiami i zapomnisz o porannym rysowaniu." },
-    mieszana: { service:"Makijaż permanentny brwi", title:"Metoda mieszana", price:"od 600 zł",
+    mieszana: { service:"Makijaż permanentny brwi", title:"Metoda mieszana",
       desc:"Chcesz złoty środek — naturalnie u nasady, wyraziście ku końcowi. Metoda mieszana łączy realistyczne włoski z delikatnym cieniowaniem. To najbardziej uniwersalny wybór, który pięknie podkreśla brwi i pasuje niemal każdej twarzy." },
-    laminacja: { service:"Stylizacja brwi", title:"Laminacja brwi", price:"od 140 zł",
+    laminacja: { service:"Stylizacja brwi", title:"Laminacja brwi",
       desc:"Twoje brwi potrzebują ujarzmienia, ale nie jesteś (jeszcze) gotowa na makijaż permanentny. Laminacja układa włoski w jednym kierunku, dodaje gęstości i optycznie podkręca brwi — efekt utrzymuje się do około 6 tygodni. Idealny, niezobowiązujący pierwszy krok. W cenie regulacja i farbka." },
-    regulacja: { service:"Stylizacja brwi", title:"Regulacja i farbka brwi", price:"od 90 zł",
+    regulacja: { service:"Stylizacja brwi", title:"Regulacja i farbka brwi",
       desc:"Lubisz mieć kontrolę i wolisz zacząć od małego kroku. Profesjonalna regulacja nada brwiom idealny kształt dopasowany do rysów Twojej twarzy, a farbka podkreśli ich kolor. Świetny start, by oswoić się i zobaczyć potencjał swoich brwi przed decyzją o makijażu permanentnym." }
   };
 
@@ -85,39 +85,77 @@ const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-w
   };
   const RT = {
     uk: {
-      wlosowa:{ service:"Перманентний макіяж брів", title:"Волоскова методика", price:"від 600 zł",
+      wlosowa:{ service:"Перманентний макіяж брів", title:"Волоскова методика",
         desc:"Твій типаж — природність. Волоскова методика відтворює окремі волоски настільки реалістично, що ніхто не здогадається, що це перманентний макіяж. Ідеально, коли є прогалини, але хочеш виглядати просто як краща, виспана версія себе — щодня, без фарбування." },
-      pudrowa:{ service:"Перманентний макіяж брів", title:"Пудрова методика (ombré)", price:"від 600 zł",
+      pudrowa:{ service:"Перманентний макіяж брів", title:"Пудрова методика (ombré)",
         desc:"Мрієш про ефект макіяжу, який не стирається. Пудрова методика дає м'який, рівномірно заповнений вигляд — наче після делікатної помадки для брів. Чудово підходить і для жирної шкіри. Прокинешся з готовими бровами й забудеш про ранкове малювання." },
-      mieszana:{ service:"Перманентний макіяж брів", title:"Змішана методика", price:"від 600 zł",
+      mieszana:{ service:"Перманентний макіяж брів", title:"Змішана методика",
         desc:"Хочеш золоту середину — природно біля основи, виразно до кінчика. Змішана методика поєднує реалістичні волоски з делікатним розтушуванням. Це найуніверсальніший вибір, що красиво підкреслює брови й пасує майже кожному обличчю." },
-      laminacja:{ service:"Стилізація брів", title:"Ламінування брів", price:"від 140 zł",
+      laminacja:{ service:"Стилізація брів", title:"Ламінування брів",
         desc:"Твоїм бровам потрібне приборкання, але ти ще не готова до перманентного макіяжу. Ламінування вкладає волоски в одному напрямку, додає густоти й візуально підкручує брови — ефект тримається до ~6 тижнів. Ідеальний, ні до чого не зобов'язуючий перший крок. У ціні — корекція та фарбування." },
-      regulacja:{ service:"Стилізація брів", title:"Корекція та фарбування брів", price:"від 90 zł",
+      regulacja:{ service:"Стилізація брів", title:"Корекція та фарбування брів",
         desc:"Любиш контроль і волієш почати з маленького кроку. Професійна корекція надасть бровам ідеальну форму під риси твого обличчя, а фарбування підкреслить колір. Чудовий старт, щоб призвичаїтись і побачити потенціал своїх брів перед рішенням про перманентний макіяж." }
     },
     en: {
-      wlosowa:{ service:"Permanent brow makeup", title:"Hair-stroke method", price:"from 600 zł",
+      wlosowa:{ service:"Permanent brow makeup", title:"Hair-stroke method",
         desc:"Your type is all about natural. The hair-stroke method recreates individual hairs so realistically that no one will know it's permanent makeup. Perfect when you have gaps but want to look like a better, well-rested version of yourself — every day, without filling them in." },
-      pudrowa:{ service:"Permanent brow makeup", title:"Powder method (ombré)", price:"from 600 zł",
+      pudrowa:{ service:"Permanent brow makeup", title:"Powder method (ombré)",
         desc:"You dream of a makeup effect that doesn't rub off. The powder method gives a soft, evenly filled look — like after a gentle brow pomade. It also works great on oily skin. You'll wake up with ready brows and forget about morning drawing." },
-      mieszana:{ service:"Permanent brow makeup", title:"Combined method", price:"from 600 zł",
+      mieszana:{ service:"Permanent brow makeup", title:"Combined method",
         desc:"You want the golden mean — natural at the base, defined toward the tail. The combined method blends realistic hairs with soft shading. It's the most universal choice that beautifully enhances brows and suits almost any face." },
-      laminacja:{ service:"Brow styling", title:"Brow lamination", price:"from 140 zł",
+      laminacja:{ service:"Brow styling", title:"Brow lamination",
         desc:"Your brows need taming, but you're not (yet) ready for permanent makeup. Lamination sets the hairs in one direction, adds density and visually lifts the brows — the effect lasts up to ~6 weeks. A perfect, no-commitment first step. Shaping and tint included." },
-      regulacja:{ service:"Brow styling", title:"Brow shaping & tint", price:"from 90 zł",
+      regulacja:{ service:"Brow styling", title:"Brow shaping & tint",
         desc:"You like being in control and prefer to start small. Professional shaping gives your brows the perfect form for your face, and tinting enhances their colour. A great start to get comfortable and see your brows' potential before deciding on permanent makeup." }
     }
   };
   const UI = {
-    pl: { eyebrow:"Quiz", h1:"Jaki zabieg brwi <em>jest dla Ciebie?</em>", lead:"Każda twarz jest inna — i każde brwi też. Odpowiedz na kilka pytań, a podpowiem Ci, który zabieg najlepiej odpowie na Twoje potrzeby i oczekiwania.", start:"Rozpocznij quiz", note:"5 pytań &middot; <b>około 1 minuty</b> &middot; bez zobowiązań", qlabel:(n,N)=>`Pytanie ${n} z ${N}`, back:"← Wróć", resEyebrow:"Twój wynik", consult:"<p><b>Masz obawy? To zupełnie naturalne.</b> Umów się najpierw na niezobowiązującą konsultację — spokojnie porozmawiamy, odpowiem na wszystkie pytania i wspólnie dobierzemy najlepsze rozwiązanie dla Ciebie.</p>", booksy:"Zarezerwuj w Booksy", leadTitle:"<p><b>Wolisz, żebyśmy odezwali się z rekomendacją?</b> Zostaw kontakt — Anna napisze lub zadzwoni 💕</p>", placeholder:"Telefon lub Instagram", send:"Wyślij kontakt", noteEmpty:"Wpisz telefon lub Instagram 🙂", noteOk:"Dziękujemy! Odezwiemy się wkrótce 💕", noteErr:"Spróbuj ponownie za chwilę.", cennik:"Zobacz pełny cennik", restart:"↺ Powtórz quiz" },
-    uk: { eyebrow:"Квіз", h1:"Яка процедура для брів <em>підходить саме тобі?</em>", lead:"Кожне обличчя різне — і кожні брови теж. Дай відповідь на кілька запитань, і я підкажу, яка процедура найкраще відповість на твої потреби й очікування.", start:"Почати квіз", note:"5 запитань &middot; <b>близько 1 хвилини</b> &middot; без зобов'язань", qlabel:(n,N)=>`Питання ${n} з ${N}`, back:"← Назад", resEyebrow:"Твій результат", consult:"<p><b>Маєш сумніви? Це цілком нормально.</b> Запишися спершу на необов'язкову консультацію — спокійно поговоримо, відповім на всі питання й разом підберемо найкраще рішення для тебе.</p>", booksy:"Забронювати в Booksy", leadTitle:"<p><b>Волієш, щоб ми написали з рекомендацією?</b> Залиш контакт — Анна тобі напише або зателефонує 💕</p>", placeholder:"Телефон або Instagram", send:"Надіслати контакт", noteEmpty:"Введи телефон або Instagram 🙂", noteOk:"Дякуємо! Ми скоро напишемо 💕", noteErr:"Спробуй ще раз за мить.", cennik:"Переглянути повний прайс", restart:"↺ Пройти ще раз" },
-    en: { eyebrow:"Quiz", h1:"Which brow treatment <em>is right for you?</em>", lead:"Every face is different — and so are your brows. Answer a few questions and I'll suggest which treatment best fits your needs and expectations.", start:"Start the quiz", note:"5 questions &middot; <b>about 1 minute</b> &middot; no commitment", qlabel:(n,N)=>`Question ${n} of ${N}`, back:"← Back", resEyebrow:"Your result", consult:"<p><b>Have concerns? That's completely normal.</b> Book a no-obligation consultation first — we'll talk it through calmly, I'll answer all your questions and together we'll choose the best option for you.</p>", booksy:"Book on Booksy", leadTitle:"<p><b>Prefer us to reach out with a recommendation?</b> Leave your contact — Anna will message or call you 💕</p>", placeholder:"Phone or Instagram", send:"Send contact", noteEmpty:"Enter phone or Instagram 🙂", noteOk:"Thank you! We'll be in touch soon 💕", noteErr:"Please try again in a moment.", cennik:"See the full price list", restart:"↺ Retake the quiz" }
+    pl: { priceMissing:"Aktualna cena — w cenniku", eyebrow:"Quiz", h1:"Jaki zabieg brwi <em>jest dla Ciebie?</em>", lead:"Każda twarz jest inna — i każde brwi też. Odpowiedz na kilka pytań, a podpowiem Ci, który zabieg najlepiej odpowie na Twoje potrzeby i oczekiwania.", start:"Rozpocznij quiz", note:"5 pytań &middot; <b>około 1 minuty</b> &middot; bez zobowiązań", qlabel:(n,N)=>`Pytanie ${n} z ${N}`, back:"← Wróć", resEyebrow:"Twój wynik", consult:"<p><b>Masz obawy? To zupełnie naturalne.</b> Umów się najpierw na niezobowiązującą konsultację — spokojnie porozmawiamy, odpowiem na wszystkie pytania i wspólnie dobierzemy najlepsze rozwiązanie dla Ciebie.</p>", booksy:"Zarezerwuj w Booksy", leadTitle:"<p><b>Wolisz, żebyśmy odezwali się z rekomendacją?</b> Zostaw kontakt — Anna napisze lub zadzwoni 💕</p>", placeholder:"Telefon lub Instagram", send:"Wyślij kontakt", noteEmpty:"Wpisz telefon lub Instagram 🙂", noteOk:"Dziękujemy! Odezwiemy się wkrótce 💕", noteErr:"Spróbuj ponownie za chwilę.", cennik:"Zobacz pełny cennik", restart:"↺ Powtórz quiz" },
+    uk: { priceMissing:"Актуальна ціна — у прайсі", eyebrow:"Квіз", h1:"Яка процедура для брів <em>підходить саме тобі?</em>", lead:"Кожне обличчя різне — і кожні брови теж. Дай відповідь на кілька запитань, і я підкажу, яка процедура найкраще відповість на твої потреби й очікування.", start:"Почати квіз", note:"5 запитань &middot; <b>близько 1 хвилини</b> &middot; без зобов'язань", qlabel:(n,N)=>`Питання ${n} з ${N}`, back:"← Назад", resEyebrow:"Твій результат", consult:"<p><b>Маєш сумніви? Це цілком нормально.</b> Запишися спершу на необов'язкову консультацію — спокійно поговоримо, відповім на всі питання й разом підберемо найкраще рішення для тебе.</p>", booksy:"Забронювати в Booksy", leadTitle:"<p><b>Волієш, щоб ми написали з рекомендацією?</b> Залиш контакт — Анна тобі напише або зателефонує 💕</p>", placeholder:"Телефон або Instagram", send:"Надіслати контакт", noteEmpty:"Введи телефон або Instagram 🙂", noteOk:"Дякуємо! Ми скоро напишемо 💕", noteErr:"Спробуй ще раз за мить.", cennik:"Переглянути повний прайс", restart:"↺ Пройти ще раз" },
+    en: { priceMissing:"Current price — see the price list", eyebrow:"Quiz", h1:"Which brow treatment <em>is right for you?</em>", lead:"Every face is different — and so are your brows. Answer a few questions and I'll suggest which treatment best fits your needs and expectations.", start:"Start the quiz", note:"5 questions &middot; <b>about 1 minute</b> &middot; no commitment", qlabel:(n,N)=>`Question ${n} of ${N}`, back:"← Back", resEyebrow:"Your result", consult:"<p><b>Have concerns? That's completely normal.</b> Book a no-obligation consultation first — we'll talk it through calmly, I'll answer all your questions and together we'll choose the best option for you.</p>", booksy:"Book on Booksy", leadTitle:"<p><b>Prefer us to reach out with a recommendation?</b> Leave your contact — Anna will message or call you 💕</p>", placeholder:"Phone or Instagram", send:"Send contact", noteEmpty:"Enter phone or Instagram 🙂", noteOk:"Thank you! We'll be in touch soon 💕", noteErr:"Please try again in a moment.", cennik:"See the full price list", restart:"↺ Retake the quiz" }
   };
   const ui = UI[LANG] || UI.pl;
   const qText = (qi) => (QT[LANG] && QT[LANG][qi] && QT[LANG][qi].q) || QUESTIONS[qi].q;
   const aText = (qi, ai) => (QT[LANG] && QT[LANG][qi] && QT[LANG][qi].a[ai]) || QUESTIONS[qi].answers[ai].t;
   const rOf = (key) => (RT[LANG] && RT[LANG][key]) || RESULTS[key];
+
+  // Ceny — z jednego źródła: katalogu usług w bocie. Worker wstrzykuje go do strony
+  // jako <script type="application/json" id="cennik-data">; tu tylko dopasowanie
+  // wyniku quizu do usługi (kategoria/nazwa). Brak danych → tekst zastępczy.
+  const CENNIK = (function(){
+    try {
+      const el = document.getElementById('cennik-data');
+      const d = el ? JSON.parse(el.textContent) : null;
+      return d && Array.isArray(d.items) ? d.items : [];
+    } catch(e){ return []; }
+  })();
+  const PMU = { cat:/^makija[zż] permanentny brwi$/i, name:/makija[zż] permanentny brwi/i, not:/dopigment|korekt|od[sś]wie[zż]/i };
+  // kolejno: najpierw usługa konkretnej metody (gdyby pojawiła się w cenniku), potem ogólna
+  const PRICE_RULES = {
+    wlosowa:  [ { cat:PMU.cat, name:/w[łl]os/i, not:PMU.not }, PMU ],
+    pudrowa:  [ { cat:PMU.cat, name:/pudr|ombr/i, not:PMU.not }, PMU ],
+    mieszana: [ { cat:PMU.cat, name:/miesz|hybryd/i, not:PMU.not }, PMU ],
+    laminacja:[ { name:/laminacja\s*brwi/i } ],
+    regulacja:[ { name:/regulacja.*(farb|henn)/i, not:/laminacja/i }, { name:/regulacja\s*brwi/i, not:/laminacja/i } ]
+  };
+  const FROM = { pl:'od', uk:'від', en:'from' };
+  function findItem(key){
+    const rules = PRICE_RULES[key] || [];
+    for (const r of rules){
+      const it = CENNIK.find(i => (!r.cat || r.cat.test(String(i.category||'').trim())) &&
+        (!r.name || r.name.test(String(i.name||''))) && !(r.not && r.not.test(String(i.name||''))));
+      if (it) return it;
+    }
+    return null;
+  }
+  function priceText(key){
+    const it = findItem(key);
+    const v = it ? Number(it.price) : NaN;
+    if (!isFinite(v) || v < 0) return ui.priceMissing;
+    let n = Number.isInteger(v) ? String(v) : v.toFixed(2);
+    if (LANG !== 'en') n = n.replace('.', ',');
+    return (it.price_from ? (FROM[LANG] || FROM.pl) + ' ' : '') + n + ' zł';
+  }
 
   const PRIORITY = ['mieszana','wlosowa','pudrowa','laminacja','regulacja'];
 
@@ -167,13 +205,14 @@ const BOOKSY = "https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-w
   }
 
   function resultHTML(){
-    const R = rOf(computeResult());
+    const key = computeResult();
+    const R = rOf(key);
     const consultBlock = answers[4]===2 ? `<div class="consult">${ui.consult}</div>` : '';
     return `
       <span class="eyebrow">${ui.resEyebrow}</span>
       <div class="res-service">${esc(R.service)}</div>
       <h1>${esc(R.title)}</h1>
-      <div class="res-price">${esc(R.price)}</div>
+      <div class="res-price">${esc(priceText(key))}</div>
       <p class="res-desc">${esc(R.desc)}</p>
       ${consultBlock}
       <div class="btn-row">
