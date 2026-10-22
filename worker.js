@@ -1856,6 +1856,42 @@ const META_QUIZ = {
     ogdesc: "Answer 5 questions and find the ideal treatment for your brows.",
   },
 };
+// Ekran startowy quizu (/quiz, /uk/quiz, /en/quiz) renderowany na serwerze w #card:
+// surowy HTML ma H1 i wstęp (Google/AI bez JS). quiz.js używa tego samego HTML
+// (data-ssr) jako ekranu startowego — także po „Zacznij od nowa”. Treść: HTML (em/b).
+const QUIZ_INTRO = {
+  pl: {
+    eyebrow: "Quiz",
+    h1: "Quiz: jaki zabieg na brwi <em>wybrać?</em>",
+    lead: "Odpowiedz na 5 krótkich pytań, a podpowiem, który zabieg najlepiej pasuje do Twoich brwi — makijaż permanentny (metoda włosowa, pudrowa lub mieszana), laminacja czy regulacja z koloryzacją. Na końcu zobaczysz rekomendację i aktualną cenę.",
+    start: "Rozpocznij quiz",
+    note: "5 pytań &middot; <b>około 1 minuty</b> &middot; bez zobowiązań",
+  },
+  uk: {
+    eyebrow: "Квіз",
+    h1: "Квіз: яку процедуру для брів <em>обрати?</em>",
+    lead: "Дай відповідь на 5 коротких запитань — і я підкажу, яка процедура найкраще підійде твоїм бровам: перманентний макіяж (волосковий, пудровий чи комбінований метод), ламінування чи корекція з фарбуванням. Наприкінці побачиш рекомендацію та актуальну ціну.",
+    start: "Почати квіз",
+    note: "5 запитань &middot; <b>близько 1 хвилини</b> &middot; без зобов'язань",
+  },
+  en: {
+    eyebrow: "Quiz",
+    h1: "Quiz: which brow treatment <em>should you choose?</em>",
+    lead: "Answer 5 short questions and I'll suggest the treatment that suits your brows best — permanent makeup (hair-stroke, powder or combined method), lamination, or shaping with tint. At the end you'll see a recommendation and the current price.",
+    start: "Start the quiz",
+    note: "5 questions &middot; <b>about 1 minute</b> &middot; no commitment",
+  },
+};
+function quizIntroHtml(lang) {
+  const t = QUIZ_INTRO[lang] || QUIZ_INTRO.pl;
+  return (
+    `<span class="eyebrow">${t.eyebrow}</span>` +
+    `<h1>${t.h1}</h1>` +
+    `<p class="lead">${t.lead}</p>` +
+    `<div class="btn-row"><button class="btn" type="button" data-action="start">${t.start}</button></div>` +
+    `<p class="intro-note">${t.note}</p>`
+  );
+}
 const META_PRIV = {
   pl: {
     title: "Polityka prywatności · Zelika PMU — Wieluń",
@@ -2080,6 +2116,13 @@ async function localizedPage(request, env, api, lang, pageKey) {
           }
         },
       });
+  }
+  if (pageKey === "quiz") {
+    // H1 + wstęp w surowym HTML (tylko strona quizu; #card w modalu na głównej — bez zmian)
+    rw = rw.on("#card", { element(e) {
+      e.setAttribute("data-ssr", "");
+      e.setInnerContent(quizIntroHtml(lang), { html: true });
+    } });
   }
   if (withData && cat) {
     // ceny dla quizu (quiz.js czyta #cennik-data; to dane, nie skrypt — CSP bez zmian)
