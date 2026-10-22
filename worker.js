@@ -548,7 +548,7 @@ function priceRowHtml(it, lang) {
   );
 }
 // Link z grupy cennika do strony usługi (strony są tylko po polsku — z /uk/ i /en/ też).
-const MORE_LINK = { pl: "Więcej o zabiegu", uk: "Детальніше", en: "More" };
+const MORE_LINK = { pl: "Więcej o zabiegu", uk: "Детальніше (польською)", en: "More about the treatment (PL)" };
 function cennikHtml(cat, lang, pageFor = new Map()) {
   let num = 0;
   return cat.cats
@@ -1248,12 +1248,21 @@ function pageCtaHtml(booksy) {
 </div>`;
 }
 
+// Stałe strony usług (tworzy je skrypt bota). Gdy listy stron nie ma (zimny cache w colo
+// + wolny/leżący origin), dla tych adresów pytamy o pojedynczą stronę: jest → render,
+// naprawdę zdjęta (404) → 404, brak danych → 503 (jak porada), nie fałszywe 404.
+// Inne adresy bez listy → zwykłe 404, bez dodatkowego pytania originu.
+const KNOWN_PAGE_SLUGS = new Set(["makijaz-permanentny-brwi-wielun", "laminacja-brwi-wielun", "laminacja-rzes-wielun"]);
+
 // null → to nie jest (opublikowana) strona usługi: router oddaje dotychczasowe 404.
 async function renderServicePage(request, api, slug, trailingSlash) {
-  const pagesRes = await api.pages();
-  // lista niedostępna (404/awaria, brak kopii) → brak stron usług, reszta bez zmian
-  const listed = pagesOf(pagesRes).find((p) => p.slug === slug);
-  if (!listed) return null;
+  const known = KNOWN_PAGE_SLUGS.has(slug);
+  // znane strony: lista i pojedyncza strona równolegle (timeouty się nie sumują)
+  const [pagesRes] = await Promise.all([api.pages(), known && !trailingSlash ? api.page(slug) : null]);
+  const listOk = !!(pagesRes.data && Array.isArray(pagesRes.data.pages));
+  const listed = listOk ? pagesOf(pagesRes).find((p) => p.slug === slug) || null : null;
+  // lista jest, a strony w niej nie ma → 404; listy brak → dalej tylko znane strony
+  if (!listed && (listOk || !known)) return null;
   if (trailingSlash) {
     const u = new URL(request.url);
     return new Response(null, {
@@ -1263,13 +1272,13 @@ async function renderServicePage(request, api, slug, trailingSlash) {
   }
   const canonical = SITE + "/" + slug;
   const [res, contentRes, postsRes] = await Promise.all([api.page(slug), api.content(), api.posts()]);
-  if (res.notFound) return null; // zdjęta (lista jeszcze z kopii)
+  if (res.notFound) return null; // zdjęta (lista jeszcze z kopii) albo naprawdę jej nie ma
   let page = res.data;
   let source = res.source;
   if (page && page.status != null && page.status !== "published") return null;
   if (!page || typeof page !== "object" || !str(page.title)) {
     // pojedyncza strona niedostępna → pełny wpis z listy (jeśli lista ma treść), inaczej 503
-    if (!str(listed.body)) return unavailableResponse(canonical);
+    if (!listed || !str(listed.body)) return unavailableResponse(canonical);
     page = listed;
     source = pagesRes.source;
   }
@@ -1316,7 +1325,8 @@ ${relatedHtml(relatedPosts(postsOf(postsRes), slug, title))}`;
 
   return htmlResponse(
     layout({
-      title: `${title} | Zelika Wieluń`,
+      // miasto już w tytule (Wieluń / w Wieluniu…) → bez powtórzenia w sufiksie
+      title: `${title} | ${/wielu[nń]/i.test(title.normalize("NFC")) ? "Zelika" : "Zelika Wieluń"}`,
       description: desc,
       canonical,
       ogImage,
@@ -1331,15 +1341,18 @@ ${relatedHtml(relatedPosts(postsOf(postsRes), slug, title))}`;
   );
 }
 
-// /media/<id>.jpg → zdjęcie z bota (API_BASE/api/media/<id>.jpg) z cache krawędzi.
-// Tylko obrazy (inny Content-Type z originu = 502), id już zwalidowane w routerze.
+// /media/<id>.jpg → zdjęcie z bota (API_BASE/api/media/<id>.jpg). Tylko obrazy (inny
+// Content-Type, przekierowanie albo za duży plik = 502), id już zwalidowane w routerze.
 // Cache tylko na 1 dzień (krawędź i przeglądarka, bez „immutable”): to zdjęcia klientek
 // publikowane za zgodą (RODO) — po wycofaniu zgody bot usuwa zdjęcie, a ono musi
 // zniknąć także spod bezpośredniego adresu najpóźniej w ciągu doby. 404 — 60 s.
+// Gwarancja nie zależy od nagłówków originu ani od wspólnego cache hooks.zelika.pl:
+// origin pytamy z pominięciem cache (no-store), a odpowiedź trzymamy sami w Cache API
+// pod kluczem strony https://zelika.pl/media/<id>.jpg z własnym Cache-Control.
 const MEDIA_TTL_S = 86400;
-const MEDIA_TTLS = { "200-299": MEDIA_TTL_S, 404: 60, "300-403": -1, "405-599": -1 };
+const MEDIA_404_TTL_S = 60;
 const MEDIA_MAX_BYTES = 15 * 1024 * 1024;
-async function mediaResponse(request, env, id) {
+async function mediaResponse(request, env, ctx, id) {
   const plain = (status, text, cc) =>
     new Response(text, { status, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": cc, ...SEC_HEADERS } });
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -1347,28 +1360,55 @@ async function mediaResponse(request, env, id) {
     r.headers.set("Allow", "GET, HEAD");
     return r;
   }
+  const head = request.method === "HEAD";
+  const out = (r) => (head ? new Response(null, { status: r.status, headers: r.headers }) : r);
+  const key = new Request(`${SITE}/media/${id}.jpg`);
+  let cache = null;
+  try {
+    cache = caches.default;
+    const hit = await cache.match(key);
+    if (hit) return out(hit);
+  } catch (_) {}
+  // 200 i 404 zapisujemy w Cache API (TTL z naszego Cache-Control); błędy — nigdy
+  const keep = (r) => {
+    if (cache) {
+      const p = cache.put(key, r.clone()).catch(() => {});
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+    }
+    return out(r);
+  };
+
   const base = String((env && env.API_BASE) || API_BASE).replace(/\/+$/, "");
   let r;
   try {
     r = await fetch(`${base}/api/media/${id}.jpg`, {
-      cf: { cacheEverything: true, cacheTtlByStatus: MEDIA_TTLS },
+      cache: "no-store",
+      redirect: "manual",
       signal: AbortSignal.timeout(8000),
     });
   } catch (e) {
     console.warn(`media ${id}: ${e && e.name ? e.name : e}`);
     return plain(504, "Gateway Timeout\n", "no-store");
   }
-  if (r.status === 404) return plain(404, "Not found\n", "public, max-age=60");
-  const type = (r.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
-  if (!r.ok || !/^image\/(jpeg|png|webp|avif)$/.test(type)) {
-    console.warn(`media ${id}: HTTP ${r.status} ${type}`);
+  const bad = (why) => {
+    console.warn(`media ${id}: ${why}`);
+    if (r.body) r.body.cancel().catch(() => {});
     return plain(502, "Bad Gateway\n", "no-store");
+  };
+  if (r.status === 404) {
+    if (r.body) r.body.cancel().catch(() => {});
+    return keep(plain(404, "Not found\n", `public, max-age=${MEDIA_404_TTL_S}`));
   }
+  const type = (r.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+  if (r.status !== 200 || !/^image\/(jpeg|png|webp|avif)$/.test(type)) return bad(`HTTP ${r.status} ${type}`);
+  if (Number(r.headers.get("Content-Length") || 0) > MEDIA_MAX_BYTES) return bad("Content-Length too large");
   const buf = await r.arrayBuffer();
   if (!buf.byteLength || buf.byteLength > MEDIA_MAX_BYTES) return plain(502, "Bad Gateway\n", "no-store");
-  return new Response(request.method === "HEAD" ? null : buf, {
-    headers: { "Content-Type": type, "Cache-Control": `public, max-age=${MEDIA_TTL_S}`, ...SEC_HEADERS },
-  });
+  return keep(
+    new Response(buf, {
+      headers: { "Content-Type": type, "Cache-Control": `public, max-age=${MEDIA_TTL_S}`, ...SEC_HEADERS },
+    })
+  );
 }
 
 // Власний robots.txt: ВІДКРИТИЙ для всіх (вкл. AI-краулери цитувань — GPTBot,
@@ -2100,7 +2140,7 @@ export default {
       return renderPost(api, slug);
     }
     const media = url.pathname.match(/^\/media\/([A-Za-z0-9_-]{1,128})\.jpg$/);
-    if (media) return mediaResponse(request, env, media[1]);
+    if (media) return mediaResponse(request, env, ctx, media[1]);
     if (path === "/sitemap.xml") return renderSitemap(api);
     if (path === "/robots.txt") return renderRobots();
     if (path === "/llms.txt") return renderLlms(api);
@@ -2120,7 +2160,8 @@ export default {
     // /prywatnosc — юридичний документ, лишається PL, але через воркер (уніфікований каркас)
     if (path === "/prywatnosc") return localizedPage(request, env, api, "pl", "priv");
 
-    // Strony usług /<slug> (tylko opublikowane z /api/pages; /<slug>/ → 301). Trafiają tu
+    // Strony usług /<slug> (opublikowane z /api/pages, a bez listy — znane slugi przez
+    // /api/pages/<slug>, KNOWN_PAGE_SLUGS; /<slug>/ → 301). Trafiają tu
     // wyłącznie ścieżki bez pliku w statyce (pliki serwuje warstwa assets przed workerem),
     // a zajęte nazwy (RESERVED_SLUGS) i trasy wyżej mają pierwszeństwo.
     const sp = url.pathname.match(/^\/([a-z0-9-]{1,120})(\/+)?$/);
