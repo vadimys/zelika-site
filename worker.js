@@ -1333,7 +1333,10 @@ ${relatedHtml(relatedPosts(postsOf(postsRes), slug, title))}`;
 
 // /media/<id>.jpg → zdjęcie z bota (API_BASE/api/media/<id>.jpg) z cache krawędzi.
 // Tylko obrazy (inny Content-Type z originu = 502), id już zwalidowane w routerze.
-const MEDIA_TTL_S = 31536000;
+// Cache tylko na 1 dzień (krawędź i przeglądarka, bez „immutable”): to zdjęcia klientek
+// publikowane za zgodą (RODO) — po wycofaniu zgody bot usuwa zdjęcie, a ono musi
+// zniknąć także spod bezpośredniego adresu najpóźniej w ciągu doby. 404 — 60 s.
+const MEDIA_TTL_S = 86400;
 const MEDIA_TTLS = { "200-299": MEDIA_TTL_S, 404: 60, "300-403": -1, "405-599": -1 };
 const MEDIA_MAX_BYTES = 15 * 1024 * 1024;
 async function mediaResponse(request, env, id) {
@@ -1364,7 +1367,7 @@ async function mediaResponse(request, env, id) {
   const buf = await r.arrayBuffer();
   if (!buf.byteLength || buf.byteLength > MEDIA_MAX_BYTES) return plain(502, "Bad Gateway\n", "no-store");
   return new Response(request.method === "HEAD" ? null : buf, {
-    headers: { "Content-Type": type, "Cache-Control": `public, max-age=${MEDIA_TTL_S}, immutable`, ...SEC_HEADERS },
+    headers: { "Content-Type": type, "Cache-Control": `public, max-age=${MEDIA_TTL_S}`, ...SEC_HEADERS },
   });
 }
 
