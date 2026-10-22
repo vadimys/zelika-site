@@ -888,12 +888,12 @@ function layout({ title, description, canonical, ogImage, jsonld, body, noindex,
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 ${noindex ? '<meta name="robots" content="noindex">' : ""}
-<link rel="canonical" href="${esc(canonical)}">
+${canonical ? `<link rel="canonical" href="${esc(canonical)}">` : ""}
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:type" content="${jsonld && jsonld["@type"] === "BlogPosting" ? "article" : "website"}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
-<meta property="og:url" content="${esc(canonical)}">
+${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <meta property="og:image" content="${esc(ogImage)}">
 <meta property="og:locale" content="pl_PL">
 <meta name="twitter:card" content="summary_large_image">
@@ -954,6 +954,45 @@ function unavailableResponse(canonical) {
     503,
     0,
     { "Cache-Control": "no-store", "Retry-After": "120", "X-Zelika-Data": "none" }
+  );
+}
+
+// Brandowana 404 (zamiast pustej odpowiedzi warstwy assets): status 404, noindex, bez
+// canonical, linki dalej. Strony usług — tylko z listy opublikowanych (/api/pages czytane
+// „soft”: kopia bez czekania na origin); bez listy — tylko strona główna i reszta linków.
+const NOT_FOUND_CSS = `
+.nf-links{list-style:none;margin:0 0 2.4em;padding:0;border-top:1px solid var(--line)}
+.nf-links li{padding:13px 2px;border-bottom:1px solid var(--line)}
+.nf-links a{font-weight:400}
+.nf-links span{display:block;color:var(--muted);font-size:.9rem}
+`;
+async function notFoundResponse(api) {
+  const pagesRes = await api.pages({ soft: true });
+  const pages = pagesOf(pagesRes).slice(0, 6);
+  const li = (href, label, note = "") =>
+    `<li><a href="${esc(href)}">${esc(label)}</a>${note ? `<span>${esc(note)}</span>` : ""}</li>`;
+  const body = `<p class="crumbs"><a href="/">Strona główna</a> › Nie znaleziono</p>
+<h1>Nie znaleziono strony</h1>
+<p class="lead">Pod tym adresem nie ma strony — mogła zostać przeniesiona albo w adresie jest literówka. Zajrzyj tutaj:</p>
+<ul class="nf-links">
+${li("/", "Strona główna", "Oferta, cennik i rezerwacja online")}
+${pages.map((p) => li("/" + p.slug, str(p.title))).join("\n")}
+${li("/porady", SECTION_TITLE, "Porady o makijażu permanentnym, brwiach i rzęsach")}
+${li("/#contact", "Kontakt", "Adres, telefon i godziny otwarcia studia")}
+</ul>`;
+  return htmlResponse(
+    layout({
+      title: "Nie znaleziono strony (404) | Zelika",
+      description: "Strona nie istnieje.",
+      canonical: "",
+      ogImage: SITE + "/og-image.jpg",
+      noindex: true,
+      body,
+      header: { current: "", pl: "/" },
+      css: NOT_FOUND_CSS,
+    }),
+    404,
+    60
   );
 }
 
@@ -2221,8 +2260,10 @@ export default {
       if (r) return r;
     }
 
-    // wszystko inne → statyka
+    // wszystko inne → statyka; brak pliku (też /uk/…, /en/…, /.git/…, /worker.js — wykluczone
+    // w .assetsignore) → brandowana 404
     const res = await env.ASSETS.fetch(request);
+    if (res.status === 404) return notFoundResponse(api);
     // przekierowania warstwy assets (html_handling, np. /index → /) — trwałe 301, nie 307
     if ((res.status === 307 || res.status === 308) && res.headers.has("Location")) {
       return redirect301(new URL(res.headers.get("Location"), url).toString());
