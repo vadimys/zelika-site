@@ -1418,8 +1418,14 @@ async function mediaResponse(request, env, ctx, id) {
 // Власний robots.txt: ВІДКРИТИЙ для всіх (вкл. AI-краулери цитувань — GPTBot,
 // Google-Extended, PerplexityBot, ClaudeBot тощо), бо ціль — видимість і цитування
 // в AI-пошуку. Перебиває Cloudflare-керований robots, що за замовч. блокував AI-ботів.
+// AI-боти — ще й окремими групами з явним Allow (рішення власника; блок на боці
+// Cloudflare — налаштування в панелі, не тут).
+const AI_BOTS = ["GPTBot", "OAI-SearchBot", "ClaudeBot", "Claude-SearchBot", "Google-Extended", "PerplexityBot"];
 function renderRobots() {
-  const body = `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`;
+  const body =
+    `User-agent: *\nAllow: /\n\n` +
+    AI_BOTS.map((b) => `User-agent: ${b}\nAllow: /\n\n`).join("") +
+    `Sitemap: ${SITE}/sitemap.xml\n`;
   return new Response(body, {
     headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" },
   });
