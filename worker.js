@@ -1,7 +1,8 @@
 // ===== Studio Zelika — edge-SSR rubryki «Porady i inspiracje» =====
 // Worker renderuje /porady (index) i /porady/<slug> jako gotowy HTML z danych
 // bota (/api/posts) — pełne SEO (meta, OG, Article/Blog JSON-LD), natychmiastowa
-// publikacja, jedno źródło prawdy w bocie. Reszta ścieżek → statyka (env.ASSETS).
+// publikacja, jedno źródło prawdy w bocie. Tak samo strony usług /<slug> (/api/pages,
+// tylko PL) i zdjęcia z bota /media/<id>.jpg. Reszta ścieżek → statyka (env.ASSETS).
 // Nagłówek i integracja Booksy — spójne ze stroną główną (ten sam widget-overlay).
 
 const SITE = "https://zelika.pl";
@@ -22,14 +23,36 @@ const esc = (s) =>
 
 const str = (v) => (v == null ? "" : String(v).trim());
 
+// Zdjęcia z bota (Immich → /api/media/<id>.jpg na hooks.zelika.pl) podajemy przez
+// własny /media/<id>.jpg: CSP img-src 'self' bez poszerzania, cache krawędzi, jeden host.
+// Pliki strony podane absolutnie (https://zelika.pl/img/…) → ścieżka względna ('self'
+// także na www/podglądzie); og:image i tak robi z tego pełny adres (absImg).
+const MEDIA_PREFIX = "https://hooks.zelika.pl/api/media/";
+const MEDIA_FILE_RE = /^([A-Za-z0-9_-]{1,128})\.jpg$/;
+const OWN_ORIGIN_RE = /^https:\/\/(www\.)?zelika\.pl(?=\/(?![\/\\]))/i;
+function mediaSrc(img) {
+  const s = str(img);
+  if (OWN_ORIGIN_RE.test(s)) return s.replace(OWN_ORIGIN_RE, "");
+  if (!s.startsWith(MEDIA_PREFIX)) return s;
+  const m = s.slice(MEDIA_PREFIX.length).match(MEDIA_FILE_RE);
+  return m ? `/media/${m[1]}.jpg` : "";
+}
+// Obraz strony usługi / galerii: zdjęcie z bota (→ /media/…) albo plik strony
+// (/img/…, https://zelika.pl/…). Inne adresy pomijamy (CSP i tak by je zablokował).
+function pageImgSrc(img) {
+  const s = mediaSrc(img);
+  return /^\/(?![\/\\])/.test(s) ? s : "";
+}
+
 function absImg(img) {
+  img = mediaSrc(img);
   if (!img) return SITE + "/og-image.jpg";
   return /^https?:\/\//.test(img) ? img : SITE + (img.startsWith("/") ? img : "/" + img);
 }
 
-function excerpt(post, n = 155) {
+function excerpt(post, n = 155, parseOpts) {
   // bez meta_description — tekst treści bez znaczników (##, **, [](…))
-  const base = post.meta_description || parseBody(post.body).map(blockText).join(" ");
+  const base = post.meta_description || parseBody(post.body, parseOpts).map(blockText).join(" ");
   const flat = String(base).replace(/\s+/g, " ").trim();
   return flat.length > n ? flat.slice(0, n - 1).trimEnd() + "…" : flat;
 }
@@ -48,15 +71,23 @@ function plDate(iso) {
 // nie przerywa); pozostałe sąsiednie linie → jeden <p> (pusta linia rozdziela
 // akapity). W tekście: **pogrubienie** i [tekst](adres). Wszystko inne — także
 // HTML i niedomknięte ** — to zwykły, escapowany tekst.
+// Strony usług (opts.markers): linia „[[cennik]]” / „[[galeria]]” → osobny blok
+// { type: "marker" } — w to miejsce strona wstawia cennik / galerię. W poradach
+// (bez opcji) taka linia zostaje zwykłym tekstem, jak dotąd.
 const LIST_RE = /^(?:-|(\d{1,3})\.)\s+(.+)$/;
-function parseBody(body) {
+const MARKER_RE = /^\[\[(cennik|galeria)\]\]$/i;
+function parseBody(body, opts = {}) {
   const blocks = [];
   let open = null; // akapit albo lista, do której trafiają kolejne linie
   for (const raw of String(body || "").replace(/\r/g, "").split("\n")) {
     const line = raw.trim();
     const m = line.match(LIST_RE);
+    const mk = opts.markers ? line.match(MARKER_RE) : null;
     if (!line) {
       if (open && open.type === "p") open = null;
+    } else if (mk) {
+      blocks.push({ type: "marker", name: mk[1].toLowerCase() });
+      open = null;
     } else if (line.startsWith("## ") || line.startsWith("### ")) {
       const h3 = line.startsWith("### ");
       blocks.push({ type: h3 ? "h3" : "h2", text: line.slice(h3 ? 4 : 3).trim() });
@@ -149,15 +180,20 @@ function inlineText(s) {
 }
 
 function blockText(b) {
+  if (b.type === "marker" || b.type === "html") return "";
   if (b.type === "p") return inlineText(b.lines.join(" "));
   if (b.type === "ul") return b.items.map((it) => "• " + inlineText(it)).join("\n");
   if (b.type === "ol") return b.items.map((it, i) => `${b.start + i}. ${inlineText(it)}`).join("\n");
   return inlineText(b.text);
 }
 
+// Bloki „html” to gotowe fragmenty wstawione przez stronę usługi (cennik, galeria) —
+// budowane z escapowanych danych; „marker” bez podstawienia nie renderuje nic.
 function renderBody(blocks) {
   return blocks
     .map((b) => {
+      if (b.type === "html") return b.html;
+      if (b.type === "marker") return "";
       if (b.type === "p") return `<p>${inlineHtml(b.lines.join(" "))}</p>`;
       if (b.type === "ul" || b.type === "ol") {
         const start = b.type === "ol" && b.start !== 1 ? ` start="${b.start}"` : "";
@@ -172,21 +208,23 @@ function renderBody(blocks) {
 // odpowiedź to akapity/listy aż do następnego nagłówka. Pary bez odpowiedzi
 // pomijamy. Format { ok, q, a } — jak dla faqPageLd().
 const FAQ_H2 = /^(najczęstsze pytania( \(faq\))?|faq)$/;
+const isFaqH2 = (b) =>
+  b.type === "h2" &&
+  FAQ_H2.test(inlineText(b.text).normalize("NFC").toLowerCase().replace(/\s+/g, " ").replace(/[\s:]+$/, ""));
 function bodyFaq(blocks) {
   const qa = [];
   let inFaq = false;
   let cur = null;
   for (const b of blocks) {
     if (b.type === "h2") {
-      const h = inlineText(b.text).normalize("NFC").toLowerCase().replace(/\s+/g, " ").replace(/[\s:]+$/, "");
-      inFaq = FAQ_H2.test(h);
+      inFaq = isFaqH2(b);
       cur = null;
     } else if (!inFaq) {
       continue;
     } else if (b.type === "h3") {
       cur = { ok: true, q: inlineText(b.text).trim(), a: [] };
       qa.push(cur);
-    } else if (cur) {
+    } else if (cur && b.type !== "marker" && b.type !== "html") {
       cur.a.push(blockText(b));
     }
   }
@@ -214,8 +252,12 @@ function modifiedAt(post) {
 //   • Brak kopii → jedno blokujące pobranie z krótkim timeoutem.
 //   • Błąd/timeout originu → znacznik „down” na API_DOWN_TTL: kolejne żądania nie
 //     czekają ponownie na timeout (kopia albo od razu brak danych).
-//   • 404 to „naprawdę nie ma” TYLKO dla pojedynczego artykułu (kasuje jego kopię);
-//     404 z list (/api/content, /api/posts) = awaria (kopia zostaje, 404 się nie cache'uje).
+//   • 404 to „naprawdę nie ma” TYLKO dla pojedynczego artykułu/strony (kasuje jego kopię);
+//     404 z list (/api/content, /api/posts, /api/pages) = awaria (kopia zostaje, 404 się
+//     nie cache'uje).
+//   • Strony usług (/api/pages…) są dodatkiem: ich awaria (także timeout) stawia znacznik
+//     tylko dla własnej ścieżki (ownDown) — nie wyłącza cennika ani bloga. Strona główna
+//     czyta listę stron „miękko” (soft): bez kopii nie czeka, tylko pobiera ją w tle.
 // Kopia jest per data center i może zostać wyrzucona z cache — wtedy działa
 // blokujące pobranie, a przy awarii statyczny fallback (index.html) / 503 dla bloga.
 const API_BASE = "https://hooks.zelika.pl"; // nadpisywalne zmienną env.API_BASE (staging/testy)
@@ -286,7 +328,7 @@ function makeApi(env, ctx) {
       console.warn(`api ${path}: ${e && e.name ? e.name : e}`);
     }
     if (cache) {
-      const k = !status || UNREACHABLE(status) ? DOWN_ALL_KEY : DOWN_ALL_KEY + path;
+      const k = !spec.ownDown && (!status || UNREACHABLE(status)) ? DOWN_ALL_KEY : DOWN_ALL_KEY + path;
       await save(cache.put(k, marker()));
     }
     return {};
@@ -314,6 +356,10 @@ function makeApi(env, ctx) {
       return { data: copy.data, source: "stale" };
     }
     if (down) return { data: null, source: "none" };
+    if (spec.soft) {
+      later(fromOrigin(path, spec, cache, true)); // nie blokujemy strony — kopia na następne żądania
+      return { data: null, source: "none" };
+    }
     const o = await fromOrigin(path, spec, cache, false);
     if (o.ok) return { data: o.data, source: "live" };
     if (o.gone) return { data: null, notFound: true, source: "live" };
@@ -335,10 +381,42 @@ function makeApi(env, ctx) {
     posts: () => get("/api/posts", { ttls: LIST_TTLS, valid: (d) => isObj(d) && Array.isArray(d.posts) }),
     post: (slug) =>
       get("/api/posts/" + encodeURIComponent(slug), { ttls: POST_TTLS, gone404: true, valid: (d) => isObj(d) && !!d.slug }),
+    // memo jest per ścieżka: w jednym żądaniu lista stron jest czytana albo soft, albo blokująco
+    pages: ({ soft = false } = {}) =>
+      get("/api/pages", { ttls: LIST_TTLS, ownDown: true, soft, valid: (d) => isObj(d) && Array.isArray(d.pages) }),
+    page: (slug) =>
+      get("/api/pages/" + encodeURIComponent(slug), {
+        ttls: POST_TTLS, gone404: true, ownDown: true, valid: (d) => isObj(d) && !!d.slug,
+      }),
   };
 }
 
 const postsOf = (res) => (res && res.data && Array.isArray(res.data.posts) ? res.data.posts : []);
+
+// ── Strony usług (/api/pages) — tylko PL, adres /<slug> w korzeniu serwisu ─────
+// Slug: małe litery, cyfry, „-” (jak slugify bota). Nazwy zajęte przez istniejące
+// trasy/katalogi nigdy nie są stroną usługi (nie zasłaniamy ich).
+const PAGE_SLUG_RE = /^[a-z0-9-]{1,120}$/;
+const RESERVED_SLUGS = new Set(["uk", "en", "porady", "quiz", "prywatnosc", "media", "img", "index", "sitemap", "robots", "llms", "api"]);
+const isPageSlug = (s) => typeof s === "string" && PAGE_SLUG_RE.test(s) && !RESERVED_SLUGS.has(s);
+// Opublikowane strony z listy (pomijamy wpisy bez slug/tytułu i powtórzone slugi).
+function pagesOf(res) {
+  const list = res && res.data && Array.isArray(res.data.pages) ? res.data.pages : [];
+  const seen = new Set();
+  return list.filter((p) => {
+    if (!p || typeof p !== "object" || !isPageSlug(p.slug) || !str(p.title) || seen.has(p.slug)) return false;
+    if (p.status != null && p.status !== "published") return false;
+    seen.add(p.slug);
+    return true;
+  });
+}
+const pageCats = (p) => (Array.isArray(p && p.price_categories) ? p.price_categories.map(str).filter(Boolean) : []);
+// kategoria cennika (catKey) → slug strony (pierwsza strona wygrywa)
+function pageByCategory(pages) {
+  const m = new Map();
+  for (const p of pages) for (const k of pageCats(p)) if (!m.has(catKey(k))) m.set(catKey(k), p.slug);
+  return m;
+}
 
 // ── Katalog usług (cennik) z /api/content ──────────────────────────────────────
 // Kontrakt bota: cennik_items (publiczne usługi w kolejności position; name_uk/en,
@@ -469,11 +547,17 @@ function priceRowHtml(it, lang) {
     `</span><span class="price">${esc(fmtPrice(it, lang))}</span></div>`
   );
 }
-function cennikHtml(cat, lang) {
+// Link z grupy cennika do strony usługi (strony są tylko po polsku — z /uk/ i /en/ też).
+const MORE_LINK = { pl: "Więcej o zabiegu", uk: "Детальніше (польською)", en: "More about the treatment (PL)" };
+function cennikHtml(cat, lang, pageFor = new Map()) {
   let num = 0;
   return cat.cats
     .map((c) => {
-      const rows = c.items.map((it) => priceRowHtml(it, lang)).join("");
+      const slug = pageFor.get(c.k);
+      const more = slug
+        ? `<a class="cat-more" href="/${esc(slug)}"${lang === "pl" ? "" : ' hreflang="pl"'}>${esc(MORE_LINK[lang] || MORE_LINK.pl)} &#8594;</a>`
+        : "";
+      const rows = c.items.map((it) => priceRowHtml(it, lang)).join("") + more;
       const title = esc(c.titles[lang] || c.titles.pl);
       if (c.k === FEATURE_CAT) {
         return `<div class="cat feature reveal d1"><div class="cat-h"><span class="cat-num">&#10022;</span><h3>${title}</h3></div><p class="feat-note">${esc(FEAT_NOTE[lang])}</p>${rows}</div>`;
@@ -742,6 +826,40 @@ footer.site{border-top:1px solid var(--line);margin-top:40px;padding:28px 0;colo
 .booksy-widget-dialog{position:fixed!important;top:50%!important;left:50%!important;margin:0!important;transform:translate(-50%,-50%)!important;max-width:96vw!important;max-height:92vh!important;overflow:auto!important}
 html:has(.booksy-widget-overlay),body:has(.booksy-widget-overlay){overflow:hidden!important}
 `;
+// Strony usług: karty cennika i galeria jak na stronie głównej (te same klasy
+// .cat/.price-row/.gitem-like), dopasowane do wąskiej kolumny treści.
+const PAGE_CSS = `
+.svc-prices{display:grid;gap:18px;margin:1.6em 0 2em}
+.cat{background:var(--bg-card);border:1px solid var(--line);border-radius:4px;padding:26px 28px 14px;box-shadow:0 10px 30px rgba(31,94,48,.05)}
+.cat.feature{background:linear-gradient(120deg,#f6f3e9,#fffdf6);border-color:var(--gold)}
+.cat .cat-h{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.cat .cat-num{font-family:var(--serif);font-style:italic;color:var(--gold);font-size:1.2rem}
+.cat h3{font-size:1.5rem;margin:0}
+.price-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:13px 0;border-top:1px solid var(--line)}
+.cat-h+.price-row{border-top:none}
+.price-row .pname{color:var(--ink);font-size:.96rem}
+.price-row .pdur{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.05em;margin-top:2px}
+.price-row .pdesc{display:block;color:var(--muted);font-size:.84rem;line-height:1.55;margin-top:4px}
+.price-row .price{font-family:var(--serif);font-size:1.4rem;color:var(--green);white-space:nowrap;font-weight:600}
+.cat.feature .price{color:#7c5e22}
+.svc-note{font-size:.85rem;color:var(--muted);margin:0}
+.svc-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:1.6em 0 2em}
+.svc-gallery figure{margin:0;aspect-ratio:3/4;border-radius:4px;overflow:hidden;border:1px solid var(--line-gold);box-shadow:0 10px 26px rgba(31,94,48,.10)}
+.svc-gallery.one{grid-template-columns:1fr}
+.svc-gallery.one figure{aspect-ratio:auto;max-height:420px}
+.svc-gallery img{width:100%;height:100%;object-fit:cover;display:block}
+.cta-btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:0}
+.btn-ghost{background:transparent;color:var(--green);border:1px solid var(--green)}
+.btn-ghost:hover{background:rgba(31,94,48,.06);color:var(--green)}
+.related{margin:2.4em 0 1em}
+.related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.related .card{margin:0}
+.related .card img{height:140px}
+.related .card .body{padding:14px 16px}
+.related .card h3{font-size:1.15rem;margin:.1em 0 .3em}
+.related .card p{font-size:.88rem}
+@media(max-width:640px){.svc-gallery{grid-template-columns:1fr 1fr}.related-grid{grid-template-columns:1fr}.cat{padding:22px 20px 10px}}
+`;
 
 // Blok CTA z realnym widgetem Booksy (rysuje zielony przycisk „Rezerwuj wizytę”,
 // a link „Umów wizytę" w nagłówku [data-booksy] deleguje do niego przez booksy-fix.js).
@@ -755,7 +873,8 @@ function ctaBlock() {
 </div>`;
 }
 
-function layout({ title, description, canonical, ogImage, jsonld, body, noindex }) {
+// header: opcje headerHtml (domyślnie — sekcja porad); css: dodatkowe style strony.
+function layout({ title, description, canonical, ogImage, jsonld, body, noindex, header, css = "" }) {
   return `<!doctype html><html lang="pl"><head>
 <meta charset="utf-8">
 <script src="/consent.js"></script>
@@ -776,10 +895,10 @@ ${noindex ? '<meta name="robots" content="noindex">' : ""}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<style>${CSS}${SHELL_CSS}</style>
+<style>${CSS}${SHELL_CSS}${css}</style>
 ${jsonld ? `<script type="application/ld+json">${scriptJson(jsonld)}</script>` : ""}
 </head><body>
-${headerHtml("pl", { current: "porady", pl: "/porady" })}
+${headerHtml("pl", header || { current: "porady", pl: "/porady" })}
 <main class="wrap">${body}</main>
 ${footerHtml("pl")}
 <script src="/nav.js" defer></script>
@@ -845,7 +964,7 @@ async function renderIndex(api) {
       ? posts
           .map(
             (p) => `<a class="card" href="/porady/${esc(p.slug)}">
-${p.image ? `<img src="${esc(p.image)}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : ""}
+${mediaSrc(p.image) ? `<img src="${esc(mediaSrc(p.image))}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : ""}
 <div class="body"><h2>${esc(p.title)}</h2><p>${esc(excerpt(p))}</p>
 <div class="date">${esc(plDate(p.published_at))}</div></div></a>`
           )
@@ -956,7 +1075,7 @@ ${faqLd ? `<script type="application/ld+json">${scriptJson(faqLd)}</script>\n` :
 <div class="meta">${esc(author)}${
     post.published_at ? " · " + esc(plDate(post.published_at)) : ""
   }</div>
-${post.image ? `<img class="hero-img" src="${esc(post.image)}" alt="${esc(str(post.image_alt) || post.title)}">` : ""}
+${mediaSrc(post.image) ? `<img class="hero-img" src="${esc(mediaSrc(post.image))}" alt="${esc(str(post.image_alt) || post.title)}">` : ""}
 ${renderBody(blocks)}
 ${byAnna ? `<aside class="author-box">
 <div class="ab-eye">Autorka</div>
@@ -983,6 +1102,315 @@ ${ctaBlock()}
   );
 }
 
+// ── Strona usługi /<slug> (faza 2 SEO; tylko PL) ──────────────────────────────
+// Treść z bota (ten sam podzbiór Markdown co porady) + znaczniki w osobnej linii:
+// [[cennik]] → karty cen z katalogu (/api/content, tylko kategorie price_categories),
+// [[galeria]] → zdjęcia z gallery (puste → zdjęcie strony albo nic). Bez znacznika:
+// cennik po pierwszym akapicie, galeria przed sekcją FAQ. Powtórzony znacznik — raz.
+const booksyHref = (u) => (/^https:\/\/([a-z0-9-]+\.)*booksy\.com\//i.test(str(u)) ? str(u) : BOOKSY);
+
+// Kategorie katalogu przypisane do strony (w kolejności strony, bez powtórzeń).
+function pageCatalogue(cat, page) {
+  if (!cat) return [];
+  return [...new Set(pageCats(page).map(catKey))].map((k) => cat.cats.find((c) => c.k === k)).filter(Boolean);
+}
+
+function pagePricesHtml(cats, page, catalogueOk) {
+  if (!pageCats(page).length) return "";
+  if (!catalogueOk) {
+    // katalog chwilowo niedostępny (brak danych i kopii) — odsyłamy do cennika
+    return `<p class="svc-note">Aktualne ceny znajdziesz w <a href="/#services">cenniku</a> oraz w Booksy.</p>`;
+  }
+  if (!cats.length) return "";
+  const anyFrom = cats.some((c) => c.items.some((it) => it.price_from));
+  const cards = cats
+    .map(
+      (c) =>
+        `<div class="cat${c.k === FEATURE_CAT ? " feature" : ""}"><div class="cat-h"><span class="cat-num">&#10022;</span><h3>Cennik: ${esc(c.titles.pl)}</h3></div>` +
+        c.items.map((it) => priceRowHtml(it, "pl")).join("") +
+        `</div>`
+    )
+    .join("");
+  const note = `Ceny w PLN${anyFrom ? "; „od” — cena minimalna, ostateczna po konsultacji" : ""}. Pełny cennik: <a href="/#services">strona główna</a>.`;
+  return `<div class="svc-prices">${cards}<p class="svc-note">${note}</p></div>`;
+}
+
+function pageGalleryHtml(page, title) {
+  const items = (Array.isArray(page.gallery) ? page.gallery : [])
+    .map((g) => (typeof g === "string" ? { url: g } : g))
+    .filter((g) => g && typeof g === "object")
+    .map((g) => ({ src: pageImgSrc(g.url), alt: str(g.alt) }))
+    .filter((g) => g.src)
+    .slice(0, 12);
+  if (!items.length) {
+    const src = pageImgSrc(page.image);
+    if (src) items.push({ src, alt: str(page.image_alt) });
+  }
+  if (!items.length) return "";
+  const figs = items
+    .map((g) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt || title)}" loading="lazy" decoding="async"></figure>`)
+    .join("");
+  return `<div class="svc-gallery${items.length === 1 ? " one" : ""}">${figs}</div>`;
+}
+
+// Bloki treści z podstawionymi znacznikami (slots: { cennik, galeria } — gotowy HTML).
+function pageBlocks(body, slots) {
+  const out = [];
+  const used = new Set();
+  for (const b of parseBody(body, { markers: true })) {
+    if (b.type !== "marker") {
+      out.push(b);
+    } else if (!used.has(b.name)) {
+      used.add(b.name);
+      if (slots[b.name]) out.push({ type: "html", html: slots[b.name] });
+    }
+  }
+  if (!used.has("cennik") && slots.cennik) {
+    const i = out.findIndex((b) => b.type === "p");
+    out.splice(i < 0 ? 0 : i + 1, 0, { type: "html", html: slots.cennik });
+  }
+  if (!used.has("galeria") && slots.galeria) {
+    const i = out.findIndex(isFaqH2);
+    out.splice(i < 0 ? out.length : i, 0, { type: "html", html: slots.galeria });
+  }
+  return out;
+}
+
+// „Przeczytaj też”: porady linkujące do tej strony, potem porady o wspólnym słowie
+// z tytułem (rdzeń = 4 pierwsze litery, bez słów ogólnych), maks. 3.
+const STOP_STEMS = new Set([
+  "wiel", "zeli", "stud", "jaki", "jaka", "kied", "któr", "dlac", "oraz", "albo", "przy", "prze", "czym",
+  "czyl", "zabi", "efek", "krok", "wszy", "musi", "wied", "dzie", "mnie", "myśl", "wygl", "wybr", "cena", "kosz",
+]);
+const titleStems = (s) =>
+  new Set(
+    String(s || "")
+      .normalize("NFC")
+      .toLowerCase()
+      .split(/[^0-9a-ząćęłńóśźż]+/)
+      .filter((w) => w.length >= 4)
+      .map((w) => w.slice(0, 4))
+      .filter((w) => !STOP_STEMS.has(w))
+  );
+// Ścieżka linku z treści (względny albo https://zelika.pl/…) bez ?/#/końcowego „/”; obcy → "".
+function sitePath(url) {
+  let p;
+  if (/^\/(?![\/\\])/.test(url)) {
+    p = url;
+  } else {
+    try {
+      const u = new URL(url);
+      if (u.protocol !== "https:" || !/^(www\.)?zelika\.pl$/i.test(u.hostname)) return "";
+      p = u.pathname;
+    } catch (_) {
+      return "";
+    }
+  }
+  return p.replace(/[?#].*$/, "").replace(/\/+$/, "") || "/";
+}
+const linksTo = (post, path) =>
+  [...String(post.body || "").matchAll(INLINE_RE)].some((m) => m[1] != null && sitePath(m[2]) === path);
+function relatedPosts(posts, slug, title, n = 3) {
+  const want = titleStems(title);
+  return posts
+    .filter((p) => p && typeof p === "object" && str(p.slug) && str(p.title) && (p.status == null || p.status === "published"))
+    .map((p, i) => {
+      const own = titleStems(p.title);
+      let shared = 0;
+      for (const s of want) if (own.has(s)) shared += 1;
+      return { p, i, link: linksTo(p, "/" + slug) ? 1 : 0, shared };
+    })
+    .filter((x) => x.link || x.shared)
+    .sort((a, b) => b.link - a.link || b.shared - a.shared || a.i - b.i)
+    .slice(0, n)
+    .map((x) => x.p);
+}
+function relatedHtml(posts) {
+  if (!posts.length) return "";
+  const cards = posts
+    .map((p) => {
+      const img = mediaSrc(p.image);
+      return (
+        `<a class="card" href="/porady/${esc(encodeURIComponent(p.slug))}">` +
+        (img ? `<img src="${esc(img)}" alt="${esc(str(p.image_alt) || p.title)}" loading="lazy">` : "") +
+        `<div class="body"><h3>${esc(p.title)}</h3><p>${esc(excerpt(p, 110))}</p></div></a>`
+      );
+    })
+    .join("\n");
+  return `<section class="related"><h2>Przeczytaj też</h2><div class="related-grid">${cards}</div></section>`;
+}
+
+function pageCtaHtml(booksy) {
+  return `<div class="cta">
+<p class="cta-h">Umów wizytę</p>
+<p class="cta-p">Wolny termin wybierzesz i zarezerwujesz online w Booksy. Nie wiesz, który zabieg wybrać? Krótki quiz podpowie.</p>
+<p class="cta-btns"><a class="btn" href="${esc(booksy)}" target="_blank" rel="noopener noreferrer" data-booksy>Umów wizytę</a><a class="btn btn-ghost" href="/quiz">Dobierz zabieg</a></p>
+</div>`;
+}
+
+// Stałe strony usług (tworzy je skrypt bota). Gdy listy stron nie ma (zimny cache w colo
+// + wolny/leżący origin), dla tych adresów pytamy o pojedynczą stronę: jest → render,
+// naprawdę zdjęta (404) → 404, brak danych → 503 (jak porada), nie fałszywe 404.
+// Inne adresy bez listy → zwykłe 404, bez dodatkowego pytania originu.
+const KNOWN_PAGE_SLUGS = new Set(["makijaz-permanentny-brwi-wielun", "laminacja-brwi-wielun", "laminacja-rzes-wielun"]);
+
+// null → to nie jest (opublikowana) strona usługi: router oddaje dotychczasowe 404.
+async function renderServicePage(request, api, slug, trailingSlash) {
+  const known = KNOWN_PAGE_SLUGS.has(slug);
+  // znane strony: lista i pojedyncza strona równolegle (timeouty się nie sumują)
+  const [pagesRes] = await Promise.all([api.pages(), known && !trailingSlash ? api.page(slug) : null]);
+  const listOk = !!(pagesRes.data && Array.isArray(pagesRes.data.pages));
+  const listed = listOk ? pagesOf(pagesRes).find((p) => p.slug === slug) || null : null;
+  // lista jest, a strony w niej nie ma → 404; listy brak → dalej tylko znane strony
+  if (!listed && (listOk || !known)) return null;
+  if (trailingSlash) {
+    const u = new URL(request.url);
+    return new Response(null, {
+      status: 301,
+      headers: { Location: new URL("/" + slug + u.search, u).toString(), "Cache-Control": "public, max-age=3600" },
+    });
+  }
+  const canonical = SITE + "/" + slug;
+  const [res, contentRes, postsRes] = await Promise.all([api.page(slug), api.content(), api.posts()]);
+  if (res.notFound) return null; // zdjęta (lista jeszcze z kopii) albo naprawdę jej nie ma
+  let page = res.data;
+  let source = res.source;
+  if (page && page.status != null && page.status !== "published") return null;
+  if (!page || typeof page !== "object" || !str(page.title)) {
+    // pojedyncza strona niedostępna → pełny wpis z listy (jeśli lista ma treść), inaczej 503
+    if (!listed || !str(listed.body)) return unavailableResponse(canonical);
+    page = listed;
+    source = pagesRes.source;
+  }
+
+  const title = str(page.title);
+  const content = contentRes.data;
+  const cat = buildCatalogue(content);
+  const cats = pageCatalogue(cat, page);
+  const desc = excerpt(page, 160, { markers: true });
+  const ogImage = absImg(pageImgSrc(page.image));
+  const blocks = pageBlocks(page.body, {
+    cennik: pagePricesHtml(cats, page, !!cat),
+    galeria: pageGalleryHtml(page, title),
+  });
+  const faqLd = faqPageLd(bodyFaq(blocks), "pl-PL");
+  const offers = cats.flatMap((c) => c.items.map((it) => offerLd(it, "pl")));
+  const jsonld = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "@id": canonical + "#service",
+    name: title,
+    description: desc,
+    url: canonical,
+    image: ogImage,
+    provider: { "@type": "BeautySalon", "@id": SITE + "/#business", name: "Zelika PMU" },
+    areaServed: { "@type": "City", name: "Wieluń" },
+  };
+  if (offers.length) jsonld.offers = offers;
+  const crumbLd = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Strona główna", item: SITE + "/" },
+      { "@type": "ListItem", position: 2, name: title, item: canonical },
+    ],
+  };
+  const body = `<script type="application/ld+json">${scriptJson(crumbLd)}</script>
+${faqLd ? `<script type="application/ld+json">${scriptJson(faqLd)}</script>\n` : ""}<p class="crumbs"><a href="/">Strona główna</a> › ${esc(title)}</p>
+<article>
+<h1>${esc(title)}</h1>
+${renderBody(blocks)}
+</article>
+${pageCtaHtml(booksyHref(content && content.booksy_url))}
+${relatedHtml(relatedPosts(postsOf(postsRes), slug, title))}`;
+
+  return htmlResponse(
+    layout({
+      // miasto już w tytule (Wieluń / w Wieluniu…) → bez powtórzenia w sufiksie
+      title: `${title} | ${/wielu[nń]/i.test(title.normalize("NFC")) ? "Zelika" : "Zelika Wieluń"}`,
+      description: desc,
+      canonical,
+      ogImage,
+      jsonld,
+      body,
+      header: { current: "", pl: "/" + slug, langHrefs: { pl: "/" + slug, uk: "/uk/", en: "/en/" } },
+      css: PAGE_CSS,
+    }),
+    200,
+    300,
+    { "X-Zelika-Data": source }
+  );
+}
+
+// /media/<id>.jpg → zdjęcie z bota (API_BASE/api/media/<id>.jpg). Tylko obrazy (inny
+// Content-Type, przekierowanie albo za duży plik = 502), id już zwalidowane w routerze.
+// Cache tylko na 1 dzień (krawędź i przeglądarka, bez „immutable”): to zdjęcia klientek
+// publikowane za zgodą (RODO) — po wycofaniu zgody bot usuwa zdjęcie, a ono musi
+// zniknąć także spod bezpośredniego adresu najpóźniej w ciągu doby. 404 — 60 s.
+// Gwarancja nie zależy od nagłówków originu ani od wspólnego cache hooks.zelika.pl:
+// origin pytamy z pominięciem cache (no-store), a odpowiedź trzymamy sami w Cache API
+// pod kluczem strony https://zelika.pl/media/<id>.jpg z własnym Cache-Control.
+const MEDIA_TTL_S = 86400;
+const MEDIA_404_TTL_S = 60;
+const MEDIA_MAX_BYTES = 15 * 1024 * 1024;
+async function mediaResponse(request, env, ctx, id) {
+  const plain = (status, text, cc) =>
+    new Response(text, { status, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": cc, ...SEC_HEADERS } });
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    const r = plain(405, "Method Not Allowed\n", "no-store");
+    r.headers.set("Allow", "GET, HEAD");
+    return r;
+  }
+  const head = request.method === "HEAD";
+  const out = (r) => (head ? new Response(null, { status: r.status, headers: r.headers }) : r);
+  const key = new Request(`${SITE}/media/${id}.jpg`);
+  let cache = null;
+  try {
+    cache = caches.default;
+    const hit = await cache.match(key);
+    if (hit) return out(hit);
+  } catch (_) {}
+  // 200 i 404 zapisujemy w Cache API (TTL z naszego Cache-Control); błędy — nigdy
+  const keep = (r) => {
+    if (cache) {
+      const p = cache.put(key, r.clone()).catch(() => {});
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+    }
+    return out(r);
+  };
+
+  const base = String((env && env.API_BASE) || API_BASE).replace(/\/+$/, "");
+  let r;
+  try {
+    r = await fetch(`${base}/api/media/${id}.jpg`, {
+      cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (e) {
+    console.warn(`media ${id}: ${e && e.name ? e.name : e}`);
+    return plain(504, "Gateway Timeout\n", "no-store");
+  }
+  const bad = (why) => {
+    console.warn(`media ${id}: ${why}`);
+    if (r.body) r.body.cancel().catch(() => {});
+    return plain(502, "Bad Gateway\n", "no-store");
+  };
+  if (r.status === 404) {
+    if (r.body) r.body.cancel().catch(() => {});
+    return keep(plain(404, "Not found\n", `public, max-age=${MEDIA_404_TTL_S}`));
+  }
+  const type = (r.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+  if (r.status !== 200 || !/^image\/(jpeg|png|webp|avif)$/.test(type)) return bad(`HTTP ${r.status} ${type}`);
+  if (Number(r.headers.get("Content-Length") || 0) > MEDIA_MAX_BYTES) return bad("Content-Length too large");
+  const buf = await r.arrayBuffer();
+  if (!buf.byteLength || buf.byteLength > MEDIA_MAX_BYTES) return plain(502, "Bad Gateway\n", "no-store");
+  return keep(
+    new Response(buf, {
+      headers: { "Content-Type": type, "Cache-Control": `public, max-age=${MEDIA_TTL_S}`, ...SEC_HEADERS },
+    })
+  );
+}
+
 // Власний robots.txt: ВІДКРИТИЙ для всіх (вкл. AI-краулери цитувань — GPTBot,
 // Google-Extended, PerplexityBot, ClaudeBot тощо), бо ціль — видимість і цитування
 // в AI-пошуку. Перебиває Cloudflare-керований robots, що за замовч. блокував AI-ботів.
@@ -997,11 +1425,12 @@ function renderRobots() {
 // Cennik i lista artykułów — z tych samych danych co strona (katalog bota).
 const md = (s) => str(s).replace(/\s+/g, " ").replace(/([\\[\]])/g, "\\$1");
 async function renderLlms(api) {
-  const [contentRes, postsRes] = await Promise.all([api.content(), api.posts()]);
+  const [contentRes, postsRes, pagesRes] = await Promise.all([api.content(), api.posts(), api.pages()]);
   const c = contentRes.data;
   const cat = buildCatalogue(c);
   const rating = parseRating(c);
   const posts = postsOf(postsRes);
+  const pages = pagesOf(pagesRes);
   const ratingTxt = rating ? ` Ocena ${fmtRating(rating.r, "pl")}/5 w Google (${rating.n} ${plOpinie(rating.n)}).` : "";
 
   let services;
@@ -1026,6 +1455,12 @@ async function renderLlms(api) {
     services = `## Usługi i ceny\n\nAktualny cennik: ${SITE}/#services oraz w Booksy (link niżej).`;
   }
 
+  const servicePages = pages.length
+    ? `## Usługi — strony\n\n` +
+      pages.map((p) => `- [${md(p.title)}](${SITE}/${p.slug})${p.meta_description ? ": " + md(p.meta_description) : ""}`).join("\n") +
+      "\n\n"
+    : "";
+
   const blog = posts.length
     ? `## Porady i inspiracje (blog)\n\n` +
       posts
@@ -1040,7 +1475,7 @@ async function renderLlms(api) {
 
 ${services}
 
-## Kontakt i rezerwacja
+${servicePages}## Kontakt i rezerwacja
 
 - Adres: ul. Młodzieżowa 5B, 98-300 Wieluń
 - Telefon: +48 571 932 161
@@ -1065,7 +1500,7 @@ ${blog}## Ważne strony
 }
 
 async function renderSitemap(api) {
-  const [postsRes, contentRes] = await Promise.all([api.posts(), api.content()]);
+  const [postsRes, contentRes, pagesRes] = await Promise.all([api.posts(), api.content(), api.pages()]);
   if (postsRes.source === "none") {
     return new Response("Sitemap chwilowo niedostępna.\n", {
       status: 503,
@@ -1081,6 +1516,13 @@ async function renderSitemap(api) {
     { loc: SITE + "/", pri: "1.0", freq: "monthly", lastmod: homeMod },
     { loc: SITE + "/uk/", pri: "0.9", freq: "monthly", lastmod: homeMod },
     { loc: SITE + "/en/", pri: "0.9", freq: "monthly", lastmod: homeMod },
+    // strony usług (PL): lastmod = updated_at / published_at
+    ...pagesOf(pagesRes).map((p) => ({
+      loc: SITE + "/" + p.slug,
+      pri: "0.9",
+      freq: "monthly",
+      lastmod: /^\d{4}-\d{2}-\d{2}/.test(modifiedAt(p)) ? modifiedAt(p).slice(0, 10) : undefined,
+    })),
     { loc: SITE + "/porady", pri: "0.8", freq: "weekly" },
     { loc: SITE + "/quiz", pri: "0.6", freq: "monthly" },
     { loc: SITE + "/uk/quiz", pri: "0.5", freq: "monthly" },
@@ -1388,9 +1830,10 @@ function hreflangFor(pl) {
       .join("") + `<link rel="alternate" hreflang="x-default" href="${SITE}${pl}">`
   );
 }
-function switcher(lang, pl) {
+// langHrefs: { pl, uk, en } — dla stron bez wersji językowych (strony usług → /uk/, /en/)
+function switcher(lang, pl, langHrefs) {
   const item = (code, label) =>
-    `<a href="${href(code, pl)}" style="padding:7px 8px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
+    `<a href="${esc(langHrefs && langHrefs[code] ? langHrefs[code] : href(code, pl))}" style="padding:7px 8px;border-radius:6px;text-decoration:none;${lang === code ? "background:var(--green,#1f5e30);color:#fff" : "color:var(--muted,#6e7365)"}">${label}</a>`;
   // <span> (не <li>) — інжектимо в <header> будь-якої сторінки (навбар або topbar quizу)
   return (
     `<span class="lang-switch" style="display:inline-flex;gap:2px;align-items:center;font-size:.72rem;font-weight:600;letter-spacing:.02em;padding-left:6px">` +
@@ -1419,7 +1862,7 @@ function navHref(lang, it, home) {
   if (it.p === "/porady") return "/porady"; // блог PL-only
   return lang === "pl" ? it.p : "/" + lang + it.p; // /quiz | /uk/quiz
 }
-function headerHtml(lang, { home = false, current = "", pl = "/" } = {}) {
+function headerHtml(lang, { home = false, current = "", pl = "/", langHrefs = null } = {}) {
   const items = NAV.map((it) => {
     const cls = current && it.cur === current ? ' class="current"' : "";
     const q = it.quiz && home ? " data-quiz-open" : "";
@@ -1429,7 +1872,7 @@ function headerHtml(lang, { home = false, current = "", pl = "/" } = {}) {
   return `<header class="nav${home ? " home" : ""}"${home ? ' id="nav"' : ""}>
 <a href="${home ? "#top" : href(lang, "/")}" class="brand" aria-label="Zelika — Home"><svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg><span class="tag">Brows &amp; More</span></a>
 <nav><ul class="nav-links">${items}${cta}</ul></nav>
-${switcher(lang, pl)}
+${switcher(lang, pl, langHrefs)}
 <button class="burger" id="burger" type="button" aria-label="Menu" aria-expanded="false">&#9776;</button>
 </header>`;
 }
@@ -1518,12 +1961,15 @@ async function localizedPage(request, env, api, lang, pageKey) {
   // odzwierciedla cennika; 304 zostawiłby w przeglądarce stare ceny).
   const assetHeaders = new Headers(request.headers);
   if (withData) for (const h of ["if-none-match", "if-modified-since", "range", "if-range"]) assetHeaders.delete(h);
-  const [res, contentRes] = await Promise.all([
+  const [res, contentRes, pagesRes] = await Promise.all([
     env.ASSETS.fetch(new Request(u.toString(), { headers: assetHeaders })),
     withData ? api.content() : null,
+    // linki „Więcej o zabiegu” — dodatek: lista stron czytana bez czekania na origin
+    pageKey === "home" ? api.pages({ soft: true }) : null,
   ]);
   const content = contentRes && contentRes.data;
   const cat = withData ? buildCatalogue(content) : null;
+  const pageFor = pageByCategory(pagesOf(pagesRes));
   const zones = cat ? cat.zones : new Set();
   const rating = withData ? parseRating(content) : null;
   const meta = page.meta[lang] || page.meta.pl;
@@ -1584,7 +2030,7 @@ async function localizedPage(request, env, api, lang, pageKey) {
   if (home) {
     // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
     if (cat) {
-      rw = rw.on(".svc-cats", { element(e) { e.setInnerContent(cennikHtml(cat, lang), { html: true }); } });
+      rw = rw.on(".svc-cats", { element(e) { e.setInnerContent(cennikHtml(cat, lang, pageFor), { html: true }); } });
     } else if (lang !== "pl") {
       // Brak danych i kopii → statyczny snapshot z index.html (jedyna kopia offline),
       // ale z przetłumaczonymi kategoriami, notą, „od” i czasem trwania (nazwy usług — PL,
@@ -1693,6 +2139,8 @@ export default {
       }
       return renderPost(api, slug);
     }
+    const media = url.pathname.match(/^\/media\/([A-Za-z0-9_-]{1,128})\.jpg$/);
+    if (media) return mediaResponse(request, env, ctx, media[1]);
     if (path === "/sitemap.xml") return renderSitemap(api);
     if (path === "/robots.txt") return renderRobots();
     if (path === "/llms.txt") return renderLlms(api);
@@ -1711,6 +2159,16 @@ export default {
     if (path === "/en/quiz") return localizedPage(request, env, api, "en", "quiz");
     // /prywatnosc — юридичний документ, лишається PL, але через воркер (уніфікований каркас)
     if (path === "/prywatnosc") return localizedPage(request, env, api, "pl", "priv");
+
+    // Strony usług /<slug> (opublikowane z /api/pages, a bez listy — znane slugi przez
+    // /api/pages/<slug>, KNOWN_PAGE_SLUGS; /<slug>/ → 301). Trafiają tu
+    // wyłącznie ścieżki bez pliku w statyce (pliki serwuje warstwa assets przed workerem),
+    // a zajęte nazwy (RESERVED_SLUGS) i trasy wyżej mają pierwszeństwo.
+    const sp = url.pathname.match(/^\/([a-z0-9-]{1,120})(\/+)?$/);
+    if (sp && isPageSlug(sp[1])) {
+      const r = await renderServicePage(request, api, sp[1], !!sp[2]);
+      if (r) return r;
+    }
 
     // wszystko inne → statyka
     return env.ASSETS.fetch(request);
