@@ -138,6 +138,13 @@
   .kcard .kbadge.new{color:#fff;background:var(--green);border-color:var(--green);}
   .kwal-note{max-width:760px;margin:34px auto 0;text-align:center;color:var(--muted);font-size:.95rem;line-height:1.72;}
   .kwal-note strong{color:var(--green);font-weight:600;}
+  .kwal-certs{display:grid;grid-template-columns:repeat(2,minmax(0,260px));justify-content:center;gap:20px;margin-top:30px;}
+  .kcert{margin:0;text-align:center;}
+  .kcert picture{display:block;aspect-ratio:3/4;border-radius:4px;overflow:hidden;border:1px solid var(--line-gold);box-shadow:0 10px 26px rgba(31,94,48,.10);}
+  .kcert img{display:block;width:100%;height:100%;object-fit:cover;}
+  .kcert figcaption{margin-top:10px;display:flex;flex-direction:column;gap:2px;}
+  .kcert .kct{font-family:var(--serif);font-style:italic;font-size:1.1rem;color:var(--green);}
+  .kcert .kcs{font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);}
   @media(max-width:920px){.kwal-grid{grid-template-columns:1fr;}}
   .svc-note{text-align:center;color:var(--muted);font-size:.9rem;margin-top:34px;}
   .svc-note a{color:var(--green);text-decoration:none;border-bottom:1px solid var(--line-gold);}
@@ -564,6 +571,10 @@
         <div class="kcard reveal d2"><div class="kzone" data-i18n="kwal.z2">Usta</div><div class="ktitle" data-i18n="kwal.b2t">Makijaż permanentny &middot; metoda Aquarelle</div><div class="kbadge new" data-i18n="kwal.b2b">Certyfikat 2026 &middot; Warszawa</div></div>
         <div class="kcard reveal d3"><div class="kzone" data-i18n="kwal.z3">Oczy</div><div class="ktitle" data-i18n="kwal.b3t">Kreska międzyrzęsowa (linia rzęs)</div><div class="kbadge new" data-i18n="kwal.b3b">Certyfikat 2026 &middot; Warszawa</div></div>
       </div>
+      <div class="kwal-certs">
+        <figure class="kcert reveal d1"><picture><source type="image/webp" srcset="/img/photo-7.webp"><img src="img/photo-7.jpg" width="740" height="986" alt="Anna Zelinska — certyfikat eksperta" data-i18n-attrs="alt=kwal.c1a" loading="lazy" decoding="async"></picture><figcaption><span class="kct" data-i18n="kwal.c1t">Certyfikat ekspercki</span><span class="kcs" data-i18n="kwal.c1s">Szkolenia &amp; rozwój</span></figcaption></figure>
+        <figure class="kcert reveal d2"><picture><source type="image/webp" srcset="/img/photo-8.webp"><img src="img/photo-8.jpg" width="740" height="986" alt="Anna Zelinska — certyfikat Pigmentology" data-i18n-attrs="alt=kwal.c2a" loading="lazy" decoding="async"></picture><figcaption><span class="kct" data-i18n="kwal.c2t">Pigmentology</span><span class="kcs" data-i18n="kwal.c2s">Certyfikat</span></figcaption></figure>
+      </div>
       <p class="kwal-note reveal" data-i18n="kwal.note"><strong>Bezpieczeństwo przede wszystkim.</strong> Pracuję wyłącznie na certyfikowanych pigmentach i jednorazowych, sterylnych modułach. Przed każdym zabiegiem omawiamy przeciwwskazania (m.in. ciąża, karmienie, opryszczka przy ustach, niektóre leki). Szkolenia w standardzie Hasnutdinova (Warszawa, 2026).</p>
     </div>
   </section>
@@ -651,15 +662,15 @@
       <div class="section-head">
         <span data-i18n="gal.eyebrow" class="eyebrow reveal">Portfolio</span>
         <h2 data-i18n="gal.h2" class="reveal d1">Galeria <em>realizacji</em></h2>
-        <p data-i18n="gal.p" class="reveal d2">Realizacje, certyfikaty i kulisy naszego studia. Pełna galeria — na Instagramie.</p>
+        <p data-i18n="gal.p" class="reveal d2">Realizacje naszego studia — zdjęcia publikowane za zgodą klientek. Pełna galeria — na Instagramie.</p>
       </div>
       <div class="gallery-grid">
-        <div class="gitem reveal d1"><picture><source type="image/webp" srcset="/img/photo-3.webp"><img src="img/photo-3.jpg" width="740" height="986" alt="Laminacja rzęs" data-i18n-attrs="alt=gal.1a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.1t">Laminacja rzęs</div><div class="gs" data-i18n="gal.1s">Stylizacja</div></div></div>
-        <div class="gitem reveal d2"><picture><source type="image/webp" srcset="/img/photo-4.webp"><img src="img/photo-4.jpg" width="740" height="986" alt="Brwi metoda mieszana — makijaż permanentny" data-i18n-attrs="alt=gal.2a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.2t">Brwi metoda mieszana</div><div class="gs" data-i18n="gal.2s">Makijaż permanentny</div></div></div>
-        <div class="gitem reveal d3"><picture><source type="image/webp" srcset="/img/photo-5.webp"><img src="img/photo-5.jpg" width="740" height="986" alt="Brwi metodą włosową — makijaż permanentny" data-i18n-attrs="alt=gal.3a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.3t">Brwi metodą włosową</div><div class="gs" data-i18n="gal.3s">Makijaż permanentny</div></div></div>
-        <div class="gitem reveal d1"><picture><source type="image/webp" srcset="/img/photo-6.webp"><img src="img/photo-6.jpg" width="740" height="986" alt="Architektura brwi" data-i18n-attrs="alt=gal.4a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.4t">Architektura brwi</div><div class="gs" data-i18n="gal.4s">Brow mapping</div></div></div>
-        <div class="gitem reveal d2"><picture><source type="image/webp" srcset="/img/photo-7.webp"><img src="img/photo-7.jpg" width="740" height="986" alt="Anna Zelinska — certyfikat eksperta" data-i18n-attrs="alt=gal.5a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.5t">Certyfikat ekspercki</div><div class="gs" data-i18n="gal.5s">Szkolenia &amp; rozwój</div></div></div>
-        <div class="gitem reveal d3"><picture><source type="image/webp" srcset="/img/photo-8.webp"><img src="img/photo-8.jpg" width="740" height="986" alt="Anna Zelinska — certyfikat Pigmentology" data-i18n-attrs="alt=gal.6a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.6t">Pigmentology</div><div class="gs" data-i18n="gal.6s">Certyfikat</div></div></div>
+        <div class="gitem reveal d1"><picture><source type="image/webp" srcset="/img/photo-2.webp"><img src="img/photo-2.jpg" width="820" height="1025" alt="Anna Zelinska podczas zabiegu w studiu Zelika" data-i18n-attrs="alt=gal.7a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.7t">Anna przy pracy</div><div class="gs" data-i18n="gal.7s">Studio Zelika</div></div></div>
+        <div class="gitem reveal d2"><picture><source type="image/webp" srcset="/img/photo-1.webp"><img src="img/photo-1.jpg" width="880" height="1100" alt="Makijaż permanentny brwi — efekt pracy Studia Zelika" data-i18n-attrs="alt=gal.8a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.8t">Makijaż permanentny brwi</div><div class="gs" data-i18n="gal.8s">Efekt zabiegu</div></div></div>
+        <div class="gitem reveal d3"><picture><source type="image/webp" srcset="/img/photo-3.webp"><img src="img/photo-3.jpg" width="740" height="986" alt="Laminacja rzęs" data-i18n-attrs="alt=gal.1a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.1t">Laminacja rzęs</div><div class="gs" data-i18n="gal.1s">Stylizacja</div></div></div>
+        <div class="gitem reveal d1"><picture><source type="image/webp" srcset="/img/photo-4.webp"><img src="img/photo-4.jpg" width="740" height="986" alt="Brwi metoda mieszana — makijaż permanentny" data-i18n-attrs="alt=gal.2a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.2t">Brwi metoda mieszana</div><div class="gs" data-i18n="gal.2s">Makijaż permanentny</div></div></div>
+        <div class="gitem reveal d2"><picture><source type="image/webp" srcset="/img/photo-5.webp"><img src="img/photo-5.jpg" width="740" height="986" alt="Brwi metodą włosową — makijaż permanentny" data-i18n-attrs="alt=gal.3a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.3t">Brwi metodą włosową</div><div class="gs" data-i18n="gal.3s">Makijaż permanentny</div></div></div>
+        <div class="gitem reveal d3"><picture><source type="image/webp" srcset="/img/photo-6.webp"><img src="img/photo-6.jpg" width="740" height="986" alt="Architektura brwi" data-i18n-attrs="alt=gal.4a" loading="lazy" decoding="async"></picture><div class="glabel"><div class="gt" data-i18n="gal.4t">Architektura brwi</div><div class="gs" data-i18n="gal.4s">Brow mapping</div></div></div>
       </div>
       <div class="gallery-cta reveal">
         <a data-i18n="gal.btn" href="https://www.instagram.com/annazelika/" target="_blank" rel="noopener noreferrer" class="btn btn-gold">&#9670; Zobacz więcej na Instagramie</a>

@@ -46,6 +46,43 @@ function pageImgSrc(img) {
   return /^\/(?![\/\\])/.test(s) ? s : "";
 }
 
+// ── Galeria na stronie głównej z bota (/api/content → home_gallery) ──────────────
+// Anna wybiera w bocie do 6 zdjęć z albumu „Blog” (tylko za zgodą klientek) i usługę z cennika do
+// każdego. Podpis — nazwa usługi i kategoria w języku strony. Pierwsze N kafelków .gitem dostaje
+// zdjęcia z bota, reszta zostaje statyczna (już przetłumaczona przez [data-i18n]).
+const GALLERY_MAX = 6;
+const GALLERY_ALT = {
+  pl: { suffix: "efekt zabiegu, Studio Zelika Wieluń", plain: "Realizacja Studia Zelika, Wieluń" },
+  uk: { suffix: "результат процедури, студія Zelika, Велюнь", plain: "Робота студії Zelika, Велюнь" },
+  en: { suffix: "treatment result, Zelika studio, Wieluń", plain: "Zelika studio work, Wieluń" },
+};
+function homeGallery(content, lang) {
+  const list = content && Array.isArray(content.home_gallery) ? content.home_gallery : [];
+  const items = new Map((content && Array.isArray(content.cennik_items) ? content.cennik_items : []).map((it) => [it && it.id, it]));
+  const cats = new Map((content && Array.isArray(content.cennik_categories) ? content.cennik_categories : []).map((c) => [c && c.key, c]));
+  const alt = GALLERY_ALT[lang] || GALLERY_ALT.pl;
+  const out = [];
+  for (const g of list) {
+    if (out.length >= GALLERY_MAX) break;
+    const url = g ? str(g.url) : "";
+    if (!url.startsWith(MEDIA_PREFIX)) continue;
+    const src = mediaSrc(url);
+    if (!src) continue;
+    const it = items.get(g.item);
+    const title = it ? str((lang === "uk" && it.name_uk) || (lang === "en" && it.name_en) || it.name) : "";
+    const c = it ? cats.get(it.category) : null;
+    const sub = c ? str(c[lang] || c.pl) : "";
+    out.push({ src, title, sub, alt: title ? `${title} — ${alt.suffix}` : alt.plain });
+  }
+  return out;
+}
+function galleryTileInner(t) {
+  const label = t.title
+    ? `<div class="glabel"><div class="gt">${esc(t.title)}</div>${t.sub ? `<div class="gs">${esc(t.sub)}</div>` : ""}</div>`
+    : "";
+  return `<img src="${esc(t.src)}" width="740" height="986" alt="${esc(t.alt)}" loading="lazy" decoding="async">${label}`;
+}
+
 // Zdjęcia strony /img/photo-N.jpg: obok leży wersja WebP (img/photo-N.webp), a wymiary są
 // znane (width/height → miejsce zarezerwowane przed wczytaniem, bez skoku układu / CLS).
 // <picture>: WebP dla przeglądarek, które go obsługują, JPG jako zapas; og:image dalej JPG.
@@ -1716,8 +1753,10 @@ const I18N = {
     "gal.2t": "Брови: змішана методика", "gal.2s": "Перманентний макіяж", "gal.2a": "Брови, змішана методика — перманентний макіяж",
     "gal.3t": "Брови: волоскова методика", "gal.3s": "Перманентний макіяж", "gal.3a": "Брови, волоскова методика — перманентний макіяж",
     "gal.4t": "Архітектура брів", "gal.4s": "Brow mapping", "gal.4a": "Архітектура брів",
-    "gal.5t": "Сертифікат експерта", "gal.5s": "Навчання й розвиток", "gal.5a": "Анна Зелінська — сертифікат експерта",
-    "gal.6t": "Pigmentology", "gal.6s": "Сертифікат", "gal.6a": "Анна Зелінська — сертифікат Pigmentology",
+    "gal.7t": "Анна за роботою", "gal.7s": "Студія Zelika", "gal.7a": "Анна Зелінська під час процедури в студії Zelika",
+    "gal.8t": "Перманентний макіяж брів", "gal.8s": "Результат процедури", "gal.8a": "Перманентний макіяж брів — робота студії Zelika",
+    "kwal.c1t": "Сертифікат експерта", "kwal.c1s": "Навчання й розвиток", "kwal.c1a": "Анна Зелінська — сертифікат експерта",
+    "kwal.c2t": "Pigmentology", "kwal.c2s": "Сертифікат", "kwal.c2a": "Анна Зелінська — сертифікат Pigmentology",
     "rev.all": "Усі відгуки в Google &#8594;", "por.all": "Усі поради &#8594;",
     "day.1": "Понеділок", "day.2": "Вівторок", "day.3": "Середа", "day.4": "Четвер", "day.5": "Пʼятниця", "day.6": "Субота", "day.7": "Неділя",
     "hours.closed": "вихідний",
@@ -1753,7 +1792,7 @@ const I18N = {
     "ef.eyebrow": "Ефекти", "ef.h2": "До і <em>після</em>", "ef.p": "Реальні роботи — фото одразу після процедури, публікуються за згодою клієнток.",
     "promo.eyebrow": "Новинка", "promo.text": "Перманентний макіяж <strong>губ</strong> і <strong>стрілка</strong> — стартуємо! Працюємо на моделях за промоціною (за згоду на фото), кількість місць обмежена. Безкоштовна консультація.", "promo.btn": "Запитати про час",
     "gal.eyebrow": "Портфоліо", "gal.h2": "Галерея <em>робіт</em>",
-    "gal.p": "Роботи, сертифікати й закулісся нашої студії. Повна галерея — в Instagram.",
+    "gal.p": "Роботи нашої студії — фото публікуємо за згодою клієнток. Повна галерея — в Instagram.",
     "gal.btn": "&#9670; Більше в Instagram",
     "rev.eyebrow": "Відгуки", "rev.h2": "Що кажуть <em>наші клієнтки</em>",
     "faq.eyebrow": "Часті питання", "faq.h2": "Найчастіші <em>питання</em>",
@@ -1814,8 +1853,10 @@ const I18N = {
     "gal.2t": "Brows: combined method", "gal.2s": "Permanent makeup", "gal.2a": "Brows, combined method — permanent makeup",
     "gal.3t": "Brows: hair-stroke method", "gal.3s": "Permanent makeup", "gal.3a": "Brows, hair-stroke method — permanent makeup",
     "gal.4t": "Brow architecture", "gal.4s": "Brow mapping", "gal.4a": "Brow architecture",
-    "gal.5t": "Expert certificate", "gal.5s": "Training &amp; development", "gal.5a": "Anna Zelinska — expert certificate",
-    "gal.6t": "Pigmentology", "gal.6s": "Certificate", "gal.6a": "Anna Zelinska — Pigmentology certificate",
+    "gal.7t": "Anna at work", "gal.7s": "Zelika studio", "gal.7a": "Anna Zelinska during a treatment at Zelika studio",
+    "gal.8t": "Permanent brow makeup", "gal.8s": "Treatment result", "gal.8a": "Permanent brow makeup — work by Zelika studio",
+    "kwal.c1t": "Expert certificate", "kwal.c1s": "Training &amp; development", "kwal.c1a": "Anna Zelinska — expert certificate",
+    "kwal.c2t": "Pigmentology", "kwal.c2s": "Certificate", "kwal.c2a": "Anna Zelinska — Pigmentology certificate",
     "rev.all": "See all reviews on Google &#8594;", "por.all": "All tips &#8594;",
     "day.1": "Monday", "day.2": "Tuesday", "day.3": "Wednesday", "day.4": "Thursday", "day.5": "Friday", "day.6": "Saturday", "day.7": "Sunday",
     "hours.closed": "closed",
@@ -1851,7 +1892,7 @@ const I18N = {
     "ef.eyebrow": "Results", "ef.h2": "Before &amp; <em>after</em>", "ef.p": "Real work — photos taken right after the treatment, published with clients' consent.",
     "promo.eyebrow": "New", "promo.text": "Permanent <strong>lip</strong> makeup and <strong>eyeliner</strong> — now launching! We work on models at a promotional price (in exchange for photo consent), limited spots. Free consultation.", "promo.btn": "Ask about a date",
     "gal.eyebrow": "Portfolio", "gal.h2": "Our <em>work</em>",
-    "gal.p": "Our work, certificates and behind-the-scenes. Full gallery on Instagram.",
+    "gal.p": "Our studio's work — photos published with clients' consent. Full gallery on Instagram.",
     "gal.btn": "&#9670; See more on Instagram",
     "rev.eyebrow": "Reviews", "rev.h2": "What <em>our clients</em> say",
     "faq.eyebrow": "FAQ", "faq.h2": "Frequently asked <em>questions</em>",
@@ -2181,6 +2222,15 @@ async function localizedPage(request, env, api, lang, pageKey) {
     } });
   }
   if (home) {
+    // Galeria z bota: pierwsze N kafelków (reszta — statyczne zdjęcia strony)
+    const tiles = homeGallery(content, lang);
+    if (tiles.length) {
+      let gi = 0;
+      rw = rw.on(".gallery-grid .gitem", { element(e) {
+        const t = tiles[gi++];
+        if (t) e.setInnerContent(galleryTileInner(t), { html: true });
+      } });
+    }
     // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
     if (cat) {
       rw = rw.on(".svc-cats", { element(e) { e.setInnerContent(cennikHtml(cat, lang, pageFor), { html: true }); } });
