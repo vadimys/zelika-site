@@ -46,6 +46,43 @@ function pageImgSrc(img) {
   return /^\/(?![\/\\])/.test(s) ? s : "";
 }
 
+// ── Galeria na stronie głównej z bota (/api/content → home_gallery) ──────────────
+// Anna wybiera w bocie do 6 zdjęć z albumu „Blog” (tylko za zgodą klientek) i usługę z cennika do
+// każdego. Podpis — nazwa usługi i kategoria w języku strony. Pierwsze N kafelków .gitem dostaje
+// zdjęcia z bota, reszta zostaje statyczna (już przetłumaczona przez [data-i18n]).
+const GALLERY_MAX = 6;
+const GALLERY_ALT = {
+  pl: { suffix: "efekt zabiegu, Studio Zelika Wieluń", plain: "Realizacja Studia Zelika, Wieluń" },
+  uk: { suffix: "результат процедури, студія Zelika, Велюнь", plain: "Робота студії Zelika, Велюнь" },
+  en: { suffix: "treatment result, Zelika studio, Wieluń", plain: "Zelika studio work, Wieluń" },
+};
+function homeGallery(content, lang) {
+  const list = content && Array.isArray(content.home_gallery) ? content.home_gallery : [];
+  const items = new Map((content && Array.isArray(content.cennik_items) ? content.cennik_items : []).map((it) => [it && it.id, it]));
+  const cats = new Map((content && Array.isArray(content.cennik_categories) ? content.cennik_categories : []).map((c) => [c && c.key, c]));
+  const alt = GALLERY_ALT[lang] || GALLERY_ALT.pl;
+  const out = [];
+  for (const g of list) {
+    if (out.length >= GALLERY_MAX) break;
+    const url = g ? str(g.url) : "";
+    if (!url.startsWith(MEDIA_PREFIX)) continue;
+    const src = mediaSrc(url);
+    if (!src) continue;
+    const it = items.get(g.item);
+    const title = it ? str((lang === "uk" && it.name_uk) || (lang === "en" && it.name_en) || it.name) : "";
+    const c = it ? cats.get(it.category) : null;
+    const sub = c ? str(c[lang] || c.pl) : "";
+    out.push({ src, title, sub, alt: title ? `${title} — ${alt.suffix}` : alt.plain });
+  }
+  return out;
+}
+function galleryTileInner(t) {
+  const label = t.title
+    ? `<div class="glabel"><div class="gt">${esc(t.title)}</div>${t.sub ? `<div class="gs">${esc(t.sub)}</div>` : ""}</div>`
+    : "";
+  return `<img src="${esc(t.src)}" width="740" height="986" alt="${esc(t.alt)}" loading="lazy" decoding="async">${label}`;
+}
+
 // Zdjęcia strony /img/photo-N.jpg: obok leży wersja WebP (img/photo-N.webp), a wymiary są
 // znane (width/height → miejsce zarezerwowane przed wczytaniem, bez skoku układu / CLS).
 // <picture>: WebP dla przeglądarek, które go obsługują, JPG jako zapas; og:image dalej JPG.
@@ -2185,6 +2222,15 @@ async function localizedPage(request, env, api, lang, pageKey) {
     } });
   }
   if (home) {
+    // Galeria z bota: pierwsze N kafelków (reszta — statyczne zdjęcia strony)
+    const tiles = homeGallery(content, lang);
+    if (tiles.length) {
+      let gi = 0;
+      rw = rw.on(".gallery-grid .gitem", { element(e) {
+        const t = tiles[gi++];
+        if (t) e.setInnerContent(galleryTileInner(t), { html: true });
+      } });
+    }
     // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
     if (cat) {
       rw = rw.on(".svc-cats", { element(e) { e.setInnerContent(cennikHtml(cat, lang, pageFor), { html: true }); } });
