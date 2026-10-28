@@ -1747,16 +1747,20 @@ const I18N = {
     "kwal.intro": "Пігмент лягає у шкіру на роки — тому важлива не ціна, а знання: підбір відтінку під підтон шкіри, техніка під тип шкіри, гігієна й правильне загоєння. Погано зроблений перманент складно й дорого виправити.",
     "kwal.z1": "Брови", "kwal.z2": "Губи", "kwal.z3": "Очі",
     "hero.alt": "Перманентний макіяж брів — робота студії Zelika, Велюнь",
-    "about.alt": "Анна Зелінська під час процедури в студії Zelika",
+    "about.alt": "Анна Зелінська — лінергістка студії Zelika у Велюні",
     "about.sig": "Експертка PMU й архітектура брів",
     "gal.1t": "Ламінування вій", "gal.1s": "Стилізація", "gal.1a": "Ламінування вій",
     "gal.2t": "Брови: змішана методика", "gal.2s": "Перманентний макіяж", "gal.2a": "Брови, змішана методика — перманентний макіяж",
     "gal.3t": "Брови: волоскова методика", "gal.3s": "Перманентний макіяж", "gal.3a": "Брови, волоскова методика — перманентний макіяж",
     "gal.4t": "Архітектура брів", "gal.4s": "Brow mapping", "gal.4a": "Архітектура брів",
-    "gal.7t": "Анна за роботою", "gal.7s": "Студія Zelika", "gal.7a": "Анна Зелінська під час процедури в студії Zelika",
+    "gal.more": "Більше робіт", "gal.moreS": "в Instagram @annazelika",
     "gal.8t": "Перманентний макіяж брів", "gal.8s": "Результат процедури", "gal.8a": "Перманентний макіяж брів — робота студії Zelika",
     "kwal.c1t": "Сертифікат експерта", "kwal.c1s": "Навчання й розвиток", "kwal.c1a": "Анна Зелінська — сертифікат експерта",
     "kwal.c2t": "Pigmentology", "kwal.c2s": "Сертифікат", "kwal.c2a": "Анна Зелінська — сертифікат Pigmentology",
+    "kwal.d1a": "Сертифікат Hasnutdinova — перманентний макіяж брів, Анна Зелінська",
+    "kwal.d2a": "Сертифікат Hasnutdinova — перманентний макіяж губ, Анна Зелінська",
+    "kwal.d3a": "Сертифікат Hasnutdinova — перманентний макіяж очей (стрілка), Анна Зелінська",
+    "kwal.dnote": "Hasnutdinova · 84 год теорії + 56 год практики",
     "rev.all": "Усі відгуки в Google &#8594;", "por.all": "Усі поради &#8594;",
     "day.1": "Понеділок", "day.2": "Вівторок", "day.3": "Середа", "day.4": "Четвер", "day.5": "Пʼятниця", "day.6": "Субота", "day.7": "Неділя",
     "hours.closed": "вихідний",
@@ -1847,16 +1851,20 @@ const I18N = {
     "kwal.intro": "Pigment stays in the skin for years — so what matters is not the price but the knowledge: matching the shade to your skin's undertone, technique suited to your skin type, hygiene and proper healing. Poorly done permanent makeup is hard and costly to fix.",
     "kwal.z1": "Brows", "kwal.z2": "Lips", "kwal.z3": "Eyes",
     "hero.alt": "Permanent brow makeup — work by Zelika studio, Wieluń",
-    "about.alt": "Anna Zelinska during a treatment at Zelika studio",
+    "about.alt": "Anna Zelinska — PMU artist at Zelika studio in Wieluń",
     "about.sig": "PMU expert &amp; brow architecture",
     "gal.1t": "Lash lamination", "gal.1s": "Styling", "gal.1a": "Lash lamination",
     "gal.2t": "Brows: combined method", "gal.2s": "Permanent makeup", "gal.2a": "Brows, combined method — permanent makeup",
     "gal.3t": "Brows: hair-stroke method", "gal.3s": "Permanent makeup", "gal.3a": "Brows, hair-stroke method — permanent makeup",
     "gal.4t": "Brow architecture", "gal.4s": "Brow mapping", "gal.4a": "Brow architecture",
-    "gal.7t": "Anna at work", "gal.7s": "Zelika studio", "gal.7a": "Anna Zelinska during a treatment at Zelika studio",
+    "gal.more": "More of our work", "gal.moreS": "on Instagram @annazelika",
     "gal.8t": "Permanent brow makeup", "gal.8s": "Treatment result", "gal.8a": "Permanent brow makeup — work by Zelika studio",
     "kwal.c1t": "Expert certificate", "kwal.c1s": "Training &amp; development", "kwal.c1a": "Anna Zelinska — expert certificate",
     "kwal.c2t": "Pigmentology", "kwal.c2s": "Certificate", "kwal.c2a": "Anna Zelinska — Pigmentology certificate",
+    "kwal.d1a": "Hasnutdinova certificate — permanent brow makeup, Anna Zelinska",
+    "kwal.d2a": "Hasnutdinova certificate — permanent lip makeup, Anna Zelinska",
+    "kwal.d3a": "Hasnutdinova certificate — permanent eye makeup (lash line), Anna Zelinska",
+    "kwal.dnote": "Hasnutdinova · 84 h theory + 56 h practice",
     "rev.all": "See all reviews on Google &#8594;", "por.all": "All tips &#8594;",
     "day.1": "Monday", "day.2": "Tuesday", "day.3": "Wednesday", "day.4": "Thursday", "day.5": "Friday", "day.6": "Saturday", "day.7": "Sunday",
     "hours.closed": "closed",
@@ -2228,7 +2236,10 @@ async function localizedPage(request, env, api, lang, pageKey) {
       let gi = 0;
       rw = rw.on(".gallery-grid .gitem", { element(e) {
         const t = tiles[gi++];
-        if (t) e.setInnerContent(galleryTileInner(t), { html: true });
+        if (!t) return;
+        // plitka „Więcej na Instagramie” (<a>) — zdjęcie z bota zastępuje cały element, bez linku
+        if (e.tagName === "a") e.replace(`<div class="gitem reveal d3">${galleryTileInner(t)}</div>`, { html: true });
+        else e.setInnerContent(galleryTileInner(t), { html: true });
       } });
     }
     // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
