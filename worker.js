@@ -47,7 +47,7 @@ function pageImgSrc(img) {
 }
 
 // ── Galeria na stronie głównej z bota (/api/content → home_gallery) ──────────────
-// Anna wybiera w bocie do 6 zdjęć z albumu „Blog” (tylko za zgodą klientek) i usługę z cennika do
+// Anna wybiera w bocie do 6 zdjęć z folderów prac (tylko za zgodą klientek) i usługę z cennika do
 // każdego. Podpis — nazwa usługi i kategoria w języku strony. Pierwsze N kafelków .gitem dostaje
 // zdjęcia z bota, reszta zostaje statyczna (już przetłumaczona przez [data-i18n]).
 const GALLERY_MAX = 6;
@@ -81,6 +81,31 @@ function galleryTileInner(t) {
     ? `<div class="glabel"><div class="gt">${esc(t.title)}</div>${t.sub ? `<div class="gs">${esc(t.sub)}</div>` : ""}</div>`
     : "";
   return `<img src="${esc(t.src)}" width="740" height="986" alt="${esc(t.alt)}" loading="lazy" decoding="async">${label}`;
+}
+
+// ── Zdjęcia studia w „O mnie” z bota (/api/content → about_photos) ───────────────
+// Anna wybiera w bocie do 3 zdjęć z folderu „Studio i mistrzyni”. Portret zostaje; pasek pod
+// statystykami. Brak zdjęć — brak paska (strona jak dotąd).
+const ABOUT_MAX = 3;
+const ABOUT_ALT = { pl: "Studio Zelika w Wieluniu", uk: "Студія Zelika у Велюні", en: "Zelika studio in Wieluń" };
+function aboutPhotos(content, lang) {
+  const list = content && Array.isArray(content.about_photos) ? content.about_photos : [];
+  const srcs = [];
+  for (const p of list) {
+    if (srcs.length >= ABOUT_MAX) break;
+    const url = p ? str(p.url) : "";
+    if (!url.startsWith(MEDIA_PREFIX)) continue;
+    const src = mediaSrc(url);
+    if (src) srcs.push(src);
+  }
+  const alt = ABOUT_ALT[lang] || ABOUT_ALT.pl;
+  return srcs.map((src, i) => ({ src, alt: srcs.length > 1 ? `${alt} (${i + 1}/${srcs.length})` : alt }));
+}
+function aboutStudioHtml(photos) {
+  const figs = photos
+    .map((p) => `<figure><img src="${esc(p.src)}" width="640" height="480" alt="${esc(p.alt)}" loading="lazy" decoding="async"></figure>`)
+    .join("");
+  return `<div class="about-studio reveal d3">${figs}</div>`;
 }
 
 // Zdjęcia strony /img/photo-N.jpg: obok leży wersja WebP (img/photo-N.webp), a wymiary są
@@ -2241,6 +2266,11 @@ async function localizedPage(request, env, api, lang, pageKey) {
         if (e.tagName === "a") e.replace(`<div class="gitem reveal d3">${galleryTileInner(t)}</div>`, { html: true });
         else e.setInnerContent(galleryTileInner(t), { html: true });
       } });
+    }
+    // Zdjęcia studia pod tekstem „O mnie” (portret bez zmian)
+    const studio = aboutPhotos(content, lang);
+    if (studio.length) {
+      rw = rw.on(".about-stats", { element(e) { e.after(aboutStudioHtml(studio), { html: true }); } });
     }
     // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
     if (cat) {
