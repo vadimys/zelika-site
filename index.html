@@ -306,10 +306,10 @@
   .jstep p{color:var(--muted);font-size:.9rem;line-height:1.55;}
   @media(max-width:920px){.jak-grid{grid-template-columns:1fr 1fr;gap:26px;}}
   @media(max-width:560px){.jak-grid{grid-template-columns:1fr;}}
-  /* Efekty — слайдер до/після (Proof pillar; спить до фото) */
+  /* Efekty — слайдер до/після (Proof pillar): пари малює Worker з бота, без пар секція hidden */
   .efekty{background:linear-gradient(180deg,transparent,var(--bg-soft) 50%,transparent);}
   .ba-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:900px;margin:0 auto;}
-  .ba{position:relative;margin:0;aspect-ratio:4/5;border-radius:6px;overflow:hidden;border:1px solid var(--line-gold);box-shadow:0 14px 40px rgba(31,94,48,.14);--p:50%;}
+  .ba{position:relative;margin:0;width:100%;max-width:420px;justify-self:center;aspect-ratio:4/5;border-radius:6px;overflow:hidden;border:1px solid var(--line-gold);box-shadow:0 14px 40px rgba(31,94,48,.14);--p:50%;}
   .ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
   .ba .ba-before{clip-path:inset(0 calc(100% - var(--p)) 0 0);}
   .ba .ba-handle{position:absolute;top:0;bottom:0;left:var(--p);width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.18);transform:translateX(-1px);pointer-events:none;z-index:3;}
@@ -609,12 +609,12 @@
     </div>
   </section>
 
-  <section class="efekty" id="efekty" data-tag-before="Przed" data-tag-after="Po" data-i18n-attrs="data-tag-before=ef.before data-tag-after=ef.after" hidden>
+  <section class="efekty" id="efekty" hidden>
     <div class="container">
       <div class="section-head">
         <span data-i18n="ef.eyebrow" class="eyebrow">Efekty</span>
         <h2 data-i18n="ef.h2">Przed i <em>po</em></h2>
-        <p data-i18n="ef.p">Prawdziwe realizacje — zdjęcia tuż po zabiegu, publikowane za zgodą klientek.</p>
+        <p data-i18n="ef.p">Prawdziwe realizacje studia, publikowane za zgodą klientek. Przy każdej parze zaznaczamy, czy to efekt tuż po zabiegu, czy po wygojeniu.</p>
       </div>
       <div class="ba-wrap" id="ba-wrap"></div>
     </div>
@@ -829,7 +829,6 @@
     <div class="zchat-foot">Wirtualny asystent &mdash; nie udziela porad medycznych</div>
   </section>
   <script src="chat.js"></script>
-<script src="ba-data.js" defer></script>
 <script src="ba.js" defer></script>
 
 <style>

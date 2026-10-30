@@ -108,6 +108,53 @@ function aboutStudioHtml(photos) {
   return `<div class="about-studio reveal d3">${figs}</div>`;
 }
 
+// ── Przed i po z bota (/api/content → before_after) ──────────────────────────────
+// Anna składa w bocie do 3 par: zdjęcie „przed”, „po” (tuż po zabiegu albo po wygojeniu) i usługa z cennika.
+// Suwaki renderujemy na serwerze (CSP nie przepuszcza skryptów inline); ba.js tylko porusza suwakiem.
+// Brak par — sekcja #efekty zostaje ukryta.
+const BA_MAX = 3;
+const BA_TAGS = {
+  pl: { before: "Przed", fresh: "Po zabiegu", healed: "Po wygojeniu", plain: "Realizacja Studia Zelika" },
+  uk: { before: "До", fresh: "Одразу після", healed: "Після загоєння", plain: "Робота студії Zelika" },
+  en: { before: "Before", fresh: "Right after", healed: "Healed", plain: "Zelika studio work" },
+};
+function beforeAfter(content, lang) {
+  const list = content && Array.isArray(content.before_after) ? content.before_after : [];
+  const items = new Map((content && Array.isArray(content.cennik_items) ? content.cennik_items : []).map((it) => [it && it.id, it]));
+  const out = [];
+  for (const p of list) {
+    if (out.length >= BA_MAX) break;
+    if (!p || (p.kind !== "fresh" && p.kind !== "healed")) continue;
+    const urls = [str(p.before), str(p.after)];
+    if (!urls.every((u) => u.startsWith(MEDIA_PREFIX))) continue;
+    const [before, after] = urls.map(mediaSrc);
+    if (!before || !after) continue;
+    const it = items.get(p.item);
+    const title = it ? str((lang === "uk" && it.name_uk) || (lang === "en" && it.name_en) || it.name) : "";
+    out.push({ before, after, kind: p.kind, title });
+  }
+  return out;
+}
+function baHtml(pairs, lang) {
+  const t = BA_TAGS[lang] || BA_TAGS.pl;
+  return pairs
+    .map((p) => {
+      const tagA = t[p.kind];
+      const name = p.title || t.plain;
+      return (
+        `<figure class="ba reveal d3" style="--p:50%">` +
+        `<img class="ba-after" src="${esc(p.after)}" width="800" height="1000" alt="${esc(`${name} — ${tagA.toLowerCase()}`)}" loading="lazy" decoding="async">` +
+        `<img class="ba-before" src="${esc(p.before)}" width="800" height="1000" alt="${esc(`${name} — ${t.before.toLowerCase()}`)}" loading="lazy" decoding="async">` +
+        `<span class="ba-tag ba-tag-b">${esc(t.before)}</span><span class="ba-tag ba-tag-a">${esc(tagA)}</span>` +
+        `<span class="ba-handle" aria-hidden="true"></span>` +
+        `<input class="ba-range" type="range" min="0" max="100" value="50" aria-label="${esc(`${t.before} / ${tagA}`)}">` +
+        (p.title ? `<figcaption>${esc(p.title)}</figcaption>` : "") +
+        `</figure>`
+      );
+    })
+    .join("");
+}
+
 // Zdjęcia strony /img/photo-N.jpg: obok leży wersja WebP (img/photo-N.webp), a wymiary są
 // znane (width/height → miejsce zarezerwowane przed wczytaniem, bez skoku układu / CLS).
 // <picture>: WebP dla przeglądarek, które go obsługują, JPG jako zapas; og:image dalej JPG.
@@ -1790,7 +1837,6 @@ const I18N = {
     "day.1": "Понеділок", "day.2": "Вівторок", "day.3": "Середа", "day.4": "Четвер", "day.5": "Пʼятниця", "day.6": "Субота", "day.7": "Неділя",
     "hours.closed": "вихідний",
     "chat.fab": "Відкрити чат із консультанткою",
-    "ef.before": "До", "ef.after": "Після",
     "kwal.b1t": "Перманентний макіяж &middot; архітектура брів",
     "kwal.b1b": "Понад 5 років практики",
     "kwal.b2t": "Перманентний макіяж &middot; метод Aquarelle",
@@ -1818,7 +1864,7 @@ const I18N = {
     "jak.s2h": "Мапінг", "jak.s2p": "Проєктую форму під ваші риси й підбираю відтінок до підтону шкіри.",
     "jak.s3h": "Процедура", "jak.s3p": "Сертифіковані пігменти, одноразові стерильні модулі, повна гігієна.",
     "jak.s4h": "Загоєння й корекція", "jak.s4p": "Докладні рекомендації та ретуш, що закріплює ефект (4–6 тижнів).",
-    "ef.eyebrow": "Ефекти", "ef.h2": "До і <em>після</em>", "ef.p": "Реальні роботи — фото одразу після процедури, публікуються за згодою клієнток.",
+    "ef.eyebrow": "Ефекти", "ef.h2": "До і <em>після</em>", "ef.p": "Реальні роботи студії, публікуємо за згодою клієнток. Біля кожної пари позначаємо, це одразу після процедури чи після загоєння.",
     "promo.eyebrow": "Новинка", "promo.text": "Перманентний макіяж <strong>губ</strong> і <strong>стрілка</strong> — стартуємо! Працюємо на моделях за промоціною (за згоду на фото), кількість місць обмежена. Безкоштовна консультація.", "promo.btn": "Запитати про час",
     "gal.eyebrow": "Портфоліо", "gal.h2": "Галерея <em>робіт</em>",
     "gal.p": "Роботи нашої студії — фото публікуємо за згодою клієнток. Повна галерея — в Instagram.",
@@ -1894,7 +1940,6 @@ const I18N = {
     "day.1": "Monday", "day.2": "Tuesday", "day.3": "Wednesday", "day.4": "Thursday", "day.5": "Friday", "day.6": "Saturday", "day.7": "Sunday",
     "hours.closed": "closed",
     "chat.fab": "Open chat with our consultant",
-    "ef.before": "Before", "ef.after": "After",
     "kwal.b1t": "Permanent makeup &middot; brow architecture",
     "kwal.b1b": "Over 5 years of practice",
     "kwal.b2t": "Permanent makeup &middot; Aquarelle method",
@@ -1922,7 +1967,7 @@ const I18N = {
     "jak.s2h": "Mapping", "jak.s2p": "I design the shape for your features and match the shade to your skin's undertone.",
     "jak.s3h": "Treatment", "jak.s3p": "Certified pigments, single-use sterile modules, full hygiene.",
     "jak.s4h": "Healing & touch-up", "jak.s4p": "Detailed aftercare and a retouch that sets the result (4–6 weeks).",
-    "ef.eyebrow": "Results", "ef.h2": "Before &amp; <em>after</em>", "ef.p": "Real work — photos taken right after the treatment, published with clients' consent.",
+    "ef.eyebrow": "Results", "ef.h2": "Before &amp; <em>after</em>", "ef.p": "Real work from our studio, published with clients' consent. Each pair is marked as right after the treatment or healed.",
     "promo.eyebrow": "New", "promo.text": "Permanent <strong>lip</strong> makeup and <strong>eyeliner</strong> — now launching! We work on models at a promotional price (in exchange for photo consent), limited spots. Free consultation.", "promo.btn": "Ask about a date",
     "gal.eyebrow": "Portfolio", "gal.h2": "Our <em>work</em>",
     "gal.p": "Our studio's work — photos published with clients' consent. Full gallery on Instagram.",
@@ -2271,6 +2316,13 @@ async function localizedPage(request, env, api, lang, pageKey) {
     const studio = aboutPhotos(content, lang);
     if (studio.length) {
       rw = rw.on(".about-stats", { element(e) { e.after(aboutStudioHtml(studio), { html: true }); } });
+    }
+    // Przed i po: suwaki z bota; brak par — sekcja zostaje ukryta
+    const pairs = beforeAfter(content, lang);
+    if (pairs.length) {
+      rw = rw
+        .on("#efekty", { element(e) { e.removeAttribute("hidden"); } })
+        .on("#ba-wrap", { element(e) { e.setInnerContent(baHtml(pairs, lang), { html: true }); } });
     }
     // Cennik renderowany na serwerze (Google/AI widzą aktualne ceny bez JS).
     if (cat) {
