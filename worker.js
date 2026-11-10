@@ -531,7 +531,7 @@ const postsOf = (res) => (res && res.data && Array.isArray(res.data.posts) ? res
 // Slug: małe litery, cyfry, „-” (jak slugify bota). Nazwy zajęte przez istniejące
 // trasy/katalogi nigdy nie są stroną usługi (nie zasłaniamy ich).
 const PAGE_SLUG_RE = /^[a-z0-9-]{1,120}$/;
-const RESERVED_SLUGS = new Set(["uk", "en", "porady", "quiz", "prywatnosc", "media", "img", "index", "sitemap", "robots", "llms", "api"]);
+const RESERVED_SLUGS = new Set(["uk", "en", "porady", "quiz", "prywatnosc", "media", "img", "index", "sitemap", "robots", "llms", "api", "zapis"]);
 const isPageSlug = (s) => typeof s === "string" && PAGE_SLUG_RE.test(s) && !RESERVED_SLUGS.has(s);
 // Opublikowane strony z listy (pomijamy wpisy bez slug/tytułu i powtórzone slugi).
 function pagesOf(res) {
@@ -2449,6 +2449,27 @@ function canonicalPath(p) {
   }
   return null;
 }
+// ── Krótki link do rezerwacji: /zapis → Booksy ─────────────────────────────────────
+// Do bio na Instagramie (i wizytówek, ulotek): Instagram pokazuje w profilu adres pierwszego linku, a link Booksy
+// jest bardzo długi — „zelika.pl/zapis” wygląda czytelnie. 302 bez cache: cel można zmienić bez starych przekierowań
+// w przeglądarkach. W logach Workera (observability) — jedno zdarzenie na kliknięcie: tylko źródło (?z=… albo host
+// referera, np. l.instagram.com), bez IP i danych osobowych — żeby policzyć wejścia z Instagrama.
+function bookingRedirect(request, url) {
+  let src = (url.searchParams.get("z") || "").replace(/[^a-z0-9_-]/gi, "").slice(0, 32);
+  if (!src) {
+    try {
+      src = new URL(request.headers.get("Referer") || "").hostname;
+    } catch (_) {
+      src = "";
+    }
+  }
+  console.log(JSON.stringify({ event: "zapis", src: src || "direct" }));
+  return new Response(null, {
+    status: 302,
+    headers: { Location: BOOKSY, "Cache-Control": "no-store", "X-Robots-Tag": "noindex", ...SEC_HEADERS },
+  });
+}
+
 function redirect301(location, maxAge = 3600) {
   return new Response(null, {
     status: 301,
@@ -2510,6 +2531,7 @@ const site = {
     const path = url.pathname.replace(/\/+$/, "") || "/";
     const api = makeApi(env, ctx);
 
+    if (path === "/zapis") return bookingRedirect(request, url);
     if (path === "/porady") return renderIndex(api);
     if (path.startsWith("/porady/")) {
       let slug;
