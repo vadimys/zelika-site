@@ -36,8 +36,10 @@
   // ustawia zgodę „denied" ZANIM async gtag.js się wykona.
 
   // Styl banera (style-src 'unsafe-inline' pokrywa wstrzyknięty <style>).
+  // Telefon (≤600px): niski pasek — 2 linijki tekstu + przyciski obok siebie, żeby
+  // nie zasłaniał przycisku rezerwacji na pierwszym ekranie.
   var css =
-    "#zconsent-bar{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#fffdf6;border-top:1px solid rgba(169,134,60,.3);box-shadow:0 -6px 24px rgba(31,94,48,.12);padding:14px 20px;display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap;font-family:'Jost',system-ui,sans-serif;font-weight:300;color:#272b22;font-size:.9rem}" +
+    "#zconsent-bar{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#fffdf6;border-top:1px solid rgba(169,134,60,.3);box-shadow:0 -6px 24px rgba(31,94,48,.12);padding:14px 20px calc(14px + env(safe-area-inset-bottom));display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap;font-family:'Jost',system-ui,sans-serif;font-weight:300;color:#272b22;font-size:.9rem}" +
     "#zconsent-bar .zc-txt{max-width:700px;line-height:1.5}" +
     "#zconsent-bar .zc-btns{display:flex;gap:10px;flex-shrink:0}" +
     "#zconsent-bar button{cursor:pointer;font-family:inherit;font-size:.85rem;letter-spacing:.02em;padding:10px 24px;border-radius:999px;border:1px solid #1f5e30;transition:.25s}" +
@@ -45,28 +47,52 @@
     "#zconsent-bar .zc-acc:hover{background:#2f7d44}" +
     "#zconsent-bar .zc-rej{background:transparent;color:#1f5e30}" +
     "#zconsent-bar .zc-rej:hover{background:rgba(31,94,48,.08)}" +
-    "@media(max-width:600px){#zconsent-bar{flex-direction:column;gap:12px;text-align:center}#zconsent-bar .zc-btns{width:100%}#zconsent-bar button{flex:1}}";
+    "@media(max-width:600px){#zconsent-bar{gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));font-size:.8rem}#zconsent-bar .zc-txt{line-height:1.4;text-align:center}#zconsent-bar .zc-btns{width:100%}#zconsent-bar button{flex:1;padding:8px 12px;font-size:.82rem}}";
   var st = document.createElement("style");
   st.textContent = css;
   document.head.appendChild(st);
+
+  // Wysokość banera → zmienna CSS --zc-h na <html> (przycisk czatu i pasek „Umów wizytę"
+  // stają NAD banerem, zamiast go zasłaniać) + zdarzenie „zconsent:bar" dla /nav.js.
+  var ro = null;
+  function publishHeight(bar) {
+    var h = bar && bar.isConnected ? Math.ceil(bar.getBoundingClientRect().height) : 0;
+    var root = document.documentElement;
+    if (h) root.style.setProperty("--zc-h", h + "px");
+    else root.style.removeProperty("--zc-h");
+    try { window.dispatchEvent(new CustomEvent("zconsent:bar", { detail: { h: h } })); } catch (e) {}
+  }
+  function onResize() { publishHeight(document.getElementById("zconsent-bar")); }
 
   function setConsent(v) {
     try { localStorage.setItem("zconsent", v); } catch (e) {}
     if (v === "granted") gtag("consent", "update", GRANT);
     var bar = document.getElementById("zconsent-bar");
     if (bar) bar.remove();
+    if (ro) { ro.disconnect(); ro = null; }
+    window.removeEventListener("resize", onResize);
+    publishHeight(null);
   }
 
   function showBanner() {
     if (document.getElementById("zconsent-bar")) return;
     var bar = document.createElement("div");
     bar.id = "zconsent-bar";
+    bar.setAttribute("role", "region");
+    bar.setAttribute("aria-label", "Zgoda na pliki cookie");
     bar.innerHTML =
-      '<div class="zc-txt">Ta strona używa plików cookie do celów analitycznych i marketingowych, aby ulepszać nasze usługi. Możesz zaakceptować lub odrzucić — Twój wybór zapamiętamy. Szczegóły w <a href="/prywatnosc" style="color:#1f5e30;text-decoration:underline">Polityce prywatności</a>.</div>' +
+      '<div class="zc-txt">Używamy plików cookie do analityki i reklam — tylko za Twoją zgodą. Szczegóły w <a href="/prywatnosc" style="color:#1f5e30;text-decoration:underline">Polityce prywatności</a>.</div>' +
       '<div class="zc-btns"><button type="button" class="zc-acc">Akceptuję</button><button type="button" class="zc-rej">Odrzucam</button></div>';
     document.body.appendChild(bar);
     bar.querySelector(".zc-acc").addEventListener("click", function () { setConsent("granted"); });
     bar.querySelector(".zc-rej").addEventListener("click", function () { setConsent("denied"); });
+    publishHeight(bar);
+    if (typeof window.ResizeObserver === "function") {
+      ro = new ResizeObserver(onResize);
+      ro.observe(bar);
+    } else {
+      window.addEventListener("resize", onResize);
+    }
   }
 
   function init() {

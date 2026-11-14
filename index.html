@@ -64,7 +64,11 @@
   .hero h1{font-size:clamp(2.4rem,5.2vw,4rem);margin-bottom:8px;}
   .hero h1 em{font-style:italic;color:var(--gold);}
   .hero .lead{color:var(--muted);font-size:1.05rem;max-width:440px;margin:20px 0 34px;}
+  .hero .lead-short{display:none;}
   .hero-actions{display:flex;gap:16px;flex-wrap:wrap;}
+  .hero-tel{margin-top:14px;font-size:.92rem;color:var(--muted);}
+  .hero-tel a{display:inline-block;padding:8px 0;color:var(--green);text-decoration:none;border-bottom:1px solid var(--line-gold);}
+  .hero-tel a:hover{border-bottom-color:var(--green);}
   .btn{display:inline-flex;align-items:center;gap:10px;padding:16px 32px;border-radius:2px;text-decoration:none;font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;transition:.4s ease;cursor:pointer;border:1px solid transparent;font-weight:400;}
   .btn-green{background:var(--green);color:#fff;font-weight:500;}
   .btn-green:hover{background:var(--green-mid);transform:translateY(-2px);box-shadow:0 14px 32px rgba(31,94,48,.24);}
@@ -227,14 +231,12 @@
   .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
   @media(max-width:920px){
     .hero-grid,.about-grid,.contact-grid{grid-template-columns:1fr;gap:46px;}
-    /* Hero на телефонах/планшетах: менший логотип і верхній відступ — кнопка бронювання
-       («Rezerwacja online») на першому екрані (360×740 — повністю, у PL/UK/EN). Відступ не
-       менший за висоту фіксованої шапки (~104px). Розмір лого задає лише width (висота — з
-       viewBox), тож без CLS; display:block прибирає зазор під інлайн-SVG. Десктоп — без змін. */
+    /* Hero на телефонах/планшетах: кнопка бронювання («Rezerwacja online») і телефон — на
+       першому екрані навіть із банером cookie (360×740, PL/UK/EN). Великого логотипа в hero
+       немає: той самий логотип уже є у фіксованій шапці (на телефоні було два поспіль, і вони
+       зсували кнопку за згин). Відступ не менший за висоту шапки (~104px). Десктоп — без змін. */
     .hero{padding-top:116px;}
-    .hero .brand-hero{margin-bottom:16px;}
-    .hero .brand-hero .mark{display:block;width:clamp(160px,46vw,300px);}
-    .hero .brand-hero .tag{font-size:.9rem;line-height:1.4;margin-top:8px;}
+    .hero .brand-hero{display:none;}
     /* Фото роботи + бейдж Google — ПІД H1/lead/CTA (раніше order:-1 ставив його над текстом),
        на всю ширину. Раніше margin:0 auto без потокового вмісту (img/бейдж — absolute)
        стискав блок до ~2×3px. Розмір задають width + aspect-ratio 4/5 (кадр як у файлі) ще
@@ -254,6 +256,15 @@
   }
   @media(max-width:560px){
     .container{padding:0 22px;}
+    /* Hero на телефоні: kicker в один рядок, H1 у два («Makijaż permanentny / w rękach…»),
+       короткий lead (повний — на ширших екранах; обидва в HTML, тож Google бачить повний),
+       кнопки на всю ширину одна під одною (поруч не вміщаються). */
+    .hero .kicker{font-size:.66rem;letter-spacing:.16em;padding:7px 12px;}
+    .hero h1{font-size:clamp(1.85rem,9.2vw,2.4rem);}
+    .hero .lead-full{display:none;}
+    .hero .lead-short{display:block;}
+    .hero-actions{flex-direction:column;gap:10px;}
+    .hero-actions .btn{justify-content:center;}
     .values-grid{grid-template-columns:1fr;}
     .gallery-grid{grid-template-columns:1fr;}
     .gitem-more{aspect-ratio:auto;min-height:200px;}
@@ -263,9 +274,6 @@
   /* Вузькі телефони (360×740 тощо): щільніше, щоб кнопка hero вмістилася на першому екрані */
   @media(max-width:400px){
     .hero{padding-top:110px;}
-    .hero .brand-hero{margin-bottom:12px;}
-    .hero .brand-hero .mark{width:clamp(140px,42vw,168px);}
-    .hero .brand-hero .tag{font-size:.8rem;margin-top:6px;}
     .hero .kicker{margin-bottom:14px;}
     .hero .lead{margin:16px 0 26px;}
   }
@@ -276,10 +284,12 @@
      нижче згину) — смуга видима. Класи ставить /nav.js:
      .sc-js — керування взяв JS, .sc-off — прихована (IntersectionObserver на кнопці hero;
      без IO — показ після прокрутки >60% висоти екрана). Без JS — видима, як раніше.
-     Кнопка чату (.zchat-fab) не рухається: смуга лише з'являється/зникає поруч із нею. */
+     Кнопка чату (.zchat-fab) не рухається: смуга лише з'являється/зникає поруч із нею.
+     Поки відкритий банер cookie, смуга й кнопка чату стоять НАД ним: його висоту /consent.js
+     кладе в --zc-h (без банера — 0, тоді працює safe-area, як раніше). */
   .sticky-cta{display:none;}
   @media(max-width:920px){
-    .sticky-cta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:fixed;left:12px;right:84px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483200;background:var(--green);color:#fbf7ec;text-decoration:none;min-height:56px;padding:9px 18px;border-radius:999px;box-shadow:0 12px 30px -8px rgba(31,94,48,.6);transition:transform .18s,opacity .25s ease-out,translate .35s cubic-bezier(.22,1,.36,1),visibility 0s;}
+    .sticky-cta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:fixed;left:12px;right:84px;bottom:calc(12px + max(env(safe-area-inset-bottom), var(--zc-h, 0px)));z-index:2147483200;background:var(--green);color:#fbf7ec;text-decoration:none;min-height:56px;padding:9px 18px;border-radius:999px;box-shadow:0 12px 30px -8px rgba(31,94,48,.6);transition:transform .18s,opacity .25s ease-out,translate .35s cubic-bezier(.22,1,.36,1),visibility 0s;}
     .sticky-cta:active{transform:scale(.97);}
     .sticky-cta .sc-main{font-weight:500;font-size:1rem;letter-spacing:.02em;}
     .sticky-cta .sc-sub{font-size:.66rem;letter-spacing:.02em;opacity:.86;}
@@ -337,7 +347,7 @@
   .quiz-band .btn-gold:hover{box-shadow:0 14px 32px rgba(0,0,0,.22);}
 
   /* AI konsultantka — widget czatu */
-  .zchat-fab{position:fixed;right:24px;bottom:24px;width:60px;height:60px;border-radius:50%;background:var(--green);color:#fbf7ec;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -8px rgba(31,94,48,.55);z-index:2147483400;transition:transform .3s,box-shadow .3s,opacity .25s;}
+  .zchat-fab{position:fixed;right:24px;bottom:calc(24px + var(--zc-h, 0px));width:60px;height:60px;border-radius:50%;background:var(--green);color:#fbf7ec;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -8px rgba(31,94,48,.55);z-index:2147483400;transition:transform .3s,box-shadow .3s,opacity .25s;}
   .zchat-fab::after{content:"";position:absolute;inset:3px;border-radius:50%;border:1px solid var(--gold-soft);opacity:.5;pointer-events:none;}
   .zchat-fab:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 16px 36px -8px rgba(31,94,48,.65);}
   .zchat-fab.hidden{opacity:0;pointer-events:none;transform:scale(.8);}
@@ -367,7 +377,7 @@
   .zchat-foot{text-align:center;font-size:.66rem;letter-spacing:.03em;color:var(--muted);padding:0 0 10px;background:var(--bg-card);flex:none;}
   @media(max-width:480px){
     .zchat-panel{right:8px;bottom:8px;width:calc(100vw - 16px);height:calc(100vh - 16px);max-height:calc(100vh - 16px);border-radius:12px;}
-    .zchat-fab{right:16px;bottom:16px;}
+    .zchat-fab{right:16px;bottom:calc(16px + var(--zc-h, 0px));}
   }
 
 .reviews{padding:84px 0;background:var(--bg-soft)}
@@ -507,11 +517,13 @@
         </div>
         <span data-i18n="hero.kicker" class="kicker">Certyfikowane studio PMU &middot; Wieluń</span>
         <h1 data-i18n="hero.h1">Makijaż permanentny<br>w rękach <em>specjalisty</em></h1>
-        <p data-i18n="hero.lead" class="lead">Studio PMU w Wieluniu prowadzone przez Annę Zelinską. Certyfikowane pigmenty, jednorazowe materiały i rygorystyczna higiena — bo trwały makijaż to zabieg, przy którym liczy się nie cena, a wiedza i precyzja. Umów niezobowiązującą konsultację.</p>
+        <p data-i18n="hero.lead" class="lead lead-full">Studio PMU w Wieluniu prowadzone przez Annę Zelinską. Certyfikowane pigmenty, jednorazowe materiały i rygorystyczna higiena — bo trwały makijaż to zabieg, przy którym liczy się nie cena, a wiedza i precyzja. Umów niezobowiązującą konsultację.</p>
+        <p data-i18n="hero.lead_short" class="lead lead-short">Certyfikowane pigmenty, jednorazowe materiały i rygorystyczna higiena. Umów bezpłatną konsultację.</p>
         <div class="hero-actions">
           <a data-i18n="hero.book" href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer" class="btn btn-green" data-booksy>Rezerwacja online</a>
           <a data-i18n="hero.services" href="#services" class="btn btn-ghost">Usługi i cennik</a>
         </div>
+        <p class="hero-tel"><a data-i18n="hero.call" href="tel:+48571932161">lub zadzwoń: 571 932 161</a></p>
       </div>
       <div class="hero-visual">
         <picture><source type="image/webp" srcset="/img/photo-1.webp"><img src="img/photo-1.jpg" fetchpriority="high" width="880" height="1100" alt="Makijaż permanentny brwi — efekt pracy Studia Zelika, Wieluń" data-i18n-attrs="alt=hero.alt" decoding="async"></picture>
