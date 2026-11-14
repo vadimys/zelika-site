@@ -923,7 +923,7 @@ h3{font-size:1.25rem;margin:1.3em 0 .3em}
 .crumbs{font-size:.85rem;color:var(--muted);margin:26px 0 0}
 .crumbs a{color:var(--muted)}
 .meta{font-size:.9rem;color:var(--muted);margin:.2em 0 1.4em;border-bottom:1px solid var(--line-gold);padding-bottom:1em}
-.hero-img{width:100%;max-height:400px;object-fit:cover;border-radius:16px;margin:1em 0}
+.hero-img{width:100%;max-height:400px;object-fit:cover;object-position:50% 30%;border-radius:16px;margin:1em 0}
 article p{margin:0 0 1.1em}
 article ul,article ol{margin:0 0 1.1em;padding-left:1.4em}
 article li{margin:0 0 .35em;padding-left:.2em}
@@ -934,7 +934,7 @@ article :is(p,li) a:hover{text-decoration-color:currentColor}
 .lead{font-size:1.08rem;color:var(--muted);margin:.3em 0 2.2em}
 .card{display:block;background:var(--bg-card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:0 0 22px;transition:box-shadow .25s,transform .25s}
 .card:hover{box-shadow:0 12px 34px rgba(31,94,48,.12);transform:translateY(-2px);text-decoration:none}
-.card img{width:100%;height:200px;object-fit:cover;display:block}
+.card img{width:100%;height:200px;object-fit:cover;object-position:50% 30%;display:block}
 .card .body{padding:18px 22px}
 .card h2{margin:.1em 0 .3em;font-size:1.35rem}
 .card p{margin:0;color:var(--muted);font-size:.96rem}
