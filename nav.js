@@ -33,14 +33,29 @@
     if (heroCta) {
       setBar(false);
       if (typeof window.IntersectionObserver === "function") {
-        // кнопка під фіксованою шапкою — вже «не видно»
+        // кнопка під фіксованою шапкою або під банером cookie внизу — вже «не видно».
+        // Висоту банера шле /consent.js (подія zconsent:bar): показ, зміна розміру, закриття —
+        // тоді спостерігач перебудовується з новим нижнім відступом.
+        // Кнопка «видна», коли на екрані щонайменше половина її висоти (1 px з-під банера —
+        // це не видно).
         var headH = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
-        new IntersectionObserver(
-          function (es) {
-            setBar(!es[es.length - 1].isIntersecting);
-          },
-          { rootMargin: "-" + headH + "px 0px 0px 0px" }
-        ).observe(heroCta);
+        var io = null;
+        var watch = function (bottomH) {
+          if (io) io.disconnect();
+          io = new IntersectionObserver(
+            function (es) {
+              var e = es[es.length - 1];
+              setBar(!(e.isIntersecting && e.intersectionRatio >= 0.5));
+            },
+            { rootMargin: "-" + headH + "px 0px -" + (bottomH || 0) + "px 0px", threshold: [0, 0.5] }
+          );
+          io.observe(heroCta);
+        };
+        var zc = document.getElementById("zconsent-bar");
+        watch(zc ? Math.ceil(zc.getBoundingClientRect().height) : 0);
+        window.addEventListener("zconsent:bar", function (e) {
+          watch(e && e.detail ? e.detail.h : 0);
+        });
       } else {
         var onBarScroll = function () {
           setBar(window.scrollY > window.innerHeight * 0.6);
