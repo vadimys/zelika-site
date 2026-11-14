@@ -1454,7 +1454,13 @@ function pageCtaHtml(booksy) {
 // + wolny/leżący origin), dla tych adresów pytamy o pojedynczą stronę: jest → render,
 // naprawdę zdjęta (404) → 404, brak danych → 503 (jak porada), nie fałszywe 404.
 // Inne adresy bez listy → zwykłe 404, bez dodatkowego pytania originu.
-const KNOWN_PAGE_SLUGS = new Set(["makijaz-permanentny-brwi-wielun", "laminacja-brwi-wielun", "laminacja-rzes-wielun"]);
+const KNOWN_PAGE_SLUGS = new Set([
+  "makijaz-permanentny-brwi-wielun",
+  "makijaz-permanentny-ust-wielun", // 14.11.2026
+  "kreska-miedzyrzesowa-wielun", // 14.11.2026
+  "laminacja-brwi-wielun",
+  "laminacja-rzes-wielun",
+]);
 
 // null → to nie jest (opublikowana) strona usługi: router oddaje dotychczasowe 404.
 async function renderServicePage(request, api, slug, trailingSlash) {
