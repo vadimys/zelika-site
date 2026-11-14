@@ -1070,12 +1070,12 @@ function htmlResponse(html, status = 200, sMaxAge = 300, extra = {}) {
       "Cross-Origin-Resource-Policy": "same-origin",
       "Content-Security-Policy":
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-        "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://www.google.pl https://googleads.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
+        "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://*.google-analytics.com https://www.google.com https://www.google.pl https://googleads.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://booksy.com; " +
         "font-src https://fonts.gstatic.com; " +
         "script-src 'self' https://booksy.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net; " +
         "frame-src https://booksy.com https://td.doubleclick.net; " +
-        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://ad.doubleclick.net https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
+        "connect-src 'self' https://booksy.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://stats.g.doubleclick.net https://ad.doubleclick.net https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
         "form-action 'self' https://booksy.com; upgrade-insecure-requests",
     },
   });
@@ -1760,15 +1760,18 @@ async function renderSitemap(api) {
 // CSP tylko dla strony głównej (czat + Turnstile). Względem _headers: script-src
 // ma 'unsafe-inline' zamiast hasha (Turnstile wstrzykuje inline-skrypt z losowym
 // tokenem) oraz challenges.cloudflare.com w script-src/frame-src/connect-src.
+// GA4 (gtag) wysyła trafienia na region1.analytics.google.com (i stats.g.doubleclick.net dla
+// Google Signals), awaryjnie obrazkiem na *.google-analytics.com — te hosty są we WSZYSTKICH
+// trzech CSP (tu, layout() i _headers); do 14.11.2026 ich brakowało i CSP blokował page_view.
 const HOMEPAGE_CSP =
   "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
   "form-action 'self' https://booksy.com; " +
-  "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://www.google.com https://www.google.pl https://googleads.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
+  "img-src 'self' data: https://booksy.com https://www.googletagmanager.com https://*.google-analytics.com https://www.google.com https://www.google.pl https://googleads.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net; " +
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://booksy.com; " +
   "font-src https://fonts.gstatic.com; " +
   "script-src 'self' 'unsafe-inline' https://booksy.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://challenges.cloudflare.com; " +
   "frame-src https://booksy.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
-  "connect-src 'self' https://zelika-chat.vadimzelinshy.workers.dev https://hooks.zelika.pl https://booksy.com https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://ad.doubleclick.net https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
+  "connect-src 'self' https://zelika-chat.vadimzelinshy.workers.dev https://hooks.zelika.pl https://booksy.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://stats.g.doubleclick.net https://ad.doubleclick.net https://googleads.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://td.doubleclick.net https://challenges.cloudflare.com; " +
   "upgrade-insecure-requests";
 
 // ── i18n: PL (база) + UA + EN. Один PL-шаблон (index.html з data-i18n) →
