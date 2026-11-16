@@ -507,11 +507,14 @@ function makeApi(env, ctx) {
   };
   const isObj = (d) => d != null && typeof d === "object";
   return {
-    content: () =>
+    // soft — без czekania na origin (pasek wydarzenia na blogu): kopia albo nic, pobranie w tle
+    content: ({ soft = false } = {}) =>
       get("/api/content", {
         ttls: LIST_TTLS,
+        soft,
         valid: (d) => isObj(d) && Array.isArray(d.cennik_items) && d.cennik_items.length > 0,
       }),
+    today: () => warsawToday(env),
     posts: () => get("/api/posts", { ttls: LIST_TTLS, valid: (d) => isObj(d) && Array.isArray(d.posts) }),
     post: (slug) =>
       get("/api/posts/" + encodeURIComponent(slug), { ttls: POST_TTLS, gone404: true, valid: (d) => isObj(d) && !!d.slug }),
@@ -531,7 +534,7 @@ const postsOf = (res) => (res && res.data && Array.isArray(res.data.posts) ? res
 // Slug: małe litery, cyfry, „-” (jak slugify bota). Nazwy zajęte przez istniejące
 // trasy/katalogi nigdy nie są stroną usługi (nie zasłaniamy ich).
 const PAGE_SLUG_RE = /^[a-z0-9-]{1,120}$/;
-const RESERVED_SLUGS = new Set(["uk", "en", "porady", "quiz", "prywatnosc", "media", "img", "index", "sitemap", "robots", "llms", "api", "zapis"]);
+const RESERVED_SLUGS = new Set(["uk", "en", "porady", "quiz", "prywatnosc", "media", "img", "index", "sitemap", "robots", "llms", "api", "zapis", "bon-podarunkowy"]);
 const isPageSlug = (s) => typeof s === "string" && PAGE_SLUG_RE.test(s) && !RESERVED_SLUGS.has(s);
 // Opublikowane strony z listy (pomijamy wpisy bez slug/tytułu i powtórzone slugi).
 function pagesOf(res) {
@@ -1022,8 +1025,9 @@ const asyncFontsHtml = (href) =>
   `<noscript><link rel="stylesheet" href="${href}"></noscript>`;
 
 // header: opcje headerHtml (domyślnie — sekcja porad); css: dodatkowe style strony.
-function layout({ title, description, canonical, ogImage, jsonld, body, noindex, header, css = "" }) {
-  return `<!doctype html><html lang="pl"><head>
+// lang — pl | uk | en (strona bonu); alternates — gotowe <link rel="alternate" hreflang> (strony z wersjami językowymi).
+function layout({ title, description, canonical, ogImage, jsonld, body, noindex, header, css = "", lang = "pl", alternates = "" }) {
+  return `<!doctype html><html lang="${esc(lang)}"><head>
 <meta charset="utf-8">
 <script src="/consent.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18246998055"></script>
@@ -1033,22 +1037,23 @@ function layout({ title, description, canonical, ogImage, jsonld, body, noindex,
 <meta name="description" content="${esc(description)}">
 ${noindex ? '<meta name="robots" content="noindex">' : ""}
 ${canonical ? `<link rel="canonical" href="${esc(canonical)}">` : ""}
+${alternates}
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:type" content="${jsonld && jsonld["@type"] === "BlogPosting" ? "article" : "website"}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 ${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <meta property="og:image" content="${esc(ogImage)}">
-<meta property="og:locale" content="pl_PL">
+<meta property="og:locale" content="${esc((META[lang] || META.pl).locale)}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 ${asyncFontsHtml(FONTS_LAYOUT)}
 <style>${CSS}${SHELL_CSS}${css}</style>
 ${jsonld ? `<script type="application/ld+json">${scriptJson(jsonld)}</script>` : ""}
 </head><body>
-${headerHtml("pl", header || { current: "porady", pl: "/porady" })}
+${headerHtml(lang, header || { current: "porady", pl: "/porady" })}
 <main class="wrap">${body}</main>
-${footerHtml("pl")}
+${footerHtml(lang)}
 <script src="/nav.js" defer></script>
 </body></html>`;
 }
@@ -1689,7 +1694,7 @@ async function renderLlms(api) {
 
 ${services}
 
-${servicePages}## Kontakt i rezerwacja
+${servicePages}${voucherLlms(c, api.today())}## Kontakt i rezerwacja
 
 - Adres: ul. Młodzieżowa 5B, 98-300 Wieluń
 - Telefon: +48 571 932 161
@@ -1702,6 +1707,7 @@ ${blog}## Ważne strony
 - [Strona główna](${SITE}/): oferta, kwalifikacje, cennik, kontakt (wersje: [UA](${SITE}/uk/), [EN](${SITE}/en/))
 - [Porady i inspiracje (blog)](${SITE}/porady)
 - [Quiz „Jaki zabieg brwi dla Ciebie?”](${SITE}/quiz)
+- [Bon podarunkowy](${SITE}${VOUCHER_PATH}) (wersje: [UA](${SITE}/uk${VOUCHER_PATH}), [EN](${SITE}/en${VOUCHER_PATH}))
 - [Polityka prywatności](${SITE}/prywatnosc)
 `;
   return new Response(body, {
@@ -1713,7 +1719,7 @@ ${blog}## Ważne strony
   });
 }
 
-async function renderSitemap(api) {
+async function renderSitemap(api, env) {
   const [postsRes, contentRes, pagesRes] = await Promise.all([api.posts(), api.content(), api.pages()]);
   if (postsRes.source === "none") {
     return new Response("Sitemap chwilowo niedostępna.\n", {
@@ -1736,6 +1742,13 @@ async function renderSitemap(api) {
       pri: "0.9",
       freq: "monthly",
       lastmod: /^\d{4}-\d{2}-\d{2}/.test(modifiedAt(p)) ? modifiedAt(p).slice(0, 10) : undefined,
+    })),
+    // strona bonu (PL/UA/EN): lastmod — dzień ostatniej zmiany treści (fazy wydarzeń z bota), nie „dziś”
+    ...["", "/uk", "/en"].map((p) => ({
+      loc: SITE + p + VOUCHER_PATH,
+      pri: p ? "0.6" : "0.8",
+      freq: "weekly",
+      lastmod: voucherLastmod(eventsOf(contentRes.data), warsawToday(env)),
     })),
     { loc: SITE + "/porady", pri: "0.8", freq: "weekly" },
     { loc: SITE + "/quiz", pri: "0.6", freq: "monthly" },
@@ -1876,7 +1889,7 @@ const I18N = {
     "jak.s3h": "Процедура", "jak.s3p": "Сертифіковані пігменти, одноразові стерильні модулі, повна гігієна.",
     "jak.s4h": "Загоєння й корекція", "jak.s4p": "Докладні рекомендації та ретуш, що закріплює ефект (4–6 тижнів).",
     "ef.eyebrow": "Ефекти", "ef.h2": "До і <em>після</em>", "ef.p": "Реальні роботи студії, публікуємо за згодою клієнток. Біля кожної пари позначаємо, це одразу після процедури чи після загоєння.",
-    "promo.eyebrow": "Новинка", "promo.text": "Перманентний макіяж <strong>губ</strong> і <strong>стрілка</strong> — стартуємо! Працюємо на моделях за промоціною (за згоду на фото), кількість місць обмежена. Безкоштовна консультація.", "promo.btn": "Запитати про час",
+    "promo.eyebrow": "Новинка", "promo.text": "Перманентний макіяж <strong>губ</strong> і <strong>міжвійкова стрілка</strong> — новинка в студії. Почніть із безкоштовної консультації: підберемо колір, форму й техніку саме для вас.", "promo.btn": "Запитати про час",
     "gal.eyebrow": "Портфоліо", "gal.h2": "Галерея <em>робіт</em>",
     "gal.p": "Роботи нашої студії — фото публікуємо за згодою клієнток. Повна галерея — в Instagram.",
     "gal.btn": "&#9670; Більше в Instagram",
@@ -1981,7 +1994,7 @@ const I18N = {
     "jak.s3h": "Treatment", "jak.s3p": "Certified pigments, single-use sterile modules, full hygiene.",
     "jak.s4h": "Healing & touch-up", "jak.s4p": "Detailed aftercare and a retouch that sets the result (4–6 weeks).",
     "ef.eyebrow": "Results", "ef.h2": "Before &amp; <em>after</em>", "ef.p": "Real work from our studio, published with clients' consent. Each pair is marked as right after the treatment or healed.",
-    "promo.eyebrow": "New", "promo.text": "Permanent <strong>lip</strong> makeup and <strong>eyeliner</strong> — now launching! We work on models at a promotional price (in exchange for photo consent), limited spots. Free consultation.", "promo.btn": "Ask about a date",
+    "promo.eyebrow": "New", "promo.text": "Permanent <strong>lip</strong> makeup and <strong>lash-line eyeliner</strong> — new in the studio. Start with a free consultation: we will choose the colour, shape and technique for you.", "promo.btn": "Ask about a date",
     "gal.eyebrow": "Portfolio", "gal.h2": "Our <em>work</em>",
     "gal.p": "Our studio's work — photos published with clients' consent. Full gallery on Instagram.",
     "gal.btn": "&#9670; See more on Instagram",
@@ -2097,10 +2110,10 @@ function hreflangFor(pl) {
       .join("") + `<link rel="alternate" hreflang="x-default" href="${SITE}${pl}">`
   );
 }
-// Wersje UA/EN mają tylko strona główna i quiz. Strony tylko po polsku (blog, porady,
+// Wersje UA/EN mają tylko strona główna, quiz i strona bonu. Strony tylko po polsku (blog, porady,
 // polityka prywatności, strony usług, 404) → UA/EN prowadzą na /uk/ i /en/, nigdy na
 // nieistniejące /uk/porady, /en/prywatnosc itd.
-const LOCALIZED_PATHS = new Set(["/", "/quiz"]);
+const LOCALIZED_PATHS = new Set(["/", "/quiz", "/bon-podarunkowy"]);
 function langHref(code, pl, langHrefs) {
   if (langHrefs && langHrefs[code]) return langHrefs[code];
   return href(code, code === "pl" || LOCALIZED_PATHS.has(pl) ? pl : "/");
@@ -2152,13 +2165,13 @@ ${switcher(lang, pl, langHrefs)}
 </header>`;
 }
 const FOOT = {
-  pl: { line: "Makijaż permanentny &middot; Brwi &middot; Rzęsy", city: "Wieluń", priv: "Polityka prywatności" },
-  uk: { line: "Перманентний макіяж &middot; Брови &middot; Вії", city: "Велюнь", priv: "Політика конфіденційності" },
-  en: { line: "Permanent makeup &middot; Brows &middot; Lashes", city: "Wieluń", priv: "Privacy policy" },
+  pl: { line: "Makijaż permanentny &middot; Brwi &middot; Rzęsy", city: "Wieluń", priv: "Polityka prywatności", bon: "Bon podarunkowy" },
+  uk: { line: "Перманентний макіяж &middot; Брови &middot; Вії", city: "Велюнь", priv: "Політика конфіденційності", bon: "Подарунковий бон" },
+  en: { line: "Permanent makeup &middot; Brows &middot; Lashes", city: "Wieluń", priv: "Privacy policy", bon: "Gift voucher" },
 };
 function footerHtml(lang) {
   const f = FOOT[lang] || FOOT.pl;
-  return `<footer class="site"><div class="container"><a href="${href(lang, "/")}" class="brand" aria-label="Zelika — Home"><svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg><span class="tag">Brows &amp; More</span></a><p class="fline">Anna Zelinska &middot; ${f.line} <span class="fdot">|</span> ${f.city} <span class="fdot">&middot;</span> &copy; 2026 <span class="fdot">&middot;</span> <a href="/prywatnosc">${f.priv}</a> <span class="fdot">&middot;</span> <a href="#" data-cookies>Cookies</a></p></div></footer>`;
+  return `<footer class="site"><div class="container"><a href="${href(lang, "/")}" class="brand" aria-label="Zelika — Home"><svg class="mark" viewBox="67.02 42.13 276.81 155.47"><use href="/logo.svg#zmark"/></svg><span class="tag">Brows &amp; More</span></a><p class="fline">Anna Zelinska &middot; ${f.line} <span class="fdot">|</span> ${f.city} <span class="fdot">&middot;</span> &copy; 2026 <span class="fdot">&middot;</span> <a href="${href(lang, "/bon-podarunkowy")}">${f.bon}</a> <span class="fdot">&middot;</span> <a href="/prywatnosc">${f.priv}</a> <span class="fdot">&middot;</span> <a href="#" data-cookies>Cookies</a></p></div></footer>`;
 }
 const SHELL_CSS = `
 header.nav{position:sticky;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(244,241,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line,#e6e1d3);transition:.45s ease}
@@ -2178,6 +2191,14 @@ header.nav .nav-cta:hover{background:var(--green,#1f5e30);color:#fff!important}
 header.nav .nav-cta::after{display:none!important}
 header.nav .lang-switch a{padding:7px 8px;border-radius:6px;text-decoration:none}
 header.nav .burger{display:none;background:none;border:none;color:var(--green,#1f5e30);font-size:1.7rem;line-height:1;cursor:pointer;padding:6px 8px}
+.evband{background:var(--green,#1f5e30);text-align:center;font-size:.8rem;letter-spacing:.02em;line-height:1.45;padding:9px 16px;position:relative;z-index:51}
+.evband a{color:#fbf7ec;text-decoration:none}
+.evband a:hover{text-decoration:underline;text-underline-offset:3px}
+.evband strong{color:#f1dfb4;font-weight:500}
+.ev-pill-wrap{display:block}
+.ev-pill{display:inline-block;margin:0 0 14px;padding:7px 15px;border-radius:999px;background:rgba(169,134,60,.13);border:1px solid rgba(169,134,60,.38);color:var(--green,#1f5e30);font-size:.8rem;line-height:1.35;letter-spacing:.01em;text-decoration:none;transition:.3s}
+.ev-pill:hover{background:rgba(169,134,60,.22);text-decoration:none}
+.ev-pill strong{font-weight:600}
 footer.site{padding:54px 0 40px;border-top:1px solid var(--line,#e6e1d3);text-align:center;margin-top:40px;background:transparent;color:var(--muted,#6e7365);font-size:.85rem}
 footer.site .container{max-width:1180px;margin:0 auto;padding:0 32px}
 footer.site .brand{align-items:center;display:inline-flex;flex-direction:column;margin-bottom:14px;text-decoration:none;line-height:1}
@@ -2206,7 +2227,7 @@ function localizeHref(s, lang) {
   if (s.startsWith("/porady") || s === "/prywatnosc") return null;
   if (s === "/") return "/" + lang + "/";
   if (s.startsWith("/#")) return "/" + lang + "/" + s.slice(1);
-  if (s === "/quiz") return "/" + lang + s;
+  if (s === "/quiz" || s === "/bon-podarunkowy") return "/" + lang + s;
   return null;
 }
 const SEC_HEADERS = {
@@ -2312,6 +2333,19 @@ async function localizedPage(request, env, api, lang, pageKey) {
       e.append(`<script type="application/json" id="cennik-data">${quizDataJson(cat)}</script>`, { html: true });
     } });
   }
+  // Wydarzenie z bonusem (zapowiedź / trwa): pigułka nad nagłówkiem hero i slot .promo-band zamiast stałego banera
+  const evCur = home ? currentEvent(eventsOf(content), api.today()) : null;
+  const evOn = isOn(evCur);
+  if (evOn) {
+    rw = rw
+      .on(".hero .kicker", { element(e) { e.before(eventPillHtml(evCur, lang), { html: true }); } })
+      .on("#promo-band", { element(e) {
+        e.removeAttribute("hidden");
+        e.removeAttribute("data-needs");
+        e.setAttribute("data-nosnippet", "");
+        e.setInnerContent(eventSlotInner(evCur, lang), { html: true });
+      } });
+  }
   if (home) {
     // Galeria z bota: pierwsze N kafelków (reszta — statyczne zdjęcia strony)
     const tiles = homeGallery(content, lang);
@@ -2394,6 +2428,7 @@ async function localizedPage(request, env, api, lang, pageKey) {
       .on("details.faq-item", { element(e) { faqCur = { ok: needsOk(e), q: "", a: "" }; faq.push(faqCur); } })
       // „uśpione” treści (np. FAQ o ustach) — tylko gdy strefa jest w katalogu
       .on("[data-needs]", { element(e) {
+        if (evOn && e.getAttribute("id") === "promo-band") return; // slot zajmuje wydarzenie (wyżej)
         if (needsOk(e)) e.removeAttribute("hidden");
         else e.remove();
       } })
@@ -2432,6 +2467,529 @@ async function localizedPage(request, env, api, lang, pageKey) {
   return new Response(out.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
+// ── Bon podarunkowy i wydarzenia z bonusem (bot: /api/content → events, vouchers) ──────────────────────────────
+// Wydarzenie z bota („🎉 Події”, np. Black Week) samo pojawia się na stronie ANNOUNCE dni przed startem i samo znika
+// po końcu: fazę liczy Worker z daty w Warszawie, nie bot — kopia API żyje do 30 dni, więc gdyby bot leżał, strona i tak
+// nie pokaże „trwa” po końcu. Reguła jak przy sprzedaży w bocie: trwa kilka → wyższy bonus, przy równym — wyższe id.
+// Bez znaczników Event/Offer (zasady Google dla akcji i bonów), a pasek i pigułka — z data-nosnippet w SSR.
+// Plan: zelika-studio-bot/docs/superpowers/plans/2026-11-15-black-week-phase0.md.
+const VOUCHER_PATH = "/bon-podarunkowy";
+const VOUCHER_SINCE = "2026-11-16"; // pierwsza wersja strony (lastmod w sitemap bez wydarzeń)
+const ENDED_DAYS = 7; // po końcu strona bonu jeszcze tyle dni pisze „zakończona”
+const ANNOUNCE_DAYS = 7; // zapas, gdy bot nie podał announce_from
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const VOUCHER_DEFAULTS = { valid_months: 3, amounts: [100, 150, 200, 300, 500], min_value: 50, max_value: 5000 };
+const ORGANIZER = {
+  name: "Anna Zelinska",
+  firm: "Zelika — Brows &amp; More",
+  nip: "832-209-88-65",
+  addr: "ul. Młodzieżowa 5B, 98-300 Wieluń",
+  mail: "kontakt@zelika.pl",
+  tel: "571 932 161",
+  telHref: "tel:+48571932161",
+};
+
+// Dzisiejsza data w Warszawie (YYYY-MM-DD). env.ZELIKA_TODAY — tylko lokalna kontrola faz (wrangler dev --var).
+function warsawToday(env) {
+  const o = str(env && env.ZELIKA_TODAY);
+  if (DAY_RE.test(o)) return o;
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Warsaw" }).format(new Date());
+}
+function addDays(iso, n) {
+  const d = new Date(iso + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+const validDay = (s) => DAY_RE.test(str(s)) && !isNaN(Date.parse(str(s) + "T12:00:00Z"));
+
+// Wydarzenia z API — tylko poprawne (nazwa, procent 1–100, daty); reszta pomijana, strona nie pada.
+function eventsOf(content) {
+  const list = content && Array.isArray(content.events) ? content.events : [];
+  const out = [];
+  for (const e of list) {
+    if (!e || typeof e !== "object") continue;
+    const name = str(e.name).slice(0, 40);
+    const pct = Number(e.pct);
+    const id = Number(e.id) || 0;
+    if (!name || !Number.isInteger(pct) || pct < 1 || pct > 100) continue;
+    if (!validDay(e.starts_on) || !validDay(e.ends_on) || str(e.ends_on) < str(e.starts_on)) continue;
+    const announce = validDay(e.announce_from) && str(e.announce_from) <= str(e.starts_on)
+      ? str(e.announce_from)
+      : addDays(str(e.starts_on), -ANNOUNCE_DAYS);
+    out.push({ id, name, pct, starts_on: str(e.starts_on), ends_on: str(e.ends_on), announce_from: announce });
+  }
+  return out;
+}
+function voucherTerms(content) {
+  const v = content && content.vouchers && typeof content.vouchers === "object" ? content.vouchers : {};
+  const months = Number(v.valid_months);
+  const amounts = Array.isArray(v.amounts) ? v.amounts.map(Number).filter((n) => Number.isInteger(n) && n > 0) : [];
+  const min = Number(v.min_value);
+  return {
+    valid_months: Number.isInteger(months) && months > 0 && months <= 60 ? months : VOUCHER_DEFAULTS.valid_months,
+    amounts: amounts.length ? amounts.slice(0, 8) : VOUCHER_DEFAULTS.amounts,
+    min_value: Number.isInteger(min) && min > 0 ? min : VOUCHER_DEFAULTS.min_value,
+  };
+}
+
+// soon | live | last | one (jednodniowe, dziś) | ended | null
+function eventPhase(ev, today) {
+  if (today < ev.announce_from) return null;
+  if (today < ev.starts_on) return "soon";
+  if (today < ev.ends_on) return "live";
+  if (today === ev.ends_on) return ev.starts_on === ev.ends_on ? "one" : "last";
+  if (today <= addDays(ev.ends_on, ENDED_DAYS)) return "ended";
+  return null;
+}
+// Jedno wydarzenie na stronę: trwające (wyższy bonus, potem wyższe id — jak bot przy sprzedaży), potem najbliższa
+// zapowiedź, potem ostatnio zakończone.
+function currentEvent(events, today) {
+  const withPhase = events.map((ev) => ({ ev, phase: eventPhase(ev, today) })).filter((x) => x.phase);
+  const pick = (list, better) => list.reduce((a, b) => (a && !better(b, a) ? a : b), null);
+  const running = withPhase.filter((x) => x.phase === "live" || x.phase === "last" || x.phase === "one");
+  if (running.length) return pick(running, (b, a) => b.ev.pct > a.ev.pct || (b.ev.pct === a.ev.pct && b.ev.id > a.ev.id));
+  const soon = withPhase.filter((x) => x.phase === "soon");
+  if (soon.length) {
+    return pick(soon, (b, a) =>
+      b.ev.starts_on < a.ev.starts_on || (b.ev.starts_on === a.ev.starts_on && (b.ev.pct > a.ev.pct || (b.ev.pct === a.ev.pct && b.ev.id > a.ev.id))));
+  }
+  const ended = withPhase.filter((x) => x.phase === "ended");
+  return ended.length ? pick(ended, (b, a) => b.ev.ends_on > a.ev.ends_on || (b.ev.ends_on === a.ev.ends_on && b.ev.id > a.ev.id)) : null;
+}
+// Nazwa wydarzenia pochodzi od Anny (bot) — do HTML zawsze escapowana; szablony dostają już bezpieczną nazwę.
+const safeEv = (e) => ({ ...e, name: esc(e.name) });
+const isOn = (cur) => !!cur && cur.phase !== "ended"; // pasek/pigułka/slot — tylko zapowiedź i trwające
+
+// „24–30.11.2026”, „28.11–2.12.2026”, „28.12.2026–3.01.2027” (jak bot: event_posts.pl_range)
+function dayFmt(iso, withYear = true) {
+  const [y, m, d] = iso.split("-");
+  return `${Number(d)}.${m}${withYear ? "." + y : ""}`;
+}
+function rangeFmt(a, b) {
+  if (a === b) return dayFmt(a);
+  if (a.slice(0, 4) !== b.slice(0, 4)) return `${dayFmt(a)}–${dayFmt(b)}`;
+  if (a.slice(5, 7) !== b.slice(5, 7)) return `${dayFmt(a, false)}–${dayFmt(b)}`;
+  return `${Number(a.slice(8))}–${dayFmt(b)}`;
+}
+const bonusFor = (value, pct) => Math.floor((value * pct) / 100 + 0.5); // jak bot: Event.bonus_for
+const EXAMPLE_VALUE = 200;
+function monthsTxt(n, lang) {
+  if (lang === "en") return n === 1 ? "1 month" : `${n} months`;
+  if (lang === "uk") return `${n} ${one(n) ? "місяць" : few(n) ? "місяці" : "місяців"}`;
+  return `${n} ${n === 1 ? "miesiąc" : few(n) ? "miesiące" : "miesięcy"}`;
+}
+
+const EV_TXT = {
+  pl: {
+    band: {
+      soon: (e, r) => `${e.name} ${r}: bon podarunkowy z bonusem <strong>+${e.pct}%</strong>`,
+      live: (e) => `${e.name}: bon podarunkowy <strong>+${e.pct}%</strong> — do ${dayFmt(e.ends_on)}, 23:59`,
+      last: (e) => `Ostatni dzień ${e.name}: bon podarunkowy <strong>+${e.pct}%</strong> — do 23:59`,
+      one: (e) => `Tylko dziś — ${e.name}: bon podarunkowy <strong>+${e.pct}%</strong> do 23:59`,
+    },
+    eye: { soon: "Wkrótce", live: "Trwa", last: "Ostatni dzień!", one: "Tylko dziś!", ended: "Zakończona" },
+    body: (e, ex, tot) =>
+      `Kupujesz bon podarunkowy — dodajemy <strong>+${e.pct}%</strong> jego wartości na tej samej karcie. Płacisz ${ex}&nbsp;zł, na bonie ${tot}&nbsp;zł. Ceny usług bez zmian.`,
+    when: {
+      soon: (e) => `Bonus przy zakupie od ${dayFmt(e.starts_on)} do ${dayFmt(e.ends_on)}, 23:59 (czas polski).`,
+      live: (e) => `Bonus przy zakupie do ${dayFmt(e.ends_on)}, 23:59 (czas polski).`,
+      last: () => `Dziś ostatni dzień — bonus przy zakupie do 23:59 (czas polski).`,
+      one: () => `Tylko dziś — bonus przy zakupie do 23:59 (czas polski).`,
+    },
+    ended: (e, r) => `Akcja „${e.name}” (${r}) zakończona. Bony podarunkowe są dostępne przez cały rok — bez bonusu.`,
+    more: "Więcej o bonie",
+    rulesLink: "Zasady akcji",
+  },
+  uk: {
+    band: {
+      soon: (e, r) => `${e.name} ${r}: подарунковий бон із бонусом <strong>+${e.pct}%</strong>`,
+      live: (e) => `${e.name}: подарунковий бон <strong>+${e.pct}%</strong> — до ${dayFmt(e.ends_on)}, 23:59`,
+      last: (e) => `Останній день ${e.name}: подарунковий бон <strong>+${e.pct}%</strong> — до 23:59`,
+      one: (e) => `Лише сьогодні — ${e.name}: подарунковий бон <strong>+${e.pct}%</strong> до 23:59`,
+    },
+    eye: { soon: "Незабаром", live: "Триває", last: "Останній день!", one: "Лише сьогодні!", ended: "Завершено" },
+    body: (e, ex, tot) =>
+      `Купуєте подарунковий бон — додаємо <strong>+${e.pct}%</strong> його вартості на ту саму картку. Платите ${ex}&nbsp;zł, на боні ${tot}&nbsp;zł. Ціни послуг без змін.`,
+    when: {
+      soon: (e) => `Бонус при купівлі з ${dayFmt(e.starts_on)} до ${dayFmt(e.ends_on)}, 23:59 (за польським часом).`,
+      live: (e) => `Бонус при купівлі до ${dayFmt(e.ends_on)}, 23:59 (за польським часом).`,
+      last: () => `Сьогодні останній день — бонус при купівлі до 23:59 (за польським часом).`,
+      one: () => `Лише сьогодні — бонус при купівлі до 23:59 (за польським часом).`,
+    },
+    ended: (e, r) => `Акцію «${e.name}» (${r}) завершено. Подарункові бони можна купити впродовж усього року — без бонусу.`,
+    more: "Детальніше про бон",
+    rulesLink: "Правила акції",
+  },
+  en: {
+    band: {
+      soon: (e, r) => `${e.name} ${r}: gift voucher with a <strong>+${e.pct}%</strong> bonus`,
+      live: (e) => `${e.name}: gift voucher <strong>+${e.pct}%</strong> — until ${dayFmt(e.ends_on)}, 23:59`,
+      last: (e) => `Last day of ${e.name}: gift voucher <strong>+${e.pct}%</strong> — until 23:59`,
+      one: (e) => `Today only — ${e.name}: gift voucher <strong>+${e.pct}%</strong> until 23:59`,
+    },
+    eye: { soon: "Coming soon", live: "On now", last: "Last day!", one: "Today only!", ended: "Ended" },
+    body: (e, ex, tot) =>
+      `Buy a gift voucher and we add <strong>+${e.pct}%</strong> of its value to the same card. You pay ${ex}&nbsp;zł — the voucher holds ${tot}&nbsp;zł. Treatment prices stay the same.`,
+    when: {
+      soon: (e) => `Bonus on vouchers bought from ${dayFmt(e.starts_on)} to ${dayFmt(e.ends_on)}, 23:59 (Polish time).`,
+      live: (e) => `Bonus on vouchers bought until ${dayFmt(e.ends_on)}, 23:59 (Polish time).`,
+      last: () => `Today is the last day — bonus on vouchers bought until 23:59 (Polish time).`,
+      one: () => `Today only — bonus on vouchers bought until 23:59 (Polish time).`,
+    },
+    ended: (e, r) => `The ${e.name} offer (${r}) has ended. Gift vouchers are available all year round — without the bonus.`,
+    more: "More about the voucher",
+    rulesLink: "Bonus rules",
+  },
+};
+const evTxt = (lang) => EV_TXT[lang] || EV_TXT.pl;
+const voucherHref = (lang) => href(lang, VOUCHER_PATH);
+
+// Cienki pasek nad nagłówkiem (blog, strony usług, quiz) — zapowiedź i trwające
+function eventBandHtml(cur, lang) {
+  const t = evTxt(lang);
+  const e = safeEv(cur.ev);
+  const text = t.band[cur.phase](e, rangeFmt(e.starts_on, e.ends_on));
+  return `<div class="evband" data-nosnippet><a href="${voucherHref(lang)}">${text} <span aria-hidden="true">&rarr;</span></a></div>`;
+}
+// Pigułka nad nagłówkiem hero na stronie głównej
+function eventPillHtml(cur, lang) {
+  const e = safeEv(cur.ev);
+  const text = evTxt(lang).band[cur.phase](e, rangeFmt(e.starts_on, e.ends_on));
+  return `<span class="ev-pill-wrap" data-nosnippet><a class="ev-pill" href="${voucherHref(lang)}">${text} <span aria-hidden="true">&rarr;</span></a></span>`;
+}
+// Slot .promo-band na stronie głównej (zastępuje stały baner „Nowość” na czas zapowiedzi i akcji)
+function eventSlotInner(cur, lang) {
+  const t = evTxt(lang);
+  const e = safeEv(cur.ev);
+  const tot = EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct);
+  return `<div class="container">
+<span class="promo-eyebrow">${e.name} &middot; ${rangeFmt(e.starts_on, e.ends_on)}</span>
+<p>${t.body(e, EXAMPLE_VALUE, tot)} ${t.when[cur.phase](e)}</p>
+<a class="btn btn-gold" href="${voucherHref(lang)}">${t.more}</a>
+</div>`;
+}
+// Moduł na stronie bonu (wszystkie fazy, łącznie z „zakończona”)
+function eventModuleHtml(cur, lang) {
+  const t = evTxt(lang);
+  const e = safeEv(cur.ev);
+  const r = rangeFmt(e.starts_on, e.ends_on);
+  if (cur.phase === "ended") {
+    return `<section class="ev-mod ended" aria-label="${e.name}"><p class="ev-eye">${t.eye.ended}</p><p>${t.ended(e, r)}</p></section>`;
+  }
+  const tot = EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct);
+  return `<section class="ev-mod ${cur.phase}" aria-label="${e.name}">
+<p class="ev-eye">${t.eye[cur.phase]}</p>
+<h2>${e.name} &middot; ${r}</h2>
+<p>${t.body(e, EXAMPLE_VALUE, tot)}</p>
+<p class="ev-when">${t.when[cur.phase](e)} <a href="#zasady">${t.rulesLink} &darr;</a></p>
+</section>`;
+}
+
+// Zasady akcji: PL — wiążąca; UA/EN — tłumaczenie z odesłaniem do wersji polskiej
+const RULES = {
+  pl: {
+    h: (e, r) => `Zasady akcji „${e.name}” (${r})`,
+    items: (e, m) => [
+      `Organizatorem akcji jest ${ORGANIZER.name}, prowadząca studio ${ORGANIZER.firm}, NIP ${ORGANIZER.nip}, ${ORGANIZER.addr}.`,
+      `Akcja trwa od ${dayFmt(e.starts_on)}, godz. 00:00, do ${dayFmt(e.ends_on)}, godz. 23:59 (czas polski). Decyduje data zakupu bonu.`,
+      `Do każdego bonu podarunkowego kupionego w tym czasie — w studiu, telefonicznie lub przez Instagram — dodajemy bonus równy ${e.pct}% wartości bonu, zaokrąglony do pełnych złotych (np. bon ${EXAMPLE_VALUE}&nbsp;zł → ${bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł bonusu, na bonie ${EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł).`,
+      `Bonus jest na tej samej karcie co wartość bonu, obowiązuje tak długo jak bon (co najmniej ${m} od zakupu — data na bonie) i można go wykorzystać razem z nią na dowolne usługi studia, także w kilku wizytach.`,
+      `Cena bonu jest równa jego wartości (bez bonusu). Ceny usług się nie zmieniają.`,
+      `Bonus nie podlega wymianie na gotówkę. Jeśli zakup bonu zostanie anulowany (zwrot pieniędzy), bonus przepada razem z bonem.`,
+      `Jeśli w tym samym czasie trwa kilka akcji, obowiązuje ta z wyższym bonusem — bonusy się nie sumują.`,
+      `Reklamacje i pytania: <a href="mailto:${ORGANIZER.mail}">${ORGANIZER.mail}</a>, tel. <a href="${ORGANIZER.telHref}">${ORGANIZER.tel}</a> lub w studiu — odpowiadamy w ciągu 14 dni.`,
+      `Imię osoby obdarowanej podane przy zakupie wykorzystujemy wyłącznie do przygotowania i obsługi bonu — więcej w <a href="/prywatnosc">Polityce prywatności</a>.`,
+    ],
+    note: "",
+  },
+  uk: {
+    h: (e, r) => `Правила акції «${e.name}» (${r})`,
+    items: (e, m) => [
+      `Організатор акції — ${ORGANIZER.name}, власниця студії ${ORGANIZER.firm}, NIP ${ORGANIZER.nip}, ${ORGANIZER.addr}.`,
+      `Акція триває з ${dayFmt(e.starts_on)}, 00:00, до ${dayFmt(e.ends_on)}, 23:59 (за польським часом). Вирішальною є дата купівлі бону.`,
+      `До кожного подарункового бону, купленого в цей час — у студії, телефоном чи через Instagram, — додаємо бонус у розмірі ${e.pct}% вартості бону, округлений до повних злотих (напр. бон ${EXAMPLE_VALUE}&nbsp;zł → ${bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł бонусу, на боні ${EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł).`,
+      `Бонус — на тій самій картці, що й вартість бону, діє стільки ж, скільки бон (щонайменше ${m} від купівлі — дата на боні), і його можна використати разом із нею на будь-які послуги студії, також за кілька візитів.`,
+      `Ціна бону дорівнює його вартості (без бонусу). Ціни послуг не змінюються.`,
+      `Бонус не обмінюється на готівку. Якщо купівлю бону скасовано (повернення грошей), бонус анулюється разом із боном.`,
+      `Якщо одночасно триває кілька акцій, діє та, де бонус більший, — бонуси не сумуються.`,
+      `Скарги й запитання: <a href="mailto:${ORGANIZER.mail}">${ORGANIZER.mail}</a>, тел. <a href="${ORGANIZER.telHref}">${ORGANIZER.tel}</a> або в студії — відповідаємо протягом 14 днів.`,
+      `Ім'я обдарованої особи, вказане при купівлі, використовуємо лише для підготовки й обслуговування бону — докладніше в <a href="/prywatnosc">Політиці конфіденційності</a> (польською).`,
+    ],
+    note: `Це переклад. Вирішальною є <a href="${VOUCHER_PATH}#zasady" hreflang="pl">польська версія правил</a>.`,
+  },
+  en: {
+    h: (e, r) => `Bonus rules: “${e.name}” (${r})`,
+    items: (e, m) => [
+      `The organiser of the offer is ${ORGANIZER.name}, running the ${ORGANIZER.firm} studio, NIP (tax no.) ${ORGANIZER.nip}, ${ORGANIZER.addr}.`,
+      `The offer runs from ${dayFmt(e.starts_on)}, 00:00, to ${dayFmt(e.ends_on)}, 23:59 (Polish time). The date of purchase decides.`,
+      `Every gift voucher bought during this time — in the studio, by phone or via Instagram — gets a bonus of ${e.pct}% of its value, rounded to whole złoty (e.g. a ${EXAMPLE_VALUE}&nbsp;zł voucher → ${bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł bonus, ${EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł on the voucher).`,
+      `The bonus sits on the same card as the voucher value, is valid as long as the voucher (at least ${m} from purchase — the date is on the voucher) and can be used together with it for any studio services, also over several visits.`,
+      `The voucher costs its face value (without the bonus). Treatment prices do not change.`,
+      `The bonus cannot be exchanged for cash. If the voucher purchase is cancelled (refund), the bonus is cancelled with it.`,
+      `If several offers run at the same time, the one with the higher bonus applies — bonuses do not add up.`,
+      `Complaints and questions: <a href="mailto:${ORGANIZER.mail}">${ORGANIZER.mail}</a>, tel. <a href="${ORGANIZER.telHref}">${ORGANIZER.tel}</a> or in the studio — we reply within 14 days.`,
+      `The recipient's name given at purchase is used only to prepare and handle the voucher — see the <a href="/prywatnosc">Privacy Policy</a> (in Polish).`,
+    ],
+    note: `This is a translation. The <a href="${VOUCHER_PATH}#zasady" hreflang="pl">Polish version of the rules</a> is binding.`,
+  },
+};
+function rulesHtml(cur, lang, months) {
+  const R = RULES[lang] || RULES.pl;
+  const e = safeEv(cur.ev);
+  const m = monthsTxt(months, lang);
+  return `<section class="bon-rules" id="zasady">
+<h2>${R.h(e, rangeFmt(e.starts_on, e.ends_on))}</h2>
+<ol>${R.items(e, m).map((li) => `<li>${li}</li>`).join("")}</ol>
+${R.note ? `<p class="rules-note">${R.note}</p>` : ""}
+</section>`;
+}
+
+// Stała treść strony bonu (PL/UA/EN)
+const BON_TXT = {
+  pl: {
+    title: "Bon podarunkowy na makijaż permanentny, brwi i rzęsy | Zelika Wieluń",
+    desc: (m) => `Bon podarunkowy studia Zelika w Wieluniu: dowolna kwota lub konkretny zabieg, ważny ${m}, do wykorzystania w kilku wizytach. Kup w studiu lub telefonicznie.`,
+    home: "Strona główna",
+    crumb: "Bon podarunkowy",
+    h1: "Bon podarunkowy",
+    lead: "Prezent, w którym obdarowana sama wybiera zabieg: makijaż permanentny brwi, ust lub kreski, stylizację brwi albo rzęs — w studiu Zelika w Wieluniu.",
+    alt: "Przykładowy bon podarunkowy studia Zelika na 300 zł",
+    h2amount: "Kwota albo konkretny zabieg",
+    amountsIntro: "Najczęściej wybierane wartości:",
+    amountsMore: (min) => `Możesz też wybrać dowolną kwotę od ${min}&nbsp;zł albo konkretny zabieg z <a href="/#services">cennika</a> — wtedy na bonie wpiszemy jego nazwę.`,
+    h2buy: "Jak kupić bon",
+    buy: [
+      `<strong>Wybierz kwotę lub zabieg</strong> i zadzwoń (<a href="tel:+48571932161">571&nbsp;932&nbsp;161</a>), napisz na <a href="https://www.instagram.com/annazelika" rel="noopener">Instagramie</a> albo zapytaj w studiu.`,
+      `<strong>Podaj imię osoby obdarowanej</strong> — wydrukujemy je na bonie.`,
+      `<strong>Odbierz bon</strong> — wydrukowany, w kopercie, albo jako PDF do wysłania lub wydruku.`,
+    ],
+    h2use: "Jak skorzystać z bonu",
+    use: [
+      "Umów wizytę online (kod QR na bonie prowadzi do rezerwacji) albo telefonicznie i powiedz, że masz bon.",
+      "Na wizytę zabierz bon — wydrukowany albo w telefonie.",
+      "Bon można wykorzystać w kilku wizytach; pozostała kwota jest ważna do daty na bonie.",
+      "Bon na konkretny zabieg można wykorzystać także na inne usługi studia — do jego wartości.",
+      "Jeśli zabieg kosztuje więcej niż kwota na bonie, różnicę dopłacasz na wizycie.",
+    ],
+    h2rules: "Najważniejsze zasady",
+    rules: (m) => [
+      `Bon jest ważny <strong>${m} od zakupu</strong> (na życzenie dłużej) — dokładna data jest wydrukowana na bonie.`,
+      "Bon nie podlega wymianie na gotówkę.",
+      `Ceny usług są takie same jak w <a href="/#services">cenniku</a> — bon jest formą płatności.`,
+      "Nie zdążysz z wizytą przed końcem ważności? Odezwij się do nas wcześniej.",
+    ],
+    ctaH: "Kupujesz bon albo już go masz?",
+    ctaBuy: "Zadzwoń: 571 932 161",
+    ctaBook: "Umów wizytę z bonem",
+  },
+  uk: {
+    title: "Подарунковий бон на перманентний макіяж, брови й вії | Zelika Велюнь",
+    desc: (m) => `Подарунковий бон студії Zelika у Велюні: будь-яка сума або конкретна процедура, діє ${m}, можна використати за кілька візитів. Купити — у студії чи телефоном.`,
+    home: "Головна",
+    crumb: "Подарунковий бон",
+    h1: "Подарунковий бон",
+    lead: "Подарунок, у якому обдарована сама обирає процедуру: перманентний макіяж брів, губ чи стрілки, стилізацію брів або вій — у студії Zelika у Велюні.",
+    alt: "Приклад подарункового бону студії Zelika на 300 zł",
+    h2amount: "Сума або конкретна процедура",
+    amountsIntro: "Найчастіше обирають:",
+    amountsMore: (min) => `Можна обрати й будь-яку суму від ${min}&nbsp;zł або конкретну процедуру з <a href="/uk/#services">прайсу</a> — тоді на боні впишемо її назву.`,
+    h2buy: "Як купити бон",
+    buy: [
+      `<strong>Оберіть суму чи процедуру</strong> й зателефонуйте (<a href="tel:+48571932161">571&nbsp;932&nbsp;161</a>), напишіть в <a href="https://www.instagram.com/annazelika" rel="noopener">Instagram</a> або запитайте в студії.`,
+      `<strong>Назвіть ім'я обдарованої</strong> — ми надрукуємо його на боні.`,
+      `<strong>Отримайте бон</strong> — надрукований, у конверті, або PDF, щоб переслати чи надрукувати.`,
+    ],
+    h2use: "Як скористатися боном",
+    use: [
+      "Запишіться онлайн (QR-код на боні веде до запису) або телефоном і скажіть, що маєте бон.",
+      "На візит візьміть бон — надрукований або в телефоні.",
+      "Бон можна використати за кілька візитів; залишок діє до дати на боні.",
+      "Бон на конкретну процедуру можна використати й на інші послуги студії — у межах його вартості.",
+      "Якщо процедура коштує більше, ніж сума на боні, різницю доплачуєте на візиті.",
+    ],
+    h2rules: "Головні правила",
+    rules: (m) => [
+      `Бон діє <strong>${m} від купівлі</strong> (за бажанням довше) — точну дату надруковано на боні.`,
+      "Бон не обмінюється на готівку.",
+      `Ціни послуг — такі самі, як у <a href="/uk/#services">прайсі</a>: бон — це спосіб оплати.`,
+      "Не встигаєте на візит до кінця строку? Напишіть нам заздалегідь.",
+    ],
+    ctaH: "Купуєте бон чи вже маєте його?",
+    ctaBuy: "Зателефонувати: 571 932 161",
+    ctaBook: "Записатися з боном",
+  },
+  en: {
+    title: "Gift voucher for permanent makeup, brows and lashes | Zelika Wieluń",
+    desc: (m) => `Zelika studio gift voucher in Wieluń: any amount or a specific treatment, valid for ${m}, usable over several visits. Buy in the studio or by phone.`,
+    home: "Home",
+    crumb: "Gift voucher",
+    h1: "Gift voucher",
+    lead: "A gift that lets the recipient choose the treatment herself: permanent makeup of brows, lips or eyeliner, brow or lash styling — at the Zelika studio in Wieluń.",
+    alt: "Sample Zelika studio gift voucher for 300 zł",
+    h2amount: "An amount or a specific treatment",
+    amountsIntro: "Most popular values:",
+    amountsMore: (min) => `You can also choose any amount from ${min}&nbsp;zł or a specific treatment from the <a href="/en/#services">price list</a> — we will print its name on the voucher.`,
+    h2buy: "How to buy a voucher",
+    buy: [
+      `<strong>Choose an amount or a treatment</strong> and call (<a href="tel:+48571932161">571&nbsp;932&nbsp;161</a>), message us on <a href="https://www.instagram.com/annazelika" rel="noopener">Instagram</a> or ask in the studio.`,
+      `<strong>Tell us the recipient's name</strong> — we will print it on the voucher.`,
+      `<strong>Get the voucher</strong> — printed, in an envelope, or as a PDF to send or print.`,
+    ],
+    h2use: "How to use the voucher",
+    use: [
+      "Book online (the QR code on the voucher leads to booking) or by phone and mention the voucher.",
+      "Bring the voucher to the visit — printed or on your phone.",
+      "The voucher can be used over several visits; the remaining amount is valid until the date on the voucher.",
+      "A voucher for a specific treatment can also be used for other studio services — up to its value.",
+      "If the treatment costs more than the voucher amount, you pay the difference at the visit.",
+    ],
+    h2rules: "Key rules",
+    rules: (m) => [
+      `The voucher is valid for <strong>${m} from purchase</strong> (longer on request) — the exact date is printed on it.`,
+      "The voucher cannot be exchanged for cash.",
+      `Treatment prices are the same as in the <a href="/en/#services">price list</a> — the voucher is a way to pay.`,
+      "Can't make it before the voucher expires? Let us know in advance.",
+    ],
+    ctaH: "Buying a voucher or already have one?",
+    ctaBuy: "Call: 571 932 161",
+    ctaBook: "Book a visit with a voucher",
+  },
+};
+
+const VOUCHER_CSS = `
+.bon .lead{margin-bottom:1.6em}
+.ev-mod{margin:1.4em 0 1.8em;padding:22px 26px;border-radius:14px;background:var(--bg-card);border:1px solid var(--line-gold);border-left:3px solid var(--gold)}
+.ev-mod.live,.ev-mod.last,.ev-mod.one{background:var(--green);border-color:var(--green);color:#fbf7ec}
+.ev-mod .ev-eye{margin:0;font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600;color:#7c5e22}
+.ev-mod.live .ev-eye,.ev-mod.last .ev-eye,.ev-mod.one .ev-eye{color:#e8d3a3}
+.ev-mod h2{margin:.25em 0 .45em;font-size:1.6rem}
+.ev-mod.live h2,.ev-mod.last h2,.ev-mod.one h2{color:#fbf7ec}
+.ev-mod p{margin:0 0 .55em}
+.ev-mod p:last-child{margin-bottom:0}
+.ev-mod strong{font-weight:500}
+.ev-mod.live strong,.ev-mod.last strong,.ev-mod.one strong{color:#f1dfb4}
+.ev-mod .ev-when{font-size:.92rem}
+.ev-mod.live a,.ev-mod.last a,.ev-mod.one a{color:#fbf7ec;text-decoration:underline;text-underline-offset:3px}
+.ev-mod.ended{border-left-color:var(--line-gold)}
+.bon-card{margin:1.2em 0 2.2em}
+.bon-card img{display:block;width:100%;height:auto;border-radius:6px;box-shadow:0 18px 44px rgba(31,94,48,.18)}
+.bon-amounts{display:flex;flex-wrap:wrap;gap:10px;list-style:none;padding:0!important;margin:.2em 0 1em!important}
+.bon-amounts li{margin:0!important;padding:5px 18px!important;font-family:var(--serif);font-size:1.35rem;font-weight:600;color:var(--green);background:var(--bg-card);border:1px solid var(--line-gold);border-radius:999px}
+.bon-amounts li::marker{content:""}
+.bon-rules{margin-top:2.4em;padding-top:1.2em;border-top:1px solid var(--line-gold);font-size:.92rem}
+.bon-rules h2{font-size:1.35rem}
+.bon-rules .rules-note{color:var(--muted);font-style:italic}
+.bon .cta-btns{margin-top:.4em}
+`;
+
+async function renderVoucherPage(api, lang) {
+  const t = BON_TXT[lang] || BON_TXT.pl;
+  const contentRes = await api.content();
+  const content = contentRes.data;
+  const terms = voucherTerms(content);
+  const months = monthsTxt(terms.valid_months, lang);
+  const cur = currentEvent(eventsOf(content), api.today());
+  const path = href(lang, VOUCHER_PATH);
+  const canonical = SITE + path;
+  const homeHref = href(lang, "/");
+  const li = (items) => items.map((x) => `<li>${x}</li>`).join("");
+  const crumbLd = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: t.home, item: SITE + homeHref },
+      { "@type": "ListItem", position: 2, name: t.crumb, item: canonical },
+    ],
+  };
+  const body = `<p class="crumbs"><a href="${homeHref}">${t.home}</a> › ${t.crumb}</p>
+<article class="bon">
+<h1>${t.h1}</h1>
+<p class="lead">${t.lead}</p>
+${cur ? eventModuleHtml(cur, lang) : ""}
+<figure class="bon-card"><picture><source type="image/webp" srcset="/img/bon-podarunkowy.webp"><img src="/img/bon-podarunkowy.jpg" width="1200" height="811" alt="${esc(t.alt)}"></picture></figure>
+<h2>${t.h2amount}</h2>
+<p>${t.amountsIntro}</p>
+<ul class="bon-amounts">${terms.amounts.map((a) => `<li>${a}&nbsp;zł</li>`).join("")}</ul>
+<p>${t.amountsMore(terms.min_value)}</p>
+<h2>${t.h2buy}</h2>
+<ol>${li(t.buy)}</ol>
+<h2>${t.h2use}</h2>
+<ul>${li(t.use)}</ul>
+<h2>${t.h2rules}</h2>
+<ul>${li(t.rules(months))}</ul>
+<div class="cta"><p class="cta-h">${t.ctaH}</p>
+<p class="cta-btns"><a class="btn" href="tel:+48571932161">${t.ctaBuy}</a> <a class="btn btn-ghost" href="/zapis?z=www-bon" rel="nofollow">${t.ctaBook}</a></p></div>
+${cur ? rulesHtml(cur, lang, terms.valid_months) : ""}
+</article>`;
+  return htmlResponse(
+    layout({
+      lang,
+      title: t.title,
+      description: t.desc(months),
+      canonical,
+      alternates: hreflangFor(VOUCHER_PATH),
+      ogImage: SITE + "/img/bon-podarunkowy.jpg",
+      jsonld: crumbLd,
+      body,
+      header: {
+        current: "",
+        pl: VOUCHER_PATH,
+        langHrefs: { pl: VOUCHER_PATH, uk: href("uk", VOUCHER_PATH), en: href("en", VOUCHER_PATH) },
+      },
+      css: PAGE_CSS + VOUCHER_CSS,
+    }),
+    200,
+    300,
+    { "X-Zelika-Data": contentRes.source }
+  );
+}
+
+// lastmod strony bonu w sitemap — dzień ostatniej zmiany jej treści (fazy wydarzeń), nie „dziś”
+function voucherLastmod(events, today) {
+  let best = today < VOUCHER_SINCE ? today : VOUCHER_SINCE;
+  for (const e of events) {
+    for (const d of [e.announce_from, e.starts_on, e.ends_on, addDays(e.ends_on, 1), addDays(e.ends_on, ENDED_DAYS + 1)]) {
+      if (d <= today && d > best) best = d;
+    }
+  }
+  return best;
+}
+
+// llms.txt: stały opis bonu + wiersz o akcji tylko w jej dniach (z datami bezwzględnymi — po końcu znika sam)
+function voucherLlms(content, today) {
+  const terms = voucherTerms(content);
+  const cur = currentEvent(eventsOf(content), today);
+  let line = "";
+  if (cur && (cur.phase === "live" || cur.phase === "last" || cur.phase === "one")) {
+    const e = cur.ev;
+    line =
+      `- Akcja: ${md(e.name)} ${rangeFmt(e.starts_on, e.ends_on)} (do ${dayFmt(e.ends_on)}, 23:59 czasu polskiego) — ` +
+      `przy zakupie bonu bonus +${e.pct}% jego wartości na tej samej karcie, ważny tak długo jak bon; ceny usług bez zmian. ` +
+      `Zasady: ${SITE}${VOUCHER_PATH}#zasady\n`;
+  }
+  return (
+    `## Bon podarunkowy\n\n` +
+    `- [Bon podarunkowy](${SITE}${VOUCHER_PATH}): dowolna kwota (np. ${terms.amounts.join(", ")} zł; od ${terms.min_value} zł) ` +
+    `lub konkretny zabieg; ważny ${monthsTxt(terms.valid_months, "pl")} od zakupu; do wykorzystania w kilku wizytach; ` +
+    `nie podlega wymianie na gotówkę. Zakup w studiu, telefonicznie lub przez Instagram.\n` +
+    line +
+    "\n"
+  );
+}
+
+// Pasek wydarzenia nad nagłówkiem stron wewnętrznych (blog, strony usług, quiz): drugi przebieg HTMLRewriter po
+// gotowej stronie. Dane — miękko (kopia API, bez czekania na bota).
+async function withEventBand(res, api, lang = "pl") {
+  if (!res || res.status !== 200 || !/^text\/html/i.test(res.headers.get("Content-Type") || "")) return res;
+  const contentRes = await api.content({ soft: true });
+  const cur = currentEvent(eventsOf(contentRes && contentRes.data), api.today());
+  if (!isOn(cur)) return res;
+  const band = eventBandHtml(cur, lang);
+  let done = false;
+  return new HTMLRewriter()
+    .on("header.nav", { element(e) { if (!done) { done = true; e.before(band, { html: true }); } } })
+    .transform(res);
+}
+
 // ── Kanoniczne adresy (301) ─────────────────────────────────────────────────────
 // Воркер запускається першим для всіх сторінок (wrangler.jsonc: run_worker_first — усе,
 // крім статики), тож www→apex і канонічні шляхи віддаємо самі як 301 — раніше частину робив шар
@@ -2450,7 +3008,7 @@ const CANON_PATHS = new Map([
 ]);
 // strony i pliki z workera bez końcowego „/” (adres z „/” → 301 bez niego); strony usług
 // /<slug>/ — osobno (renderServicePage: 301 tylko dla istniejącej strony)
-const NO_SLASH_RE = /^\/(?:porady(?:\/[^/]+)?|quiz|uk\/quiz|en\/quiz|prywatnosc|robots\.txt|sitemap\.xml|llms\.txt)$/;
+const NO_SLASH_RE = /^\/(?:porady(?:\/[^/]+)?|quiz|uk\/quiz|en\/quiz|prywatnosc|(?:uk\/|en\/)?bon-podarunkowy|robots\.txt|sitemap\.xml|llms\.txt)$/;
 function canonicalPath(p) {
   if (CANON_PATHS.has(p)) return CANON_PATHS.get(p);
   if (p.length > 1 && p.endsWith("/")) {
@@ -2545,7 +3103,10 @@ const site = {
     const api = makeApi(env, ctx);
 
     if (path === "/zapis") return bookingRedirect(request, url);
-    if (path === "/porady") return renderIndex(api);
+    if (path === VOUCHER_PATH) return renderVoucherPage(api, "pl");
+    if (path === "/uk" + VOUCHER_PATH) return renderVoucherPage(api, "uk");
+    if (path === "/en" + VOUCHER_PATH) return renderVoucherPage(api, "en");
+    if (path === "/porady") return withEventBand(await renderIndex(api), api);
     if (path.startsWith("/porady/")) {
       let slug;
       try {
@@ -2553,11 +3114,11 @@ const site = {
       } catch (_) {
         slug = ""; // zepsute %-kodowanie → 404, nie wyjątek
       }
-      return renderPost(api, slug);
+      return withEventBand(await renderPost(api, slug), api);
     }
     const media = url.pathname.match(/^\/media\/([A-Za-z0-9_-]{1,128})\.jpg$/);
     if (media) return mediaResponse(request, env, ctx, media[1]);
-    if (path === "/sitemap.xml") return renderSitemap(api);
+    if (path === "/sitemap.xml") return renderSitemap(api, env);
     if (path === "/robots.txt") return renderRobots();
     if (path === "/llms.txt") return renderLlms(api);
 
@@ -2571,9 +3132,9 @@ const site = {
     if (path === "/") return localizedPage(request, env, api, "pl", "home");
     if (path === "/uk") return localizedPage(request, env, api, "uk", "home");
     if (path === "/en") return localizedPage(request, env, api, "en", "home");
-    if (path === "/quiz") return localizedPage(request, env, api, "pl", "quiz");
-    if (path === "/uk/quiz") return localizedPage(request, env, api, "uk", "quiz");
-    if (path === "/en/quiz") return localizedPage(request, env, api, "en", "quiz");
+    if (path === "/quiz") return withEventBand(await localizedPage(request, env, api, "pl", "quiz"), api, "pl");
+    if (path === "/uk/quiz") return withEventBand(await localizedPage(request, env, api, "uk", "quiz"), api, "uk");
+    if (path === "/en/quiz") return withEventBand(await localizedPage(request, env, api, "en", "quiz"), api, "en");
     // /prywatnosc — юридичний документ, лишається PL, але через воркер (уніфікований каркас)
     if (path === "/prywatnosc") return localizedPage(request, env, api, "pl", "priv");
 
@@ -2584,7 +3145,7 @@ const site = {
     const sp = url.pathname.match(/^\/([a-z0-9-]{1,120})(\/+)?$/);
     if (sp && isPageSlug(sp[1])) {
       const r = await renderServicePage(request, api, sp[1], !!sp[2]);
-      if (r) return r;
+      if (r) return withEventBand(r, api);
     }
 
     // wszystko inne → statyka; brak pliku (też /uk/…, /en/…, /.git/…, /worker.js — wykluczone
