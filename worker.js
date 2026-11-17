@@ -2594,7 +2594,7 @@ const EV_THEMES = new Set(["black", "xmas", "rose"]);
 const EV_THEME_WORD = {
   pl: { black: "Czarny", xmas: "Bordowy", rose: "Różowy" },
   uk: { black: "Чорний", xmas: "Бордовий", rose: "Рожевий" },
-  en: { black: "black", xmas: "burgundy", rose: "rose" },
+  en: { black: "Black-and-gold", xmas: "Burgundy", rose: "Rose" },
 };
 // Zdjęcie karty z bota (voucher_pdf._page, bez napisu „WZÓR” — jak img/bon-podarunkowy.*) — tylko gdy liczby
 // na karcie zgadzają się z wydarzeniem: przykład 200 zł + pct% i nazwa z karty (slug). Inaczej klasyczna karta.
@@ -2701,12 +2701,11 @@ const dw = (iso, lang) => `<span class="ev-nw">${dayWords(iso, lang)}</span>`;
 function windowWords(e, lang) {
   const a = e.starts_on, b = e.ends_on;
   const y = (iso) => iso.slice(0, 4) + (lang === "pl" ? "&nbsp;r." : lang === "uk" ? "&nbsp;р." : "");
-  const left = a.slice(0, 4) !== b.slice(0, 4) ? `${dayWords(a, lang)}&nbsp;${y(a)}`
+  const left = a.slice(0, 4) !== b.slice(0, 4) ? `${dayWords(a, lang)} ${y(a)}`
     : a.slice(5, 7) !== b.slice(5, 7) ? dayWords(a, lang) : String(Number(a.slice(8)));
-  // data z rokiem w jednym kawałku („do 30 listopada 2026 r.” — nie „…listopada | 2026 r.”); szablony PL/UK wiążą też
-  // zakres w jednym miesiącu („od 23 do 30 listopada 2026 r.”, „з 23 по 30 листопада 2026 р.”, „from 23 to 30 November 2026”)
-  // — wiersz łamie się przed nim
-  return { from: left, to: `${dayWords(b, lang)}&nbsp;${y(b)}`, one: `${dayWords(a, lang)}&nbsp;${y(a)}` };
+  // twarde spacje tylko w małych jednostkach („od 23”, „do 30 listopada”, „2026 r.”, „do godz. 23:59” — przyimki wiąże nb(),
+  // EN — szablon), nie jeden długi łańcuch: pierwszy wiersz na telefonie wypełnia się do końca
+  return { from: left, to: `${dayWords(b, lang)} ${y(b)}`, one: `${dayWords(a, lang)} ${y(a)}` };
 }
 
 // Teksty wydarzenia. Zasady (plan fazy 0 + raport „Преміальний анонс акції на сайті”): bonus to prezent, nie rabat —
@@ -2765,7 +2764,7 @@ const EV_TXT = {
     secTag: (e, ph) => ph === "soon" ? `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "pl")}` : null,
     h2: (e, ex, tot) => `<span class="ev-ib">Płacisz ${ex}&nbsp;zł,</span> <em class="ev-ib">na&nbsp;bonie ${tot}&nbsp;zł</em>`,
     lead: (e, ph) => `<span class="ev-s1">Do każdego bonu podarunkowego kupionego ${EV_WHEN.pl(e, ph)} ${ph === "soon" ? "dodamy" : "dodajemy"} ${e.pct}% jego wartości.</span> <span class="ev-nw ev-s2">Ceny usług bez zmian.</span>`,
-    give: { soon: "Jak kupić bon", on: "Podaruj bon" },
+    give: { soon: "Kiedy i jak kupić", on: "Podaruj bon" },
     rulesLink: "Zasady akcji",
     alt: (e, ex, b, tot) => `${EV_THEME_WORD.pl[e.theme] ? EV_THEME_WORD.pl[e.theme] + " bon" : "Bon"} podarunkowy Zelika na ${e.nameAttr}: ${ex} zł + ${b} zł bonusu, razem ${tot} zł`,
     // moduł na stronie bonu: eyebrow — ta sama etykieta co „bilet”, pasek i sekcja (nazwa naprzód, po kropce daty — zapowiedź
@@ -2780,10 +2779,10 @@ const EV_TXT = {
     // mechanizm jednym zdaniem tuż pod równaniem (Baymard: warunek przy akcji); w zapowiedzi — czas przyszły
     modTxt: (e, ph) => `<span class="ev-s1">Do każdego bonu ${ph === "soon" ? `kupionego ${EV_WHEN.pl(e, ph)} dodamy` : "dodajemy"} ${e.pct}% jego wartości.</span> <span class="ev-nw ev-s2">Ceny usług bez zmian.</span>`,
     when: (e, w, ph) => evToday(ph)
-      ? `Bonus przy zakupie dziś, ${dw(e.ends_on, "pl")}, do&nbsp;godz.&nbsp;23:59 czasu&nbsp;polskiego.`
+      ? `Bonus przysługuje przy zakupie bonu dziś, ${dw(e.ends_on, "pl")}, do&nbsp;godz.&nbsp;23:59 czasu&nbsp;polskiego.`
       : oneDay(e)
-        ? `Bonus przy zakupie ${w.one}, do&nbsp;godz.&nbsp;23:59 czasu&nbsp;polskiego.`
-        : `Bonus przy zakupie od ${w.from}${/^\d+$/.test(w.from) ? "&nbsp;" : " "}do ${w.to}, do&nbsp;godz.&nbsp;23:59 czasu&nbsp;polskiego.`,
+        ? `Bonus przysługuje przy zakupie bonu ${w.one}, do&nbsp;godz.&nbsp;23:59 czasu&nbsp;polskiego.`
+        : `Bonus przysługuje przy zakupie bonu od ${w.from} do ${w.to}, do&nbsp;godz.&nbsp;23:59 czasu&nbsp;polskiego.`,
     order: "Zamów telefonicznie",
     contact: `${EV_TEL} <span aria-hidden="true">&middot;</span> ${EV_IG}`,
     how: "Jak kupić bon",
@@ -2813,7 +2812,7 @@ const EV_TXT = {
     secTag: (e, ph) => ph === "soon" ? `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "uk")}` : null,
     h2: (e, ex, tot) => `<span class="ev-ib">Ви платите ${ex}&nbsp;zł,</span> <em class="ev-ib">на&nbsp;боні&nbsp;— ${tot}&nbsp;zł</em>`,
     lead: (e, ph) => `<span class="ev-s1">До кожного подарункового бону, купленого ${EV_WHEN.uk(e, ph)}, ${ph === "soon" ? "додамо" : "додаємо"} ${e.pct}% його вартості.</span> <span class="ev-nw ev-s2">Ціни послуг не змінюються.</span>`,
-    give: { soon: "Як купити бон", on: "Подарувати бон" },
+    give: { soon: "Коли й як купити", on: "Подарувати бон" },
     rulesLink: "Правила акції",
     alt: (e, ex, b, tot) => `${EV_THEME_WORD.uk[e.theme] ? EV_THEME_WORD.uk[e.theme] + " подарунковий" : "Подарунковий"} бон Zelika на ${e.nameAttr}: ${ex} zł + ${b} zł бонусу, разом ${tot} zł`,
     eye: {
@@ -2825,10 +2824,11 @@ const EV_TXT = {
     modH2: (e, ex, tot) => `<span class="ev-ib">Ви платите ${ex}&nbsp;zł,</span> <em class="ev-ib">на&nbsp;боні&nbsp;— ${tot}&nbsp;zł</em>`,
     modTxt: (e, ph) => `<span class="ev-s1">До кожного бону${ph === "soon" ? `, купленого ${EV_WHEN.uk(e, ph)}, додамо` : " додаємо"} ${e.pct}% його вартості.</span> <span class="ev-nw ev-s2">Ціни послуг не змінюються.</span>`,
     when: (e, w, ph) => evToday(ph)
-      ? `Бонус діє для покупок сьогодні, ${dw(e.ends_on, "uk")}, до 23:59 за&nbsp;польським&nbsp;часом.`
+      // «бони,&nbsp;куплені»: bez tego text-wrap:pretty łamie po przecinku (pierwszy wiersz «Бонус нараховуємо на бони,», 55% miary)
+      ? `Бонус нараховуємо на бони,&nbsp;куплені сьогодні, ${dw(e.ends_on, "uk")}, до 23:59 за&nbsp;польським&nbsp;часом.`
       : oneDay(e)
-        ? `Бонус діє для покупок ${w.one}, до 23:59 за&nbsp;польським&nbsp;часом.`
-        : `Бонус діє для покупок з ${w.from}${/^\d+$/.test(w.from) ? "&nbsp;" : " "}по ${w.to}, до 23:59 за&nbsp;польським&nbsp;часом.`,
+        ? `Бонус нараховуємо на бони,&nbsp;куплені ${w.one}, до 23:59 за&nbsp;польським&nbsp;часом.`
+        : `Бонус нараховуємо на бони,&nbsp;куплені з ${w.from} по ${w.to}, до 23:59 за&nbsp;польським&nbsp;часом.`,
     order: "Замовити телефоном",
     contact: `${EV_TEL} <span aria-hidden="true">&middot;</span> ${EV_IG}`,
     how: "Як купити бон",
@@ -2844,7 +2844,7 @@ const EV_TXT = {
     },
     bandShort: {
       soon: (e) => `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")}`,
-      live: (e, a) => `${e.name} &middot; ${a(`+${e.pct}%`)} voucher value`,
+      live: (e, a) => `${e.name} &middot; ${a(`+${e.pct}%`)} on vouchers`,
       last: (e) => `${e.name} &middot; last day`,
       one: (e) => `${e.name} &middot; today only`,
     },
@@ -2858,9 +2858,9 @@ const EV_TXT = {
     secTag: (e, ph) => ph === "soon" ? `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")}` : null,
     h2: (e, ex, tot) => `<span class="ev-ib">You pay ${ex}&nbsp;zł&nbsp;—</span> <em class="ev-ib">the voucher holds ${tot}&nbsp;zł</em>`,
     lead: (e, ph) => `<span class="ev-s1">Every gift voucher bought ${EV_WHEN.en(e, ph)} ${ph === "soon" ? "will carry" : "carries"} an extra ${e.pct}%&nbsp;of&nbsp;its&nbsp;value.</span> <span class="ev-nw ev-s2">Treatment prices stay the same.</span>`,
-    give: { soon: "How to buy a voucher", on: "Give a voucher" },
+    give: { soon: "When and how to buy", on: "Give a voucher" },
     rulesLink: "Bonus rules",
-    alt: (e, ex, b, tot) => `Zelika gift voucher${EV_THEME_WORD.en[e.theme] ? " in " + EV_THEME_WORD.en[e.theme] : ""} for ${e.nameAttr}: ${ex} zł + ${b} zł bonus, ${tot} zł in total`,
+    alt: (e, ex, b, tot) => `${EV_THEME_WORD.en[e.theme] ? EV_THEME_WORD.en[e.theme] + " Zelika" : "Zelika"} gift voucher for ${e.nameAttr}: ${ex} zł + ${b} zł bonus, ${tot} zł in total`,
     eye: {
       soon: (e) => `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")}`,
       live: (e) => `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")}`,
@@ -2870,10 +2870,10 @@ const EV_TXT = {
     modH2: (e, ex, tot) => `<span class="ev-ib">You pay ${ex}&nbsp;zł&nbsp;—</span> <em class="ev-ib">the voucher holds ${tot}&nbsp;zł</em>`,
     modTxt: (e, ph) => `<span class="ev-s1">${ph === "soon" ? `Every voucher bought ${EV_WHEN.en(e, ph)} will carry` : "Every voucher carries"} an extra ${e.pct}%&nbsp;of&nbsp;its&nbsp;value.</span> <span class="ev-nw ev-s2">Treatment prices stay the same.</span>`,
     when: (e, w, ph) => evToday(ph)
-      ? `The bonus applies to purchases made today, ${dw(e.ends_on, "en")}, until 23:59 Polish&nbsp;time.`
+      ? `The bonus applies to vouchers bought today, ${dw(e.ends_on, "en")}, until&nbsp;23:59 Polish&nbsp;time.`
       : oneDay(e)
-        ? `The bonus applies to purchases on ${w.one}, until 23:59 Polish&nbsp;time.`
-        : `The bonus applies to purchases from&nbsp;${w.from}${/^\d+$/.test(w.from) ? "&nbsp;" : " "}to&nbsp;${w.to}, until 23:59 Polish&nbsp;time.`,
+        ? `The bonus applies to vouchers bought on&nbsp;${w.one}, until&nbsp;23:59 Polish&nbsp;time.`
+        : `The bonus applies to vouchers bought from&nbsp;${w.from} to&nbsp;${w.to}, until&nbsp;23:59 Polish&nbsp;time.`,
     order: "Order by phone",
     contact: `${EV_TEL} <span aria-hidden="true">&middot;</span> ${EV_IG}`,
     how: "How to buy a voucher",
@@ -2898,16 +2898,16 @@ const evAcc = (s) => `<span class="ev-acc">${s}</span>`;
 const EV_ARROW = `<span class="ev-acc ev-arr" aria-hidden="true">&rarr;</span>`;
 const evTotal = (e) => EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct);
 const evAlt = (e, lang) => evTxt(lang).alt(e, EXAMPLE_VALUE, bonusFor(EXAMPLE_VALUE, e.pct), evTotal(e));
-// Zestaw szerokości karty v5 (jeden obraz: strona bonu 712 px, strona główna 440 px; 1x i 2x)
+// Zestaw szerokości karty v5 (jeden obraz: strona bonu 560 px, strona główna 440 px; 1x i 2x)
 const evCardSet = (base, ext) => `${base}-712.${ext} 712w, ${base}-880.${ext} 880w, ${base}-1320.${ext} 1320w, ${base}.${ext} 1424w`;
 // <picture> karty wydarzenia na stronie bonu (imię, rezerwacja i QR — bez kodu-wzoru, terminu i drobnego druku;
-// warunki są w HTML, #zasady). 712 px w treści artykułu.
+// warunki są w HTML, #zasady). 560 px (naturalna wielkość) w treści artykułu, na telefonie — cała kolumna.
 function evCardPicture(cur, lang, attrs = "") {
   const card = evCard(cur.ev);
   if (!card) return null;
   const e = safeEv(cur.ev, lang);
   const set = (ext) => evCardSet(card.src, ext);
-  const sizes = "(max-width:760px) 100vw, 712px";
+  const sizes = "(max-width:560px) 100vw, 560px";
   return `<picture><source type="image/webp" srcset="${set("webp")}" sizes="${sizes}"><img src="${card.src}.jpg" srcset="${set("jpg")}" sizes="${sizes}" width="1424" height="962" alt="${nb(evAlt(e, lang), lang)}"${attrs}></picture>`;
 }
 // <picture> karty na stronie głównej — ten sam obraz v5 co na stronie bonu. Bez obrotu (płasko); 440 px → 880/1320 (1x/2x).
@@ -2944,7 +2944,7 @@ function eventStubHtml(cur, lang) {
 // Slot .promo-band na stronie głównej (zastępuje stały baner „Nowość” na czas zapowiedzi i akcji): beżowa sekcja,
 // bohater — „lico” karty bonu wydarzenia; liczby i daty żywym tekstem (nie w obrazku). Kolejność na telefonie
 // (grid areas): eyebrow → H2 → karta → lead → przyciski. Bez pasującej karty — sama typografia (ev-sec--nocard),
-// nigdy klasyczna karta 300 zł obok innego równania. W zapowiedzi przycisk „Jak kupić bon” prowadzi do modułu wydarzenia na
+// nigdy klasyczna karta 300 zł obok innego równania. W zapowiedzi przycisk „Kiedy i jak kupić” prowadzi do modułu wydarzenia na
 // stronie bonu (#ev: okno zakupu „od 23 do 30 listopada”), nie prosto do kroków zakupu (#jak-kupic).
 function eventSlotInner(cur, lang) {
   const t = evTxt(lang);
@@ -2956,7 +2956,7 @@ function eventSlotInner(cur, lang) {
   return nb(`<div class="container ev-sec-grid">
 <div class="ev-sec-head"><span class="eyebrow">${eye}</span>
 <h2>${t.h2(e, EXAMPLE_VALUE, evTotal(e))}</h2></div>
-${pic ? `<a class="ev-sec-card" href="${vh}" data-ev-src="section-card" tabindex="-1">${pic}</a>` : ""}
+${pic ? `<a class="ev-sec-card" href="${vh}" data-ev-src="section-card" tabindex="-1" aria-hidden="true">${pic}</a>` : ""}
 <div class="ev-sec-body"><p class="ev-sec-lead">${t.lead(e, cur.phase)}</p>
 <div class="ev-sec-acts"><a class="btn btn-green" href="${ph === "soon" ? `${vh}#ev` : vh}" data-ev-src="section">${t.give[ph]}</a><a class="ev-sec-rules" href="${vh}#zasady">${t.rulesLink}</a></div></div>
 </div>`, lang);
@@ -2993,7 +2993,7 @@ const RULES = {
       `Organizatorem akcji jest ${ORGANIZER.name}, prowadząca studio ${ORGANIZER.firm}, NIP ${ORGANIZER.nip}, ${ORGANIZER.addr}.`,
       `Akcja trwa od ${dayWords(e.starts_on, "pl")} ${e.starts_on.slice(0, 4)}&nbsp;r., godz. 00:00, do ${dayWords(e.ends_on, "pl")} ${e.ends_on.slice(0, 4)}&nbsp;r., godz. 23:59 (czas polski). Decyduje data zakupu bonu.`,
       `Do każdego bonu podarunkowego kupionego w tym czasie — w studiu, telefonicznie lub przez Instagram — dodajemy bonus równy ${e.pct}% wartości bonu, zaokrąglony do pełnych złotych (np. bon ${EXAMPLE_VALUE}&nbsp;zł → ${bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł bonusu, na bonie ${EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł).`,
-      `Bonus jest zapisany na tym samym bonie co kwota bonu, obowiązuje tak długo jak bon (co najmniej ${m} od zakupu — data na bonie) i można go wykorzystać razem z tą kwotą na dowolne usługi studia, także w kilku wizytach.`,
+      `Bonus zapisujemy na tym samym bonie co zapłaconą kwotę; jest ważny tak długo jak bon (co najmniej ${m} od zakupu — data jest na bonie). Można go wykorzystać razem z tą kwotą na dowolne usługi studia, także podczas kilku wizyt.`,
       `Cena bonu jest równa jego wartości (bez bonusu). Ceny usług się nie zmieniają.`,
       `Bonus nie podlega wymianie na gotówkę. Jeśli zakup bonu zostanie anulowany (zwrot pieniędzy), bonus przepada razem z bonem.`,
       `Jeśli w tym samym czasie trwa kilka akcji, obowiązuje ta z wyższym bonusem — bonusy się nie sumują.`,
@@ -3008,7 +3008,7 @@ const RULES = {
       `Організатор акції — ${ORGANIZER.name}, власниця студії ${ORGANIZER.firm}, NIP ${ORGANIZER.nip}, ${ORGANIZER.addr}.`,
       `Акція триває з ${dayWords(e.starts_on, "uk")} ${e.starts_on.slice(0, 4)}&nbsp;р., 00:00, до ${dayWords(e.ends_on, "uk")} ${e.ends_on.slice(0, 4)}&nbsp;р., 23:59 (за польським часом). Вирішальною є дата купівлі бону.`,
       `До кожного подарункового бону, купленого в цей час — у студії, телефоном чи через Instagram, — додаємо бонус у розмірі ${e.pct}% вартості бону, округлений до повних злотих (напр. бон ${EXAMPLE_VALUE}&nbsp;zł → ${bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł бонусу, на боні ${EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł).`,
-      `Бонус зараховується на той самий бон, що й основна сума, і діє стільки ж, скільки бон (щонайменше ${m} від купівлі — дата на боні). Разом з основною сумою бонус оплачує будь-які послуги студії, і його можна використати за кілька візитів.`,
+      `Бонус зараховуємо на той самий бон, що й основну суму, і він діє стільки ж, скільки бон (щонайменше ${m} від купівлі — дата на боні). Його можна використати разом з основною сумою на будь-які послуги студії, зокрема за кілька візитів.`,
       `Ціна бону дорівнює його вартості (без бонусу). Ціни послуг не змінюються.`,
       `Бонус не обмінюється на готівку. Якщо купівлю бону скасовано (повернення грошей), бонус анулюється разом із боном.`,
       `Якщо одночасно триває кілька акцій, діє та, де бонус більший, — бонуси не сумуються.`,
@@ -3023,7 +3023,7 @@ const RULES = {
       `The organiser of the offer is ${ORGANIZER.name}, running the ${ORGANIZER.firm} studio, NIP (tax no.) ${ORGANIZER.nip}, ${ORGANIZER.addr}.`,
       `The offer runs from ${dayWords(e.starts_on, "en")} ${e.starts_on.slice(0, 4)}, 00:00, to ${dayWords(e.ends_on, "en")} ${e.ends_on.slice(0, 4)}, 23:59 (Polish time). The date of purchase decides.`,
       `Every gift voucher bought during this time — in the studio, by phone or via Instagram — gets a bonus of ${e.pct}% of its value, rounded to whole złoty (e.g. a ${EXAMPLE_VALUE}&nbsp;zł voucher → ${bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł bonus, ${EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł on the voucher).`,
-      `The bonus is added to the same voucher as the amount paid and is valid as long as the voucher (at least ${m} from purchase — the date is on the voucher). Together with that amount, the bonus pays for any studio services and can be used over several visits.`,
+      `The bonus is added to the same voucher as the amount paid and is valid for as long as the voucher (at least ${m} from purchase — the date is on the voucher). It can be spent together with that amount on any studio services, including over several visits.`,
       `The voucher costs its face value (without the bonus). Treatment prices do not change.`,
       `The bonus cannot be exchanged for cash. If the voucher purchase is cancelled (refund), the bonus is cancelled with it.`,
       `If several offers run at the same time, the one with the higher bonus applies — bonuses do not add up.`,
@@ -3165,7 +3165,7 @@ const VOUCHER_CSS = `
    3,87:1 (z 4% szumem tła ≈3,4) — AA dla dużego tekstu z zapasem (H2 28/24,8 px; mała wysokość x Cormoranta) */
 .ev-mod h2 em{font-style:italic;font-weight:500;color:#93743a}
 .ev-mod .ev-txt{margin:0 0 .5em;font-size:1rem;color:#272b22;text-wrap:pretty}
-.ev-mod .ev-when{margin:0;font-size:.92rem;line-height:1.65;color:#5f6456;text-wrap:wrap}
+.ev-mod .ev-when{margin:0;font-size:.92rem;line-height:1.65;color:#5f6456;text-wrap:pretty}
 .ev-mod .ev-txt,.ev-mod .ev-when{max-width:42rem} /* jedna miara (672 px): obie prawe krawędzie bloku na jednej linii */
 /* każde zdanie mechanizmu od nowego wiersza (także na desktopie: ostatnie słowo zdania 1 nie zaczyna wiersza zdania 2) */
 .ev-mod .ev-txt .ev-s1,.ev-mod .ev-txt .ev-s2{display:block}
@@ -3187,6 +3187,9 @@ const VOUCHER_CSS = `
 .bon-card{margin:1.2em 0 2.2em}
 .bon-card img{display:block;width:100%;height:auto;border-radius:6px;box-shadow:0 18px 44px rgba(31,94,48,.18)}
 .bon-card.ev-theme-black{margin:1.6em 0 2.2em}
+/* karta w naturalnej wielkości (148 mm ≈ 560 px), nie na całą kolumnę (712 px): lewą krawędzią na linii tekstu, podpis
+   (figcaption) — szerokością karty; telefon — 100% kolumny */
+@media(min-width:561px){.bon-card.ev-theme-black{max-width:560px}}
 /* krawędź karty — złocona linia (jak złota ramka zdjęcia hero, --line-gold), nie szara obwódka UI; cień kontaktowy mocniej */
 .bon-card.ev-theme-black img{border-radius:2px;box-shadow:0 0 0 1px rgba(169,134,60,.42),0 1px 2px rgba(20,16,8,.28),0 18px 36px -14px rgba(20,16,8,.30),0 44px 80px -36px rgba(40,30,12,.34)}
 .bon-card figcaption{margin-top:12px;font-size:.85rem;line-height:1.5;color:#5f6456;text-wrap:balance}
@@ -3194,7 +3197,7 @@ const VOUCHER_CSS = `
 .bon-amounts li{margin:0!important;padding:6px 16px!important;font-family:var(--serif);font-size:1.35rem;font-weight:500;color:var(--green);background:var(--bg-card);border:1px solid var(--line-gold);border-radius:2px}
 .bon-amounts li::marker{content:""}
 .bon-rules{margin-top:2.4em;padding-top:1.2em;border-top:1px solid var(--line-gold);font-size:.92rem}
-.bon-rules h2{font-size:1.35rem}
+.bon-rules h2{font-size:1.35rem;font-variant-numeric:lining-nums}
 .bon-rules .rules-note{color:var(--muted);font-style:italic}
 .bon .cta-btns{margin-top:.4em}
 `;
