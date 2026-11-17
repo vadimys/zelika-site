@@ -66,7 +66,12 @@
   .hero .lead{color:var(--muted);font-size:1.05rem;max-width:440px;margin:20px 0 34px;}
   .hero .lead-short{display:none;}
   .hero .lead .nw{white-space:nowrap;}
-  .hero .lead{text-wrap:pretty;} /* bez sieroty w ostatnim wierszu (lead_short na telefonie: «konsultację.») */
+  .hero .lead{text-wrap:pretty;} /* bez sieroty w ostatnim wierszu; zdanie-zachęta lead_short («Umów bezpłatną
+     konsultację.») związane twardymi spacjami — na telefonie nie rwie się w pół */
+  /* UK «Запишіться на безкоштовну консультацію.» (~300 px) — w całości w nowym wierszu, gdy się mieści (360/390); 320 px:
+     szersze niż wiersz — jedno łamanie, przed «на…», bez samotnego «Запишіться» w osobnym wierszu */
+  .hero .lead .lead-cta{display:inline-block;}
+  @media(max-width:350px){.hero .lead .lead-cta{display:inline;}}
   .hero-actions{display:flex;gap:16px;flex-wrap:wrap;}
   .hero-tel{margin-top:14px;font-size:.92rem;color:var(--muted);}
   .hero-tel a{display:inline-block;padding:8px 0;color:var(--green);text-decoration:none;border-bottom:1px solid var(--line-gold);}
@@ -308,8 +313,8 @@
   }
   /* Bardzo niskie okna laptopów (1366×768 → ~657 px okna Chrome, 1440×790, 1024×768): «Rezerwacja online» ≥16 px nad
      krawędzią okna i nad paskiem cookies przy pierwszej wizycie. Logo hero mniejsze; poniżej 680 px — ukryte (to samo
-     logo jest w nagłówku). */
-  @media(min-width:921px) and (max-height:780px){
+     logo jest w nagłówku). Próg 800 px, nie 780: przy 1440×790 z paskiem cookies przycisk stał pod paskiem. */
+  @media(min-width:921px) and (max-height:800px){
     .hero{padding:96px 0 40px;}
     .hero .brand-hero{margin-bottom:8px;}
     .hero .brand-hero .mark{width:min(210px,60%);}
@@ -317,6 +322,11 @@
     .hero .lead{margin:12px 0 22px;}
   }
   @media(min-width:921px) and (max-height:680px){.hero .brand-hero{display:none;}}
+  /* 921–1279 px: przycisk czatu (60 px, 24 px od prawej) wchodzi w kolumnę zdjęcia; przy pierwszej wizycie pasek cookies
+     podnosi go do dolnego rogu zdjęcia (1024×768: róg zdjęcia pod przyciskiem, 1180×820: karta ocen go dotyka; 1251–1276:
+     7–19 px odstępu). Zdjęcie o 72 px węższe z prawej: ≥20 px od przycisku, a karta ocen (prawy dolny róg zdjęcia) — obok
+     niego, nie pod nim. Od 1280 px wystarcza reguła niskiego desktopu wyżej (−24 px, 22 px odstępu). */
+  @media(min-width:921px) and (max-width:1279px){.hero-visual{width:calc(100% - 72px);justify-self:start;}}
 
   /* Sticky mobile CTA (thumb-zone) + мікрорядок ціна·час·локація.
      Поки на екрані кнопка бронювання з hero — смуга прихована (раніше перекривала її на
@@ -618,7 +628,7 @@
         <span data-i18n="hero.kicker" class="kicker">Certyfikowane studio PMU &middot; Wieluń</span>
         <h1 data-i18n="hero.h1">Makijaż permanentny<br>w rękach <em>specjalisty</em></h1>
         <p data-i18n="hero.lead" class="lead lead-full">Studio PMU w&nbsp;Wieluniu prowadzone przez Annę Zelinską. Certyfikowane pigmenty, jednorazowe materiały i&nbsp;rygorystyczna higiena&nbsp;— bo trwały makijaż to zabieg, przy którym liczy się nie cena, a&nbsp;wiedza i&nbsp;precyzja. Umów niezobowiązującą konsultację.</p>
-        <p data-i18n="hero.lead_short" class="lead lead-short">Certyfikowane pigmenty, jednorazowe materiały i&nbsp;rygorystyczna higiena. Umów bezpłatną&nbsp;konsultację.</p>
+        <p data-i18n="hero.lead_short" class="lead lead-short">Certyfikowane pigmenty, jednorazowe materiały i&nbsp;rygorystyczna higiena. Umów&nbsp;bezpłatną&nbsp;konsultację.</p>
         <div class="hero-actions">
           <a data-i18n="hero.book" href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer" class="btn btn-green" data-booksy>Rezerwacja online</a>
           <a data-i18n="hero.services" href="#services" class="btn btn-ghost">Usługi i cennik</a>
