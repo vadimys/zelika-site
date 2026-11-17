@@ -78,14 +78,19 @@
   .btn-gold:hover{background:var(--gold-soft);transform:translateY(-2px);box-shadow:0 14px 32px rgba(169,134,60,.26);}
   .btn-ghost{border-color:var(--line);color:var(--green);}
   .btn-ghost:hover{border-color:var(--green);background:rgba(31,94,48,.05);}
+  .hero-aside{position:relative;min-width:0;}
   .hero-visual{position:relative;aspect-ratio:4/5;border-radius:4px;overflow:hidden;border:1px solid var(--line-gold);box-shadow:0 24px 60px rgba(31,94,48,.16);}
   .hero-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
   .hero-visual::after{content:"";position:absolute;inset:12px;border:1px solid rgba(255,255,255,.4);border-radius:2px;pointer-events:none;}
-  .hv-rating{position:absolute;top:16px;right:16px;background:rgba(255,253,246,.94);backdrop-filter:blur(6px);border:1px solid var(--line-gold);border-radius:3px;padding:10px 14px;text-align:center;z-index:3;text-decoration:none;transition:transform .3s,box-shadow .3s;}
+  .hv-rating{position:absolute;top:24px;right:24px;background:rgba(255,253,246,.94);backdrop-filter:blur(6px);border:1px solid var(--line-gold);border-radius:3px;padding:10px 14px;text-align:center;z-index:3;text-decoration:none;transition:transform .3s,box-shadow .3s;}
   .hv-rating:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(31,94,48,.18);}
   .hv-rating .r{font-family:var(--serif);font-size:1.5rem;color:var(--green);line-height:1;display:block;font-variant-numeric:lining-nums;} /* «5,0», nie «5,o» (cyfry nautyczne Cormoranta) */
   .hv-rating .s{color:var(--gold);font-size:.7rem;letter-spacing:.12em;display:block;margin:2px 0;}
   .hv-rating .t{font-size:.54rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:block;}
+  /* „bilet” wydarzenia (worker.js eventStubHtml) zajmuje lewy górny róg zdjęcia — karta ocen schodzi do prawego dolnego:
+     dwie płaskie wkładki z tego samego materiału (krem, złota linia .30) po przekątnej, w ramce odbitki (≥921; 561–920 —
+     niżej, 20 px; ≤560 „bilet” nie leży na zdjęciu) */
+  @media(min-width:921px){.ev-stub + .hero-visual .hv-rating{top:auto;bottom:24px;}}
   .values{padding:0 0 30px;}
   .values-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:46px 0;}
   .val{display:flex;flex-direction:column;gap:12px;}
@@ -246,7 +251,10 @@
        fetchpriority="high" у <img> лишаємо: на десктопі це фото = LCP, а на телефоні LCP —
        текст hero (Lighthouse: LCP однаковий з high і без нього). */
     .hero-visual{width:100%;max-height:min(70vh,560px);max-height:min(70svh,560px);}
-    .hv-rating{top:14px;right:14px;padding:10px 14px 9px;}
+    .hv-rating{top:20px;right:20px;padding:10px 14px 9px;}
+    /* w czasie wydarzenia (worker.js: .hero-grid.has-ev) — mniejszy odstęp tekst → zdjęcie: „bilet” w lewym górnym rogu
+       zdjęcia mieści się w realnym oknie Safari na iPhonie (~664 px wysokości), nie tylko w 844 */
+    .hero-grid.has-ev{row-gap:28px;}
     .hv-rating .s{font-size:.78rem;}
     .hv-rating .t{font-size:.62rem;letter-spacing:.12em;}
     .values-grid{grid-template-columns:1fr 1fr;gap:30px;}
@@ -273,13 +281,16 @@
     section{padding:74px 0;}
     .about-stats{gap:24px;}
   }
+  /* Tablet (561–920): „bilet” w lewym górnym rogu zdjęcia → karta ocen w prawy dolny (przekątna, jak na desktopie).
+     Telefon (≤560): „bilet” to podpis NAD zdjęciem (worker.js), więc karta ocen zostaje tam, gdzie na żywej stronie
+     (prawy górny róg, 20 px) — bez nadpisania. */
+  @media(min-width:561px) and (max-width:920px){.ev-stub + .hero-visual .hv-rating{top:auto;bottom:20px;}}
   /* Вузькі телефони (360×740 тощо): щільніше, щоб кнопка hero вмістилася на першому екрані */
   @media(max-width:400px){
     .hero{padding-top:110px;}
     .hero .kicker{margin-bottom:14px;}
     .hero .lead{margin:16px 0 26px;}
   }
-
   /* Niskie okna desktopu (1280×820, 1366×768, 1440×900): przycisk «Rezerwacja online» w całości na pierwszym ekranie
      we wszystkich językach (≥24 px nad krawędzią). Mniejszy logotyp hero i ciaśniejsze odstępy; szerszy lead = mniej
      wierszy w UK/EN. Wysokie okna — bez zmian. */
@@ -360,9 +371,69 @@
   /* Promo-band запуску usta/kreska (спить до внесення послуг у cennik) */
   .promo-band{background:var(--green);position:relative;overflow:hidden;}
   .promo-band .container{text-align:center;padding:34px 32px;position:relative;z-index:2;}
-  .promo-band .promo-eyebrow{display:inline-block;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:#0f2a17;background:var(--gold-soft);padding:5px 14px;border-radius:999px;font-weight:700;margin-bottom:14px;}
+  .promo-band .promo-eyebrow{display:inline-block;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:#0f2a17;background:var(--gold-soft);padding:5px 14px;border-radius:999px;font-weight:500;margin-bottom:14px;}
   .promo-band p{color:#fbf7ec;max-width:64ch;margin:0 auto 20px;font-size:1.05rem;}
   .promo-band p strong{color:var(--gold-soft);}
+  /* Wydarzenie z bonusem (worker.js eventSlotInner): slot .promo-band staje się beżową sekcją — oddziela się od
+     zielonego quizu, wygląda jak własna treść strony, a bohaterem jest karta bonu wydarzenia (dla „black” — czarny
+     „Bilet” z bota). Liczby i daty — żywy tekst. Bez reveal/animacji; jedynie 2px uniesienia karty przy najechaniu. */
+  .promo-band.ev-sec{background:linear-gradient(180deg,transparent,var(--bg-soft) 50%,transparent);padding:84px 0;overflow:visible;}
+  .promo-band.ev-sec .container{padding:0 32px;text-align:left;}
+  .ev-sec-grid{display:grid;grid-template-columns:.9fr 1.1fr;grid-template-areas:"card head" "card body";column-gap:56px;align-items:center;}
+  .ev-sec-head{grid-area:head;align-self:end;}
+  .ev-sec-body{grid-area:body;align-self:start;}
+  .ev-sec h2{font-size:clamp(2rem,4.5vw,3.1rem);margin:16px 0 0;font-variant-numeric:lining-nums;text-wrap:balance;}
+  /* #93743a: wciąż złoto obok #a9863c („specjalisty” w hero), ale 3,54:1 na #ece7d8 i 3,87:1 na #f4f1e7 (≈3,4 z 4% szumem
+     tła) — AA dla dużego tekstu z zapasem; #9e7d3a dawał 3,12 (z szumem <3), --gold 2,76 */
+  .ev-sec h2 em{font-style:italic;color:#93743a;display:inline-block;} /* druga część równania przenosi się w całości */
+  .ev-sec .eyebrow .ev-dash{letter-spacing:.05em;margin-left:-.3em;}
+  .promo-band.ev-sec .ev-sec-lead{color:var(--muted);font-size:1.05rem;line-height:1.7;max-width:46ch;margin:20px 0 0;text-wrap:pretty;}
+  .ev-sec-acts{display:flex;align-items:center;flex-wrap:wrap;gap:16px 30px;margin-top:32px;}
+  .ev-sec-rules{font-size:.85rem;font-weight:400;color:var(--green);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.3em;text-decoration-color:rgba(31,94,48,.65);transition:text-decoration-color .3s;}
+  .ev-sec-rules:hover{text-decoration-color:currentColor;text-decoration-thickness:2px;}
+  /* Karta jak druk na kartonie, nie plastik i nie makieta „gift card”: prosto (bez obrotu — ten sam przedmiot i ten sam
+     obraz co na stronie bonu), lewą krawędzią na linii treści (jak H1 hero), róg 2px, złocona krawędź (złota linia jak
+     ramka zdjęcia hero, nie szara obwódka UI), mocniejszy cień kontaktowy (kremowa połowa odrywa się od beżu) i warstwowy
+     cień z ciepłej czerni. Obraz: karta z bota („Dla Kasi”, „Rezerwacja” z QR; bez kodu, terminu, drobnego druku). */
+  .ev-sec-card{grid-area:card;justify-self:start;display:block;width:min(440px,100%);border-radius:2px;transform:none;box-shadow:0 0 0 1px rgba(169,134,60,.42),0 1px 2px rgba(20,16,8,.28),0 12px 22px -12px rgba(20,16,8,.24),0 36px 64px -30px rgba(40,30,12,.34);transition:transform .3s ease,box-shadow .3s ease;}
+  .ev-sec-card img{display:block;width:100%;height:auto;border-radius:2px;}
+  .ev-sec-card:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(169,134,60,.42),0 2px 3px rgba(20,16,8,.28),0 16px 28px -12px rgba(20,16,8,.26),0 44px 76px -30px rgba(40,30,12,.36);}
+  .ev-sec a:focus-visible{outline:2px solid var(--green);outline-offset:3px;}
+  /* ≥921: tekst jedną grupą (eyebrow → H2 → lead → przyciski), optycznie na środku karty — siatka wyżej (head do dołu
+     wiersza 1, body do góry wiersza 2; karta przez oba wiersze dzieli nadmiar wysokości po równo). H2 → lead 24 px,
+     lead → przyciski 32 px. Gdy tekst jest wyższy od karty (921–1100), karta centruje się względem tekstu. */
+  @media(min-width:921px){.promo-band.ev-sec .ev-sec-lead{margin-top:24px;}}
+  /* Wydarzenie bez pasującej karty (inna tema / inny %): sama typografia, wyśrodkowana — nigdy karta 300 zł obok innego równania */
+  .promo-band.ev-sec.ev-sec--nocard .ev-sec-grid{grid-template-columns:1fr;grid-template-areas:"head" "body";max-width:720px;margin:0 auto;text-align:center;}
+  .ev-sec--nocard .ev-sec-lead{margin-left:auto!important;margin-right:auto!important;}
+  .ev-sec--nocard .ev-sec-acts{justify-content:center;}
+  @media(max-width:920px){
+    .ev-sec-grid{grid-template-columns:1fr;grid-template-areas:"head" "card" "body";max-width:624px;margin:0 auto;}
+    .ev-sec-card{margin:40px 0 34px;}
+    .promo-band.ev-sec .ev-sec-lead{max-width:none;margin-top:0;}
+    .ev-sec--nocard .ev-sec-lead{margin-top:20px!important;}
+  }
+  @media(max-width:560px){
+    .promo-band.ev-sec{padding:64px 0;}
+    .promo-band.ev-sec .container{padding:0 22px;}
+    .ev-sec .eyebrow{letter-spacing:.24em;}
+    .ev-sec .eyebrow::before{width:24px;margin-right:10px;}
+    .ev-sec .eyebrow .ev-dash{margin-left:-.18em;}
+    .ev-sec-card{width:100%;margin:34px 0 30px;} /* pełna kolumna: obie krawędzie karty na liniach przycisku pod nią */
+    /* lead na telefonie: zdanie mechanizmu jako osobny blok — pełne wiersze, bez samotnego słowa w ostatnim (pretty, nie
+       balance: balance dawało krótki pierwszy wiersz, jak ręczne łamanie); „Ceny usług bez zmian.” zawsze w osobnym wierszu
+       pod nim (worker.js: .ev-s1 + .ev-s2) */
+    .ev-sec-lead .ev-s1,.ev-sec-lead .ev-s2{display:block;}
+    .ev-sec-lead .ev-s1{text-wrap:pretty;}
+    .ev-sec-acts{flex-direction:column;align-items:stretch;gap:6px;margin-top:28px;}
+    .ev-sec-acts .btn{justify-content:center;}
+    .ev-sec-rules{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;padding:0;}
+  }
+  @media(max-width:350px){.ev-sec .eyebrow{letter-spacing:.14em;}.ev-sec .eyebrow::before{display:none;}}
+  @media(prefers-reduced-motion:reduce){
+    .ev-sec-card{transition:none;}
+    .ev-sec-card:hover{transform:none;}
+  }
   /* quiz invitation band */
   .quiz-band{background:var(--green);position:relative;overflow:hidden;}
   .quiz-band::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 62% 85% at 50% -10%,rgba(169,134,60,.18),transparent 64%);pointer-events:none;}
@@ -554,9 +625,14 @@
         </div>
         <p class="hero-tel"><a data-i18n="hero.call" href="tel:+48571932161">lub zadzwoń: 571 932 161</a></p>
       </div>
+      <!-- .hero-aside: kotwica „biletu” wydarzenia (worker.js eventStubHtml, prepend) — płaska wkładka w lewym górnym
+           rogu zdjęcia (karta ocen schodzi wtedy do prawego dolnego); na telefonie (≤560) podpis nad zdjęciem, karta ocen
+           bez zmian. Bez wydarzenia — sam .hero-visual, jak dotąd. -->
+      <div class="hero-aside">
       <div class="hero-visual">
         <picture><source type="image/webp" srcset="/img/photo-1.webp"><img src="img/photo-1.jpg" fetchpriority="high" width="880" height="1100" alt="Makijaż permanentny brwi — efekt pracy Studia Zelika, Wieluń" data-i18n-attrs="alt=hero.alt" decoding="async"></picture>
         <a class="hv-rating" href="https://search.google.com/local/reviews?placeid=ChIJuctMe_74lYgRW7tzVvxaoqI" target="_blank" rel="noopener noreferrer" aria-label="Opinie Google — 5,0"><span class="r" data-google-rating>5,0</span><span class="s" data-stars aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="t" data-reviews="count">53 opinie</span></a>
+      </div>
       </div>
     </div>
   </section>

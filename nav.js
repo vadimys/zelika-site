@@ -19,11 +19,13 @@
   var nav = document.querySelector("header.nav");
 
   // Sticky CTA «Umów wizytę» (головна, телефони; стилі — у index.html): прихована, поки на
-  // екрані кнопка бронювання з hero (на першому екрані смуга перекривала саму кнопку), і
-  // видима, коли кнопки не видно — проскролено або на низькому екрані вона ще нижче згину.
-  // Без IntersectionObserver — показ після прокрутки >60% висоти екрана. Смуга без кнопки
-  // hero поруч (інші сторінки) — видима, як раніше. Клік і конверсія — без змін: той самий
-  // <a data-booksy>.
+  // екрані будь-яка головна кнопка сторінки — бронювання з hero (на першому екрані смуга
+  // перекривала саму кнопку) або «Podaruj bon» секції акції (#promo-band, worker.js: дві
+  // однаково вагомі зелені кнопки з різними цілями поруч розмивають ієрархію й провокують
+  // хибний дотик). Видима, коли жодної не видно — проскролено або на низькому екрані кнопка
+  // hero ще нижче згину. Без IntersectionObserver — показ після прокрутки >60% висоти екрана.
+  // Смуга без кнопки hero поруч (інші сторінки) — видима, як раніше. Клік і конверсія — без
+  // змін: той самий <a data-booksy>.
   var bar = document.querySelector(".sticky-cta");
   if (bar) {
     var heroCta = document.querySelector(".hero-actions [data-booksy]") || document.querySelector(".hero-actions");
@@ -38,18 +40,25 @@
         // тоді спостерігач перебудовується з новим нижнім відступом.
         // Кнопка «видна», коли на екрані щонайменше половина її висоти (1 px з-під банера —
         // це не видно).
+        var targets = [heroCta, document.querySelector("#promo-band:not([hidden]) .ev-sec-acts")].filter(Boolean);
+        var vis = new Map();
         var headH = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
         var io = null;
         var watch = function (bottomH) {
           if (io) io.disconnect();
+          vis.clear();
           io = new IntersectionObserver(
             function (es) {
-              var e = es[es.length - 1];
-              setBar(!(e.isIntersecting && e.intersectionRatio >= 0.5));
+              es.forEach(function (e) {
+                vis.set(e.target, e.isIntersecting && e.intersectionRatio >= 0.5);
+              });
+              setBar(!Array.from(vis.values()).some(Boolean));
             },
             { rootMargin: "-" + headH + "px 0px -" + (bottomH || 0) + "px 0px", threshold: [0, 0.5] }
           );
-          io.observe(heroCta);
+          targets.forEach(function (t) {
+            io.observe(t);
+          });
         };
         var zc = document.getElementById("zconsent-bar");
         watch(zc ? Math.ceil(zc.getBoundingClientRect().height) : 0);
