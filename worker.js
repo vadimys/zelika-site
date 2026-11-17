@@ -1826,7 +1826,7 @@ const I18N = {
     "sticky.sub": "безкоштовна консультація · Велюнь",
     "hero.kicker": "Сертифікована студія PMU · Велюнь",
     "hero.h1": "Перманентний макіяж<br>у руках <em>фахівця</em>",
-    "hero.lead": "Студія PMU у&nbsp;Велюні під керівництвом Анни Зелінської. Сертифіковані пігменти, одноразові матеріали й&nbsp;сувора гігієна, адже стійкий макіяж&nbsp;— це процедура, де важить не ціна, а&nbsp;знання й&nbsp;точність. Запишіться на необовʼязкову консультацію.",
+    "hero.lead": "Студія PMU у&nbsp;Велюні під керівництвом Анни Зелінської. Сертифіковані пігменти, одноразові матеріали й&nbsp;сувора гігієна, адже стійкий макіяж&nbsp;— це процедура, де важить не ціна, а&nbsp;знання й&nbsp;точність. Запишіться на&nbsp;необовʼязкову консультацію.",
     "hero.lead_short": "Сертифіковані пігменти, одноразові матеріали й&nbsp;сувора гігієна. <span class=\"lead-cta\">Запишіться на&nbsp;безкоштовну&nbsp;консультацію.</span>",
     "hero.book": "Онлайн-запис", "hero.services": "Послуги й ціни",
     "hero.call": "або зателефонуйте: 571 932 161",
@@ -2837,7 +2837,7 @@ const EV_TXT = {
   },
   en: {
     band: {
-      soon: (e, a) => `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")} &middot; ${a(`${e.pct}%`)} extra value on every voucher`,
+      soon: (e, a) => `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")} &middot; we’ll add ${a(`${e.pct}%`)} to every voucher`,
       live: (e, a) => `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")} &middot; ${a(`${e.pct}%`)} extra value on every voucher`,
       last: (e, a) => `${e.name} &middot; last day &middot; ${a(`${e.pct}%`)} extra value on every voucher`,
       one: (e, a) => `${e.name} &middot; today only &middot; ${a(`${e.pct}%`)} extra value on every voucher`,
@@ -2854,7 +2854,8 @@ const EV_TXT = {
       last: (e) => `${e.name} &middot; last day`,
       one: (e) => `${e.name} &middot; today only`,
     },
-    stub: (e) => `${e.pct}% extra value on every voucher`,
+    // jak PL/UK: w zapowiedzi czas przyszły („we’ll add”), bo bonus jeszcze nie działa
+    stub: (e, ph) => ph === "soon" ? `We’ll add ${e.pct}% to every voucher` : `${e.pct}% extra value on every voucher`,
     secTag: (e, ph) => ph === "soon" ? `${e.name} &middot; ${rangeWords(e.starts_on, e.ends_on, "en")}` : null,
     h2: (e, ex, tot) => `<span class="ev-ib">You pay ${ex}&nbsp;zł&nbsp;—</span> <em class="ev-ib">the voucher holds ${tot}&nbsp;zł</em>`,
     lead: (e, ph) => `<span class="ev-s1">Every gift voucher bought ${EV_WHEN.en(e, ph)} ${ph === "soon" ? "will carry" : "carries"} an extra ${e.pct}%&nbsp;of&nbsp;its&nbsp;value.</span> <span class="ev-nw ev-s2">Treatment prices stay the same.</span>`,
@@ -3008,7 +3009,7 @@ const RULES = {
       `Організатор акції — ${ORGANIZER.name}, власниця студії ${ORGANIZER.firm}, NIP ${ORGANIZER.nip}, ${ORGANIZER.addr}.`,
       `Акція триває з ${dayWords(e.starts_on, "uk")} ${e.starts_on.slice(0, 4)}&nbsp;р., 00:00, до ${dayWords(e.ends_on, "uk")} ${e.ends_on.slice(0, 4)}&nbsp;р., 23:59 (за польським часом). Вирішальною є дата купівлі бону.`,
       `До кожного подарункового бону, купленого в цей час — у студії, телефоном чи через Instagram, — додаємо бонус у розмірі ${e.pct}% вартості бону, округлений до повних злотих (напр. бон ${EXAMPLE_VALUE}&nbsp;zł → ${bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł бонусу, на боні ${EXAMPLE_VALUE + bonusFor(EXAMPLE_VALUE, e.pct)}&nbsp;zł).`,
-      `Бонус зараховуємо на той самий бон, що й основну суму, і він діє стільки ж, скільки бон (щонайменше ${m} від купівлі — дата на боні). Його можна використати разом з основною сумою на будь-які послуги студії, зокрема за кілька візитів.`,
+      `Бонус зараховуємо на той самий бон, що й основну суму, і він діє стільки ж, скільки бон (щонайменше ${m} від купівлі — дата на боні). Його можна використати разом з основною сумою на будь-які послуги студії, також за кілька візитів.`,
       `Ціна бону дорівнює його вартості (без бонусу). Ціни послуг не змінюються.`,
       `Бонус не обмінюється на готівку. Якщо купівлю бону скасовано (повернення грошей), бонус анулюється разом із боном.`,
       `Якщо одночасно триває кілька акцій, діє та, де бонус більший, — бонуси не сумуються.`,
@@ -3160,6 +3161,7 @@ const VOUCHER_CSS = `
 .bon .lead{margin-bottom:1.6em}
 .ev-mod{margin:0 0 1.6em;padding:22px 0 0;border-top:1px solid rgba(169,134,60,.35);scroll-margin-top:112px} /* #ev: złota linia modułu tuż pod lepką belką (~105 px) */
 .ev-mod .ev-eye{margin:0 0 .75em;font-family:var(--sans);font-weight:500;font-size:.6875rem;line-height:1.4;letter-spacing:.14em;text-transform:uppercase;color:#7c5e22}
+.ev-mod .ev-eye .ev-dash{letter-spacing:0;margin-left:-.1em}
 .ev-mod h2{margin:0 0 .4em;font-family:var(--serif);font-weight:500;font-size:1.75rem;line-height:1.15;color:#1f5e30;font-variant-numeric:lining-nums;text-wrap:balance}
 /* równanie jak na stronie głównej: druga część złotą kursywą (Cormorant italic 500 — FONTS_LAYOUT); #93743a na #f4f1e7
    3,87:1 (z 4% szumem tła ≈3,4) — AA dla dużego tekstu z zapasem (H2 28/24,8 px; mała wysokość x Cormoranta) */
