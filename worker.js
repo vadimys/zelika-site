@@ -3160,6 +3160,7 @@ const BON_TXT = {
 const VOUCHER_CSS = `
 .bon .lead{margin-bottom:1.6em}
 .ev-mod{margin:0 0 1.6em;padding:22px 0 0;border-top:1px solid rgba(169,134,60,.35);scroll-margin-top:112px} /* #ev: złota linia modułu tuż pod lepką belką (~105 px) */
+#jak-kupic,#zasady{scroll-margin-top:118px} /* przyciski «Jak kupić bon» i «Zasady akcji»: nagłówek pod lepką belką, nie za nią */
 .ev-mod .ev-eye{margin:0 0 .75em;font-family:var(--sans);font-weight:500;font-size:.6875rem;line-height:1.4;letter-spacing:.14em;text-transform:uppercase;color:#7c5e22}
 .ev-mod .ev-eye .ev-dash{letter-spacing:0;margin-left:-.1em}
 .ev-mod h2{margin:0 0 .4em;font-family:var(--serif);font-weight:500;font-size:1.75rem;line-height:1.15;color:#1f5e30;font-variant-numeric:lining-nums;text-wrap:balance}
