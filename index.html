@@ -65,6 +65,8 @@
   .hero h1 em{font-style:italic;color:var(--gold);}
   .hero .lead{color:var(--muted);font-size:1.05rem;max-width:440px;margin:20px 0 34px;}
   .hero .lead-short{display:none;}
+  .hero .lead .nw{white-space:nowrap;}
+  .hero .lead{text-wrap:pretty;} /* bez sieroty w ostatnim wierszu (lead_short na telefonie: «konsultację.») */
   .hero-actions{display:flex;gap:16px;flex-wrap:wrap;}
   .hero-tel{margin-top:14px;font-size:.92rem;color:var(--muted);}
   .hero-tel a{display:inline-block;padding:8px 0;color:var(--green);text-decoration:none;border-bottom:1px solid var(--line-gold);}
@@ -81,7 +83,7 @@
   .hero-visual::after{content:"";position:absolute;inset:12px;border:1px solid rgba(255,255,255,.4);border-radius:2px;pointer-events:none;}
   .hv-rating{position:absolute;top:16px;right:16px;background:rgba(255,253,246,.94);backdrop-filter:blur(6px);border:1px solid var(--line-gold);border-radius:3px;padding:10px 14px;text-align:center;z-index:3;text-decoration:none;transition:transform .3s,box-shadow .3s;}
   .hv-rating:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(31,94,48,.18);}
-  .hv-rating .r{font-family:var(--serif);font-size:1.5rem;color:var(--green);line-height:1;display:block;}
+  .hv-rating .r{font-family:var(--serif);font-size:1.5rem;color:var(--green);line-height:1;display:block;font-variant-numeric:lining-nums;} /* «5,0», nie «5,o» (cyfry nautyczne Cormoranta) */
   .hv-rating .s{color:var(--gold);font-size:.7rem;letter-spacing:.12em;display:block;margin:2px 0;}
   .hv-rating .t{font-size:.54rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:block;}
   .values{padding:0 0 30px;}
@@ -277,6 +279,33 @@
     .hero .kicker{margin-bottom:14px;}
     .hero .lead{margin:16px 0 26px;}
   }
+
+  /* Niskie okna desktopu (1280×820, 1366×768, 1440×900): przycisk «Rezerwacja online» w całości na pierwszym ekranie
+     we wszystkich językach (≥24 px nad krawędzią). Mniejszy logotyp hero i ciaśniejsze odstępy; szerszy lead = mniej
+     wierszy w UK/EN. Wysokie okna — bez zmian. */
+  @media(min-width:921px) and (max-height:900px){
+    .hero{padding:112px 0 56px;}
+    .hero > .container{width:100%;} /* .hero to flex: bez tego węższa treść zwężała i przesuwała całą siatkę (PL ≠ UK) */
+    /* zdjęcie o 24 px węższe z prawej: szerszy kontener dosuwał je do przycisku czatu (1280×820: 5 px od rogu,
+       z paskiem cookies — na krawędzi zdjęcia); teraz ≥20 px odstępu */
+    .hero-visual{width:calc(100% - 24px);justify-self:start;}
+    .hero .brand-hero{margin-bottom:14px;}
+    .hero .brand-hero .mark{width:min(300px,70%);}
+    .hero .brand-hero .tag{margin-top:8px;}
+    .hero .lead{max-width:520px;margin:16px 0 28px;}
+    .hero h1{font-size:clamp(2.4rem,4.6vw,3.6rem);} /* UK «Перманентний макіяж» — w jednym wierszu (było 3 wiersze) */
+  }
+  /* Bardzo niskie okna laptopów (1366×768 → ~657 px okna Chrome, 1440×790, 1024×768): «Rezerwacja online» ≥16 px nad
+     krawędzią okna i nad paskiem cookies przy pierwszej wizycie. Logo hero mniejsze; poniżej 680 px — ukryte (to samo
+     logo jest w nagłówku). */
+  @media(min-width:921px) and (max-height:780px){
+    .hero{padding:96px 0 40px;}
+    .hero .brand-hero{margin-bottom:8px;}
+    .hero .brand-hero .mark{width:min(210px,60%);}
+    .hero .brand-hero .tag{margin-top:4px;}
+    .hero .lead{margin:12px 0 22px;}
+  }
+  @media(min-width:921px) and (max-height:680px){.hero .brand-hero{display:none;}}
 
   /* Sticky mobile CTA (thumb-zone) + мікрорядок ціна·час·локація.
      Поки на екрані кнопка бронювання з hero — смуга прихована (раніше перекривала її на
@@ -517,8 +546,8 @@
         </div>
         <span data-i18n="hero.kicker" class="kicker">Certyfikowane studio PMU &middot; Wieluń</span>
         <h1 data-i18n="hero.h1">Makijaż permanentny<br>w rękach <em>specjalisty</em></h1>
-        <p data-i18n="hero.lead" class="lead lead-full">Studio PMU w Wieluniu prowadzone przez Annę Zelinską. Certyfikowane pigmenty, jednorazowe materiały i rygorystyczna higiena — bo trwały makijaż to zabieg, przy którym liczy się nie cena, a wiedza i precyzja. Umów niezobowiązującą konsultację.</p>
-        <p data-i18n="hero.lead_short" class="lead lead-short">Certyfikowane pigmenty, jednorazowe materiały i rygorystyczna higiena. Umów bezpłatną konsultację.</p>
+        <p data-i18n="hero.lead" class="lead lead-full">Studio PMU w&nbsp;Wieluniu prowadzone przez Annę Zelinską. Certyfikowane pigmenty, jednorazowe materiały i&nbsp;rygorystyczna higiena&nbsp;— bo trwały makijaż to zabieg, przy którym liczy się nie cena, a&nbsp;wiedza i&nbsp;precyzja. Umów niezobowiązującą konsultację.</p>
+        <p data-i18n="hero.lead_short" class="lead lead-short">Certyfikowane pigmenty, jednorazowe materiały i&nbsp;rygorystyczna higiena. Umów bezpłatną&nbsp;konsultację.</p>
         <div class="hero-actions">
           <a data-i18n="hero.book" href="https://booksy.com/pl-pl/334211_zelika-pmu-makijaz-permanentny-wielun_brwi-i-rzesy_25323_wielun" target="_blank" rel="noopener noreferrer" class="btn btn-green" data-booksy>Rezerwacja online</a>
           <a data-i18n="hero.services" href="#services" class="btn btn-ghost">Usługi i cennik</a>

@@ -895,7 +895,7 @@ function reviewCardsHtml(list) {
 
 // --- style (spójne ze stroną główną: kolory, fonty, nagłówek, przycisk Booksy) ---
 const CSS = `
-:root{--bg:#f4f1e7;--bg-soft:#ece7d8;--bg-card:#fffdf6;--green:#1f5e30;--green-mid:#2f7d44;--gold:#a9863c;--ink:#272b22;--muted:#6e7365;--line:rgba(31,94,48,.16);--line-gold:rgba(169,134,60,.30);--serif:'Cormorant Garamond',Georgia,serif;--sans:'Jost',system-ui,sans-serif}
+:root{--bg:#f4f1e7;--bg-soft:#ece7d8;--bg-card:#fffdf6;--green:#1f5e30;--green-mid:#2f7d44;--gold:#a9863c;--ink:#272b22;--muted:#5f6456;--line:rgba(31,94,48,.16);--line-gold:rgba(169,134,60,.30);--serif:'Cormorant Garamond',Georgia,serif;--sans:'Jost',system-ui,sans-serif}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;line-height:1.75;-webkit-font-smoothing:antialiased}
 a{color:var(--green);text-decoration:none}
@@ -941,7 +941,7 @@ article :is(p,li) a:hover{text-decoration-color:currentColor}
 .card .body{padding:18px 22px}
 .card h2{margin:.1em 0 .3em;font-size:1.35rem}
 .card p{margin:0;color:var(--muted);font-size:.96rem}
-.card .date{font-size:.78rem;color:var(--gold);letter-spacing:.05em;margin-top:.6em}
+.card .date{font-size:.78rem;color:#7c5e22;letter-spacing:.05em;margin-top:.6em}
 .cta{margin:2.6em 0 1em;padding:1.8em;background:var(--bg-card);border:1px solid var(--line-gold);border-radius:16px;text-align:center}
 .cta-h{margin:.1em 0 .6em;font-family:var(--serif);font-size:1.45rem;color:var(--green)}
 .cta-p{margin:0 0 1.3em;color:var(--muted)}
@@ -1826,8 +1826,8 @@ const I18N = {
     "sticky.sub": "безкоштовна консультація · Велюнь",
     "hero.kicker": "Сертифікована студія PMU · Велюнь",
     "hero.h1": "Перманентний макіяж<br>у руках <em>фахівця</em>",
-    "hero.lead": "Студія PMU у Велюні під керівництвом Анни Зелінської. Сертифіковані пігменти, одноразові матеріали й сувора гігієна — бо стійкий макіяж це процедура, де важить не ціна, а знання і точність. Запишіться на необовʼязкову консультацію.",
-    "hero.lead_short": "Сертифіковані пігменти, одноразові матеріали й сувора гігієна. Запишіться на безкоштовну консультацію.",
+    "hero.lead": "Студія PMU у&nbsp;Велюні під керівництвом Анни Зелінської. Сертифіковані пігменти, одноразові матеріали й&nbsp;сувора гігієна&nbsp;— бо стійкий макіяж&nbsp;— це процедура, де важить не ціна, а&nbsp;знання й&nbsp;точність. Запишіться на необовʼязкову консультацію.",
+    "hero.lead_short": "Сертифіковані пігменти, одноразові матеріали й&nbsp;сувора гігієна. Запишіться на безкоштовну&nbsp;консультацію.",
     "hero.book": "Онлайн-запис", "hero.services": "Послуги й ціни",
     "hero.call": "або зателефонуйте: 571 932 161",
     "val1.h": "Експертка PMU й архітектура брів",
@@ -1931,8 +1931,8 @@ const I18N = {
     "sticky.sub": "free consultation · Wieluń",
     "hero.kicker": "Certified PMU studio · Wieluń",
     "hero.h1": "Permanent makeup<br>in <em>expert</em> hands",
-    "hero.lead": "A PMU studio in Wieluń led by Anna Zelinska. Certified pigments, single-use materials and rigorous hygiene — because permanent makeup is a procedure where knowledge and precision matter more than price. Book a no-obligation consultation.",
-    "hero.lead_short": "Certified pigments, single-use materials and rigorous hygiene. Book a free consultation.",
+    "hero.lead": "A PMU studio in Wieluń led by Anna Zelinska. Certified pigments, <span class=\"nw\">single-use</span> materials and rigorous hygiene&nbsp;— because permanent makeup is a procedure where knowledge and precision matter more than price. Book a&nbsp;<span class=\"nw\">no-obligation</span> consultation.",
+    "hero.lead_short": "Certified pigments, single-use materials and rigorous hygiene. Book a free&nbsp;consultation.",
     "hero.book": "Book online", "hero.services": "Services & prices",
     "hero.call": "or call: 571 932 161",
     "val1.h": "PMU Expert & Brow Architecture",
@@ -2199,6 +2199,12 @@ header.nav .burger{display:none;background:none;border:none;color:var(--green,#1
 .ev-pill{display:inline-block;margin:0 0 14px;padding:7px 15px;border-radius:999px;background:rgba(169,134,60,.13);border:1px solid rgba(169,134,60,.38);color:var(--green,#1f5e30);font-size:.8rem;line-height:1.35;letter-spacing:.01em;text-decoration:none;transition:.3s}
 .ev-pill:hover{background:rgba(169,134,60,.22);text-decoration:none}
 .ev-pill strong{font-weight:600}
+header.nav .nav-cta{white-space:nowrap}
+@media(min-width:921px) and (max-width:1180px){
+header.nav .nav-links{gap:20px}
+header.nav .nav-links a{letter-spacing:.14em}
+header.nav .nav-cta{padding:10px 16px!important}
+}
 footer.site{padding:54px 0 40px;border-top:1px solid var(--line,#e6e1d3);text-align:center;margin-top:40px;background:transparent;color:var(--muted,#6e7365);font-size:.85rem}
 footer.site .container{max-width:1180px;margin:0 auto;padding:0 32px}
 footer.site .brand{align-items:center;display:inline-flex;flex-direction:column;margin-bottom:14px;text-decoration:none;line-height:1}
