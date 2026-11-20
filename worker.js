@@ -489,7 +489,11 @@ function makeApi(env, ctx) {
       later(fromOrigin(path, spec, cache, true)); // stale-while-revalidate
       return { data: copy.data, source: "stale" };
     }
-    if (down) return { data: null, source: "none" };
+    if (down) {
+      // bez tego logu 503 „przez znacznik” nie zostawia w logach żadnej przyczyny
+      console.warn(`api ${path}: pominięte — origin oznaczony jako niedostępny (do ${API_DOWN_TTL} s po błędzie)`);
+      return { data: null, source: "none" };
+    }
     if (spec.soft) {
       later(fromOrigin(path, spec, cache, true)); // nie blokujemy strony — kopia na następne żądania
       return { data: null, source: "none" };
@@ -515,7 +519,15 @@ function makeApi(env, ctx) {
         valid: (d) => isObj(d) && Array.isArray(d.cennik_items) && d.cennik_items.length > 0,
       }),
     today: () => warsawToday(env),
-    posts: () => get("/api/posts", { ttls: LIST_TTLS, valid: (d) => isObj(d) && Array.isArray(d.posts) }),
+    // early — start bez czekania (artykuł: lista tylko na wypadek braku wpisu); waitUntil trzyma
+    // pobranie do końca, żeby kopia listy zapisała się, nawet gdy strona poszła już z kopii wpisu.
+    // Awaria takiego odczytu (nikt na niego nie czeka) oznacza tylko /api/posts (ownDown), a nie
+    // cały origin — inaczej udany artykuł mógłby na 60 s dać 503 innym artykułom bez kopii w colo.
+    posts: ({ early = false } = {}) => {
+      const p = get("/api/posts", { ttls: LIST_TTLS, ownDown: early, valid: (d) => isObj(d) && Array.isArray(d.posts) });
+      if (early) later(p);
+      return p;
+    },
     post: (slug) =>
       get("/api/posts/" + encodeURIComponent(slug), { ttls: POST_TTLS, gone404: true, valid: (d) => isObj(d) && !!d.slug }),
     // memo jest per ścieżka: w jednym żądaniu lista stron jest czytana albo soft, albo blokująco
@@ -1224,10 +1236,27 @@ const SLUG_OK = /^[^/\s]{1,200}$/;
 
 async function renderPost(api, slug) {
   const canonical = SITE + "/porady/" + slug;
-  const res = SLUG_OK.test(slug) ? await api.post(slug) : { data: null, notFound: true, source: "live" };
-  // API niedostępne i brak ostatniej kopii → 503 (nie 404+noindex: to nie jest „nie ma artykułu”)
-  if (res.source === "none") return unavailableResponse(canonical);
-  const post = res.data;
+  const slugOk = SLUG_OK.test(slug);
+  // lista rusza równolegle z wpisem (timeouty się nie sumują), ale czekamy na nią tylko, gdy wpisu
+  // brak; zwykle to jedno trafienie w kopię listy
+  const listP = slugOk ? api.posts({ early: true }) : null;
+  const res = slugOk ? await api.post(slug) : { data: null, notFound: true, source: "live" };
+  let post = res.data;
+  let source = res.source;
+  // Wpisu nie ma ani w kopii tego colo, ani z originu w 1,5 s (np. Googlebot z USA, nowy artykuł,
+  // chwilowo wolny tunel) → pełny wpis z listy /api/posts: ta sama treść, a lista zwykle już jest
+  // w kopii (/porady, sitemap, strony usług). Bez wpisu w liście → 503 (nie 404+noindex: to nie
+  // jest „nie ma artykułu”). 404 wpisu z originu w tym żądaniu wygrywa (tu nie trafia); ale gdy
+  // origin leży, artykuł ukryty w bocie może wrócić ze starej kopii listy — jak wcześniej ze starej
+  // kopii samego wpisu w innym colo (kopie żyją do 30 dni, odświeżają się, gdy origin wróci).
+  if (res.source === "none") {
+    const listRes = await listP;
+    const listed = postsOf(listRes).find((p) => p && p.slug === slug) || null;
+    if (!listed || listed.status !== "published" || !str(listed.body)) return unavailableResponse(canonical);
+    console.warn(`porada ${slug}: brak pojedynczego wpisu — z listy (${listRes.source})`);
+    post = listed;
+    source = listRes.source;
+  }
   if (!post || post.status !== "published") {
     const body = `<h1>Nie znaleziono</h1><p class="lead">Taka porada nie istnieje lub została przeniesiona.</p>
 <p><a href="/porady">← Wróć do porad</a></p>`;
@@ -1305,7 +1334,7 @@ ${ctaBlock()}
     }),
     200,
     300,
-    { "X-Zelika-Data": res.source }
+    { "X-Zelika-Data": source }
   );
 }
 
@@ -3414,7 +3443,13 @@ function versionAssets(res, v) {
 
 export default {
   async fetch(request, env, ctx) {
-    return versionAssets(await site.route(request, env, ctx), assetVersion(env));
+    const res = await site.route(request, env, ctx);
+    // 503 = brak danych z bota (zimny cache tego data center + origin nie zdążył) — colo do logów,
+    // żeby przyczynę (log „api …” obok) było widać bez szukania po telemetrii
+    if (res.status === 503) {
+      console.warn(`503 ${new URL(request.url).pathname} colo=${(request.cf && request.cf.colo) || "?"}`);
+    }
+    return versionAssets(res, assetVersion(env));
   },
 };
 
